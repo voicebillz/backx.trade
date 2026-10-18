@@ -5,7 +5,7 @@ import express from 'express';
 export const RPC = {
   ethereum: process.env.RPC_ETHEREUM || 'https://ethereum-rpc.publicnode.com',
   base: process.env.RPC_BASE || 'https://base-rpc.publicnode.com',
-  bsc: process.env.RPC_BSC || 'https://bsc-rpc.publicnode.com',
+  bsc: process.env.RPC_BSC || 'https://bsc-dataseed.bnbchain.org',
   solana: process.env.RPC_SOLANA || 'https://api.mainnet-beta.solana.com',
 };
 

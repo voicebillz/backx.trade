@@ -20,6 +20,15 @@ const STABLES = {
 // LI.FI Diamond: the only contract a swap or approval may target (same address on these chains).
 const LIFI_DIAMOND = '0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae';
 const isAddr = (a) => /^0x[0-9a-fA-F]{40}$/.test(a);
+// Refuse routes that lose more than this vs. fair USD value (fees + impact + slippage). The UI asks for an
+// explicit confirmation above 3 %.
+const MAX_LOSS = 0.1;
+// How each chain keeps swaps out of a public mempool (shown in the UI; the wallet uses these RPCs).
+const MEV = {
+  ethereum: 'Private submission via MEV Blocker',
+  base: 'Sequencer ordering, no public mempool',
+  bsc: 'Private submission via PancakeSwap MEV Guard',
+};
 
 /** coingecko id → contract address per supported chain. Refreshed daily. */
 async function platforms(redis) {
@@ -173,7 +182,14 @@ swapRouter.get('/quote', async (req, res) => {
       }
     }
     const toDec = q.action.toToken.decimals;
+    // Sandwich / bad-route guard: what you get must be close to what you pay, at independent USD prices.
+    const fromUsd = Number(q.estimate.fromAmountUSD) || 0;
+    const toUsd = Number(q.estimate.toAmountUSD) || 0;
+    const loss = fromUsd > 0 && toUsd > 0 ? 1 - toUsd / fromUsd : null;
+    if (loss != null && loss > MAX_LOSS) return res.status(400).json({ error: 'price_impact', loss });
     res.json({
+      quotedAt: Date.now(),
+      loss,
       chainId: CHAINS[chain].id,
       fromAmount: fromUnits(amount, info.decimals),
       toAmount: fromUnits(BigInt(q.estimate.toAmount), toDec),
@@ -183,10 +199,24 @@ swapRouter.get('/quote', async (req, res) => {
       gasUsd: (q.estimate.gasCosts || []).reduce((s, g) => s + (Number(g.amountUSD) || 0), 0),
       feeUsd: (q.estimate.feeCosts || []).reduce((s, f) => s + (Number(f.amountUSD) || 0), 0),
       route: String(q.toolDetails?.name || q.tool || 'DEX').slice(0, 40),
+      mev: MEV[chain],
       slippage,
       approval,
       tx: { to: LIFI_DIAMOND, data: tx.data, value: BigInt(tx.value || '0x0').toString() },
     });
+  } catch {
+    res.status(503).json({ error: 'unavailable' });
+  }
+});
+
+/** Receipt status for a transaction the user just sent (read-only, any user's own tx hash). */
+swapRouter.get('/receipt', async (req, res) => {
+  const chain = String(req.query.chain || '');
+  const hash = String(req.query.hash || '');
+  if (!CHAINS[chain] || !/^0x[0-9a-fA-F]{64}$/.test(hash)) return res.status(400).json({ error: 'bad_request' });
+  try {
+    const r = await rpc(RPC[chain], 'eth_getTransactionReceipt', [hash]);
+    res.json({ status: r ? (r.status === '0x1' ? 'success' : 'reverted') : 'pending' });
   } catch {
     res.status(503).json({ error: 'unavailable' });
   }

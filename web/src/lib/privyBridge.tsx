@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  PrivyProvider, useExportWallet, useLinkAccount, useMfaEnrollment, usePrivy, useSendTransaction,
+  PrivyProvider, addRpcUrlOverrideToChain, useExportWallet, useLinkAccount, useMfaEnrollment, usePrivy, useSendTransaction,
 } from '@privy-io/react-auth';
 import { base, bsc, mainnet } from 'viem/chains';
 import { api, ApiError } from './api';
@@ -34,8 +34,14 @@ export default function PrivyBridge(props: Props) {
           ethereum: { createOnLogin: 'users-without-wallets' },
           solana: { createOnLogin: 'users-without-wallets' },
         },
-        // Withdrawals: chains the wallet page can send on. Privy shows its own confirm screen.
-        supportedChains: [mainnet, base, bsc],
+        // Chains the wallet can send on. MEV protection: Ethereum and BNB Chain transactions go to private
+        // RPCs (MEV Blocker, PancakeSwap MEV Guard), never the public mempool where bots sandwich swaps.
+        // Base has no public mempool (the sequencer orders transactions first come, first served).
+        supportedChains: [
+          addRpcUrlOverrideToChain(mainnet, 'https://rpc.mevblocker.io'),
+          base,
+          addRpcUrlOverrideToChain(bsc, 'https://bscrpc.pancakeswap.finance'),
+        ],
         defaultChain: mainnet,
         appearance: { theme: '#0A0A0A', accentColor: '#FFD100', logo: '/backx-logo.png', walletChainType: 'ethereum-only' },
       }}

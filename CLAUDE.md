@@ -62,6 +62,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   The server builds every quote for the signed-in user's own address and rejects any route whose tx or approval
   does not target the LI.FI Diamond `0x1231…4EaE`; approvals are for the exact amount. User signs with Privy.
   Solana swaps not built yet. Listed coins map to contracts via CoinGecko platforms (cached daily).
+  MEV protection: Privy sends Ethereum txs via MEV Blocker and BNB Chain via PancakeSwap MEV Guard (private RPCs,
+  chain overrides in privyBridge.tsx; also used by withdrawals). Base has no public mempool. Every swap is re-quoted
+  right before signing (and again after an approval is mined); a worse minimum stops it. Routes losing >10 % of
+  USD value are refused server-side; >3 % needs explicit confirmation.
 - Withdrawals are signed by the user's own Privy wallet with Privy's confirm screen (EVM: ETH/Base/BNB, native + USDC).
   Amounts are parsed to base units and rounded down. Solana withdrawals not built yet.
 - Multiplication 1× is allowed for Hedge: nothing is borrowed, no liquidation, issuers get 0 % (owner 2026-10-18).

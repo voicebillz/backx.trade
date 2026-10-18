@@ -10,6 +10,7 @@ interface SwapToken { id: string; symbol: string; name: string; image: string | 
 interface Quote {
   chainId: number; fromAmount: string; toAmount: string; toAmountMin: string;
   fromUsd: number | null; toUsd: number | null; gasUsd: number; feeUsd: number; route: string; slippage: number;
+  quotedAt: number; loss: number | null; mev: string;
   approval: { to: `0x${string}`; data: `0x${string}` } | null;
   tx: { to: `0x${string}`; data: `0x${string}`; value: string };
 }
@@ -21,7 +22,7 @@ const CHAIN_OPTIONS = [
 const EXPLORER: Record<EvmChain['key'], string> = { ethereum: 'https://etherscan.io/tx/', base: 'https://basescan.org/tx/', bsc: 'https://bscscan.com/tx/' };
 const ERRORS: Record<string, string> = {
   insufficient: 'Not enough balance.', no_route: 'No route found for this pair and amount.', bad_amount: 'Enter an amount.',
-  unknown_token: 'This token is not routable right now.', route_rejected: 'Route rejected by our safety checks. Try again.', unavailable: 'Quotes are unavailable. Try again shortly.',
+  unknown_token: 'This token is not routable right now.', price_impact: 'Blocked: this route would lose more than 10% of the value. Try a smaller amount.', route_rejected: 'Route rejected by our safety checks. Try again.', unavailable: 'Quotes are unavailable. Try again shortly.',
 };
 const fmt = (s: string) => { const n = Number(s); return n === 0 ? '0' : n < 0.000001 ? '<0.000001' : n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 8 : 6 }); };
 
@@ -83,7 +84,8 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
   const [loading, setLoading] = useState(false);
   const [picker, setPicker] = useState<'from' | 'to' | null>(null);
   const [slippage, setSlippage] = useState('0.005');
-  const [step, setStep] = useState<{ kind: 'idle' | 'approve' | 'swap' | 'done' | 'error'; msg?: string }>({ kind: 'idle' });
+  const [step, setStep] = useState<{ kind: 'idle' | 'checking' | 'approve' | 'swap' | 'done' | 'error'; msg?: string }>({ kind: 'idle' });
+  const [ackImpact, setAckImpact] = useState(false);
   const evm = chain !== 'solana';
 
   // Tokens for the chain; default pair: native → USDC.
@@ -123,38 +125,66 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
 
   const flip = () => { setFrom(to); setTo(from); setAmount(''); };
 
+  /** Waits until the transaction is mined (private RPCs only show it once it is in a block). */
+  const waitMined = async (hash: string) => {
+    for (let i = 0; i < 90; i++) {
+      const r = await api<{ status: string }>(`/api/swap/receipt?chain=${chain}&hash=${hash}`).catch(() => ({ status: 'pending' }));
+      if (r.status === 'success') return;
+      if (r.status === 'reverted') throw new Error('The approval failed on-chain.');
+      await new Promise((ok) => setTimeout(ok, 2000));
+    }
+    throw new Error('The approval is taking long. Try the swap again in a minute.');
+  };
+
+  const quoteUrl = () => `/api/swap/quote?chain=${chain}&from=${from!.address}&to=${to!.address}&amount=${encodeURIComponent(amount)}&slippage=${slippage}`;
+
   const swap = async () => {
     if (!quote || !actions || !from || !to) return;
     try {
-      if (quote.approval) {
+      // MEV: never sign a stale route. Re-quote now; if the guaranteed minimum got worse, show it instead.
+      setStep({ kind: 'checking' });
+      const fresh = await api<Quote>(quoteUrl());
+      if (Number(fresh.toAmountMin) < Number(quote.toAmountMin) * 0.998) {
+        setQuote(fresh);
+        setStep({ kind: 'error', msg: 'The price moved. Check the new minimum and confirm again.' });
+        return;
+      }
+      let q = fresh;
+      if (q.approval) {
         setStep({ kind: 'approve' });
-        await actions.sendEvm({ chainId: quote.chainId, to: quote.approval.to, data: quote.approval.data, description: `Allow ${quote.fromAmount} ${from.symbol} for this swap` });
+        const ah = await actions.sendEvm({ chainId: q.chainId, to: q.approval.to, data: q.approval.data, description: `Allow ${q.fromAmount} ${from.symbol} for this swap` });
+        await waitMined(ah);
+        // The approval took a block or more: quote again so the swap never signs an old price.
+        setStep({ kind: 'checking' });
+        const after = await api<Quote>(quoteUrl());
+        if (Number(after.toAmountMin) < Number(fresh.toAmountMin) * 0.998) {
+          setQuote(after);
+          setStep({ kind: 'error', msg: 'Approved. The price moved meanwhile: check the new minimum and press Swap again.' });
+          return;
+        }
+        q = after;
       }
       setStep({ kind: 'swap' });
       const hash = await actions.sendEvm({
-        chainId: quote.chainId, to: quote.tx.to, data: quote.tx.data, value: BigInt(quote.tx.value),
-        description: `Swap ${quote.fromAmount} ${from.symbol} → ~${fmt(quote.toAmount)} ${to.symbol}`,
+        chainId: q.chainId, to: q.tx.to, data: q.tx.data, value: BigInt(q.tx.value),
+        description: `Swap ${q.fromAmount} ${from.symbol} → ~${fmt(q.toAmount)} ${to.symbol}`,
       });
       setStep({ kind: 'done', msg: hash });
       setAmount('');
       onDone();
     } catch (e) {
-      setStep({ kind: 'error', msg: e instanceof Error ? e.message.slice(0, 140) : 'Not sent' });
+      setStep({ kind: 'error', msg: e instanceof ApiError ? ERRORS[e.code] ?? 'No quote.' : e instanceof Error ? e.message.slice(0, 140) : 'Not sent' });
     }
   };
 
-  const impact = quote?.fromUsd && quote.toUsd ? (quote.toUsd / quote.fromUsd - 1) * 100 : null;
-  const busy = step.kind === 'approve' || step.kind === 'swap';
+  const impact = quote?.loss != null ? -quote.loss * 100 : null;
+  const highImpact = impact != null && impact < -3;
+  const busy = step.kind === 'checking' || step.kind === 'approve' || step.kind === 'swap';
+  useEffect(() => { setAckImpact(false); }, [quote?.quotedAt]);
 
   return (
     <main id="main" className="page swap-page">
-      <header className="page-head">
-        <div>
-          <p className="eyebrow">Swap</p>
-          <h1>Swap in your own wallet</h1>
-          <p className="page-sub">Every listed coin on Ethereum, Base and BNB Chain. Best on-chain route across DEXes; you sign, funds never leave your wallet.</p>
-        </div>
-      </header>
+      <h1 className="swap-title">Swap portal</h1>
 
       <div className="swap-wrap">
         <section className="card swap-card">
@@ -204,11 +234,19 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
                   <div><dt>Network fee (est.)</dt><dd className="num">{usd(quote.gasUsd)}</dd></div>
                   {quote.feeUsd > 0 && <div><dt>Routing fee</dt><dd className="num">{usd(quote.feeUsd)}</dd></div>}
                   {quote.approval && <div><dt>Approval</dt><dd>Exact amount, one extra signature</dd></div>}
+                  <div><dt>MEV protection</dt><dd className="ok">{quote.mev}</dd></div>
                 </dl>
               )}
 
-              <button className="btn btn-primary btn-block" disabled={!quote || !actions || busy} onClick={swap}>
-                {step.kind === 'approve' ? 'Step 1 of 2: approve in the wallet window…'
+              {highImpact && quote && (
+                <label className="export-ack">
+                  <input type="checkbox" checked={ackImpact} onChange={(e) => setAckImpact(e.target.checked)} />
+                  <span>This swap loses {Math.abs(impact!).toFixed(1)}% to fees and price impact. I understand.</span>
+                </label>
+              )}
+              <button className="btn btn-primary btn-block" disabled={!quote || !actions || busy || (highImpact && !ackImpact)} onClick={swap}>
+                {step.kind === 'checking' ? 'Checking the latest price…'
+                  : step.kind === 'approve' ? 'Step 1 of 2: approve in the wallet window…'
                   : step.kind === 'swap' ? (quote?.approval ? 'Step 2 of 2: confirm the swap…' : 'Confirm the swap in the wallet window…')
                   : !from || !to ? 'Select tokens' : !amount ? 'Enter an amount' : loading ? 'Finding the best route…' : quote ? `Swap ${from.symbol} → ${to.symbol}` : 'No route'}
               </button>
@@ -218,7 +256,6 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
             </>
           )}
         </section>
-        <p className="hint swap-foot">Routes are found by LI.FI across on-chain DEXes on the same network; no bridges. backx checks every route goes to the LI.FI contract from and to your own address, and approves only the exact amount.</p>
       </div>
 
       {picker && tokens && (

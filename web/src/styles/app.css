@@ -582,3 +582,4 @@ tr.zero { opacity: .5; }
 .picker-name { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
 .picker-name small { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 899px) { .nav a { padding: 0 8px; } }
+.swap-title { text-align: center; margin: 8px 0 20px; font-size: 28px; letter-spacing: -.02em; }
