@@ -63,7 +63,8 @@ VITE_PRIVY_APP_ID=<samme app-id som PRIVY_APP_ID på Railway>
 
 - Login methods: kun **Email, Google, Apple, X**. Ingen «Wallet».
 - Embedded wallets: Ethereum, «Create on login: users without wallets».
-- **Allowed origins:** `https://backx.trade`, `https://www.backx.trade` (og `http://localhost:5173` bare mens vi utvikler).
+- **Allowed origins:** kun `https://backx.trade` og `https://www.backx.trade`. Ikke `api.backx.trade` (serveren kaller ikke Privy fra en nettleser),
+  ikke Vercel-preview-adresser og ikke `localhost` i produksjonsappen. Trenger vi lokal testing, lager vi en egen Privy-testapp.
 - App-id er offentlig. App-secret er hemmelig og går kun i Railway.
 - «Secure your app»: begge punktene er gjort i koden. CSP og X-Frame-Options sendes fra `web/vercel.json`
   på alle sider. Huk av begge og trykk Continue. Sjekk: `curl -sI https://backx.trade | grep -i content-security`.
