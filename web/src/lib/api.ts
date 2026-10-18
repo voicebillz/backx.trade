@@ -6,7 +6,8 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const r = await fetch(BASE + path, { ...init, credentials: 'include' });
+  // Never hang the UI on a slow or down API.
+  const r = await fetch(BASE + path, { ...init, credentials: 'include', signal: init.signal ?? AbortSignal.timeout(8000) });
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new ApiError(r.status, body.error || 'error');
   return body as T;

@@ -56,7 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthState = {
     status, me,
-    canSignIn: !!privy?.ready && checked && !me,
+    // Not gated on the session check: the token exchange itself waits for it.
+    canSignIn: !!privy?.ready && !me,
     signIn: privy?.login ?? noop,
     signOut,
   };
