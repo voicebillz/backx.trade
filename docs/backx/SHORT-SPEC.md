@@ -23,7 +23,7 @@ Copy: «Issue» og «Short», aldri «leverage», aldri «zero risk».
 
 ### 2.1 Åpning
 1. Traderen setter inn innsatsen X i **USDC** (samme som Hedge).
-2. Åpningsgebyrer av innsatsen: 2 % holders + 0,5 % safety fund → E₀.
+2. Åpningsgebyrer av innsatsen: 2 % holders + 0,5 % Reserve Security Fund → E₀.
 3. Notional **N = m · E₀** (ved 5× og $100: N ≈ $487,50).
    - Forskjell fra Hedge: på Hedge kjøper traderens egne penger også coinen, så bare
      (m − 1)·X lånes. På Short er traderens penger **sikkerhet i USD**, og *hele*
@@ -82,7 +82,7 @@ Hedge 1× låner ingenting.
 ## 4. Likvidering og gap
 - Måles på **netto tilbakekjøpskost** (exact-output-quote inkl. fee og impact), ikke skjermkurs.
 - **Gap:** stiger prisen forbi likvideringspunktet før tilbakekjøpet går gjennom, holder ikke C
-  til å kjøpe alle q PONS. Da kjøpes så mange som mulig, og **safety fund kjøper resten**.
+  til å kjøpe alle q PONS. Da kjøpes så mange som mulig, og **Reserve Security Fund kjøper resten**.
   Først når fondet er tomt taper issuers, pro rata.
 - **Pris mot manipulasjon:** issuer tjener på likvidering, og en pumpe i én blokk kunne
   likvidert shorts. Derfor TWAP- eller oracle-vakt + `minOut`/`maxIn` på hver swap, akkurat
@@ -140,7 +140,7 @@ Prinsipper som gjelder (som Hedge):
 
 ## 8. Åpne beslutninger (Short)
 1. Issuer-andeler fra shorts utbetales i tokenet (anbefalt) eller i USDC.
-2. Safety fund felles eller per side (anbefalt: per side).
+2. Reserve Security Fund felles eller per side (anbefalt: per side).
 3. Short-maks per coin ved lansering (tabell §6 er utgangspunkt).
 4. Permissionless likvidering eller kun vår keeper (felles med Hedge).
 5. Squeeze-tak: maks samlet short per coin som andel av pool-dybde.

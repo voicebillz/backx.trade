@@ -37,7 +37,10 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Never commit `.env`, keys or keypair files. `VITE_*` ends up in the browser: no secrets there.
 - Owner keys are never handled by a server or script. Safe `0xfa408F75490C0412d4a5F45FA7553Aff03249BE4` owns the contracts.
 - On-chain access is read-only unless the owner explicitly asks otherwise.
-- Contracts are not written until the open decisions in the spec (§11) are settled with the owner.
+- Contracts live in `contracts/` (Foundry, OpenZeppelin v5.1.0, owner = the Safe from the constructor). Written at the
+  owner's request 2026-10-18; NOT audited, NOT deployed. Deploying needs owner sign-off on the open decisions, the
+  swap adapter + TWAP oracle per pool, fork tests and an external audit. `forge test` must stay green.
+- Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers): change both together.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.

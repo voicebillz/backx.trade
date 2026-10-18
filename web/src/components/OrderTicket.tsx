@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import type { Market } from '../lib/markets';
 import { price, usd } from '../lib/format';
-import type { Quote, Side } from '../lib/hedge';
+import { maxNotional, type Quote, type Side } from '../lib/hedge';
 import { MultiplierSlider } from './MultiplierSlider';
 import { CoinIcon } from './CoinIcon';
 
@@ -24,6 +24,20 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
   const id = useId();
   const short = side === 'short';
   const max = short ? market.shortMaxM : market.maxM;
+  const maxStake = Math.floor(maxNotional(market.depth) / Math.max(m, 1));
+  const tooBig = (parseFloat(stake) || 0) > maxStake;
+
+  if (short && max < 1) {
+    return (
+      <aside className="panel ticket is-short" aria-label="Order ticket">
+        <div className="seg" role="tablist" aria-label="Side">
+          <button role="tab" aria-selected={false} onClick={() => onSide('hedge')}>▲ Hedge</button>
+          <button role="tab" aria-selected className="active short">▼ Short</button>
+        </div>
+        <p className="note">Shorts are off for {market.symbol}: its pool is too thin for issuers to be safe from sudden pumps.</p>
+      </aside>
+    );
+  }
 
   return (
     <aside className={'panel ticket' + (short ? ' is-short' : '')} aria-label="Order ticket">
@@ -48,6 +62,7 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
           <input id={id + 'stake'} inputMode="decimal" value={stake} onChange={(e) => onStake(e.target.value.replace(/[^0-9.]/g, ''))} className="num" />
           <button className="max-btn" disabled title="Sign in to use your balance">Max</button>
         </div>
+        <span className={tooBig ? 'field-err' : 'hint'}>Max {usd(maxStake, 0)} at {m}× (keeps price impact under 0.5%).</span>
       </div>
 
       <div className="field">
@@ -95,7 +110,7 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
           <dl className="kv small">
             <div><dt>Holders (2% of stake)</dt><dd className="num">{usd(q.fees.holders)}</dd></div>
             <div><dt>Borrow (0.2% of {short ? 'tokens lent' : 'loan'})</dt><dd className="num">{usd(q.fees.borrow)}</dd></div>
-            <div><dt>Safety fund (0.5%)</dt><dd className="num">{usd(q.fees.safety)}</dd></div>
+            <div><dt>Reserve Security Fund</dt><dd className="num">{usd(q.fees.rsf)}</dd></div>
             <div><dt>Swap + impact, both ways (est.)</dt><dd className="num">{usd(q.fees.swap)}</dd></div>
           </dl>
         )}

@@ -66,7 +66,7 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
   const maxM = market ? (side === 'short' ? market.shortMaxM : market.maxM) : 30; // no clamp before a market loads
-  useEffect(() => { setM((x) => Math.min(x, maxM)); }, [maxM]);
+  useEffect(() => { setM((x) => Math.max(1, Math.min(x, maxM))); }, [maxM]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheet(false); };
     addEventListener('keydown', onKey);

@@ -139,8 +139,8 @@ function IssueModal({ market, initial, onClose }: { market: Market; initial: 'us
         </dl>
         <p className="hint">
           {tok
-            ? `Your ${market.symbol} stays ${market.symbol}: its dollar value moves with the price, and earnings are paid in ${market.symbol}. A sudden pump past a short's liquidation can leave a gap; the safety fund covers it first.`
-            : 'Your USDC is lent to Hedges and comes back first when they close. A sudden drop past a liquidation can leave a gap; the safety fund covers it first.'}
+            ? `Your ${market.symbol} stays ${market.symbol}: its dollar value moves with the price, and earnings are paid in ${market.symbol}. A sudden pump past a short's liquidation can leave a gap; the Reserve Security Fund covers it first.`
+            : 'Your USDC is lent to Hedges and comes back first when they close. A sudden drop past a liquidation can leave a gap; the Reserve Security Fund covers it first.'}
         </p>
         <button className="btn btn-gold btn-block" disabled>Issuing opens at launch</button>
       </div>
