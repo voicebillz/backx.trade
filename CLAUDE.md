@@ -40,7 +40,10 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Contracts live in `contracts/` (Foundry, OpenZeppelin v5.1.0, owner = the Safe from the constructor). Written at the
   owner's request 2026-10-18; NOT audited, NOT deployed. Deploying needs owner sign-off on the open decisions, the
   swap adapter + TWAP oracle per pool, fork tests and an external audit. `forge test` must stay green.
-- Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers): change both together.
+- Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
+- Crash cover (owner 2026-10-18): a side's open positions may never have a one-jump gap (market crashBps / pumpBps)
+  larger than that side's Reserve Security Fund; it cannot be switched off. Limit (take-profit) orders fill via keeper
+  on the TWAP, at most 1 % worse than the limit. Details: `docs/backx/FEES-AND-MARGINS.md` §3b–3c.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.

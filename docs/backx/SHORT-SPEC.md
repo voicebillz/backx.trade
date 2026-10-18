@@ -89,6 +89,8 @@ Hedge 1× låner ingenting.
 - **Pris mot manipulasjon:** issuer tjener på likvidering, og en pumpe i én blokk kunne
   likvidert shorts. Derfor TWAP- eller oracle-vakt + `minOut`/`maxIn` på hver swap, akkurat
   som Hedge. **ÅPEN:** permissionless likvidering eller bare vår keeper (samme beslutning som Hedge).
+- **Krasjvern (bygget):** en pumpe i ett hopp kan koste fondet mange ganger innsatsen. Nye shorts avvises når
+  fondet ikke dekker summen av alle åpne shorts' verste hull (`FEES-AND-MARGINS.md` §3b).
 - **Squeeze-tak:** samlet åpen short per coin begrenses så tilbakekjøpet av alle shorts aldri
   flytter prisen mer enn ca. 1 % (samme regel som posisjonsstørrelse på Hedge).
 

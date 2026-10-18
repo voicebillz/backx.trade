@@ -65,6 +65,54 @@ Prisen for marginen: likvideringen kommer litt tidligere for traderen på høy m
   dekke et gap**, aldri til eier. Er fondet tomt, deles tapet pro rata av issuers (skrives av).
 - **ÅPEN:** hva som skjer med overskudd over et visst nivå (til issuers, holders, eller bli stående).
 
+## 3b. Krasjvern: fondet bestemmer hvor mye som kan være åpent (2026-10-18)
+
+Problemet: en krasj eller pumpe **i ett hopp** (rug, børsnyhet) rekker forbi likvideringen, og da betaler
+fondet hullet. Per $100-posisjon er det mye mer enn de $0,50–1,40 fondet får inn
+(`SCENARIOS-100.md` og `sim/scenarios.py`):
+
+| m | Hedge: krasj −30 % | −50 % | −70 % | Short: pumpe +30 % | +100 % | +200 % |
+|---|---|---|---|---|---|---|
+| 2× | $0 | $1 | $41 | $0 | $98 | $293 |
+| 5× | $52 | $152 | $251 | $50 | $391 | $879 |
+| 10× | $203 | $402 | $601 | $197 | $880 | $1 855 |
+| 30× | $806 | $1 405 | $2 003 | $787 | $2 834 | $5 759 |
+
+Hedge 1× låner ingenting og koster fondet aldri noe. Et fall stopper på −100 %, mens en pumpe ikke har noe tak.
+Derfor er Short den farligste siden.
+
+**Regelen i kontrakten** (`BackxPositionManager`, testet):
+- Hver coin har en **krasj** (Hedge) og en **pumpe** (Short) som fondet skal tåle i ett hopp (`crashBps`, `pumpBps`).
+- Hver posisjon regner ut sitt verste hull ved åpning: Hedge `L·c − E·(1−c)`, Short `N·c − E`.
+  Testet mot det kontrakten faktisk betaler ved et hopp: innenfor 5 %.
+- Summen for alle åpne posisjoner på en side må være **≤ det fondet har**. Ellers avvises nye posisjoner
+  (`FundTooSmall`). Åpne posisjoner berøres aldri. Når posisjoner lukkes, frigjøres plassen.
+- Krasjvernet kan ikke slås av: minst 20 % hver vei. `stressCoverBps` (standard 100 %, minst 20 %) lar Safe si at
+  fondet bare må dekke en del av summen, ut fra at ikke alle coins krasjer samtidig.
+
+Anbefalte nivåer (**ÅPEN**, eier bestemmer):
+
+| Coin-type | Krasj (Hedge) | Pumpe (Short) |
+|---|---|---|
+| Major (BTC/ETH) | 30 % | 30 % |
+| Large | 50 % | 100 % |
+| Mid / meme | 70 % | 200 % |
+| Small (GAZZ-type) | 90 % | av |
+
+Hva det betyr: et fond på **$100 000** tåler ca. 124 Hedge-posisjoner à $100 på 30× i en major
+(krasj 30 %), eller ca. 166 på 10× i en memecoin (krasj 70 %). Fondet må derfor **fylles før lansering**
+(**ÅPEN:** hvor mye), og det vokser med hver posisjon. Uten penger i fondet kan bare Hedge 1× åpnes.
+
+## 3c. Limit-ordre (take profit)
+
+- Traderen kan sette en **pris** ved åpning eller senere (`setLimit`, 0 = fjern). Hedge: over dagens pris
+  («Sell at»). Short: under dagens pris («Buy back at»).
+- En keeper lukker posisjonen når **TWAP** har nådd prisen (`executeLimit`). En pris-spike i én blokk kan ikke
+  utløse den (testet). Fyllingen er aldri mer enn **1 %** dårligere enn limiten (`limitSlipBps`, maks 5 %).
+- Oppgjøret er en vanlig lukking: issuers får principal tilbake først, så p av gevinsten.
+- Billetten viser «At your limit …, worst fill» i stedet for «If it rises 10 %» når en limit er satt.
+- Det er ingen stop-loss: likvideringen er gulvet.
+
 ## 4. Maks multiplikator (v3)
 
 | Pool | Hedge | Short | Grunn |
@@ -95,7 +143,8 @@ Sikkerhet i koden:
 - Eier kan endre parametere bare innenfor harde grenser (e ≥ 5 %, holders ≤ 3 %, buffer ≤ 5 % …).
 - Lukking og likvidering virker alltid, også når nye posisjoner er pauset.
 
-Tester (`forge test`): Hedge og Short 5× med gevinst (issuers først), 1× uten lån, likvideringsnivå
+Tester (`forge test`, 27 stk.): limit-ordre begge sider (TWAP-vern, regler, tilgang), krasjvern (fondet stopper nye
+posisjoner, estimatet dekker faktisk gap, kan ikke slås av), Hedge og Short 5× med gevinst (issuers først), 1× uten lån, likvideringsnivå
 30× og 10× = simuleringen (±0,06 %), likvidering 30× uten tap, gap 30× dekket av fondet (begge sider),
 tomt fond → avskrivning, eier kan ikke lukke under null, TWAP-vern, caps, pause, tilgang,
 uttaksgrense, parametergrenser, og fuzz (3 000 tilfeldige posisjoner 1–30×, ±30 %): alltid
@@ -106,5 +155,5 @@ principal tilbake, ingenting fast i kontrakten, issuers aldri i minus.
 2. `IPriceOracle`: TWAP per pool (vindu og observasjoner avgjøres per coin).
 3. Keeper-tjeneste (egen Railway-tjeneste uten offentlig domene, egen nøkkel).
 4. Fork-tester mot Robinhood mainnet, deretter **ekstern audit**.
-5. Åpne beslutninger: §1.4, §3, permissionless likvidering, oppgraderbar vs immutable, feeExempt for
+5. Åpne beslutninger: §1.4, §3, §3b (nivåer og hvor mye fondet fylles med), permissionless likvidering, oppgraderbar vs immutable, feeExempt for
    GUSD, juridisk sjekk.

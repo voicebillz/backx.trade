@@ -635,3 +635,11 @@ tr.zero { opacity: .5; }
 }
 .session-rows { display: flex; flex-direction: column; gap: 14px; }
 @media (max-width: 899px) { .session-rows .btn { min-height: 44px; } }
+
+/* Limit (take-profit) quick picks */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-btn { font-family: var(--mono); font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--raised); color: var(--ink-2); transition: border-color 160ms var(--ease-out), color 160ms var(--ease-out); }
+.chip-btn:hover { color: var(--ink); border-color: var(--ink-3); }
+.ticket:not(.is-short) .chip-btn.on { color: var(--price-up); border-color: var(--price-up); }
+.ticket.is-short .chip-btn.on { color: var(--price-down); border-color: var(--price-down); }
+@media (max-width: 899px) { .chip-btn { min-height: 36px; padding: 6px 12px; } }

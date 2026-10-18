@@ -12,7 +12,7 @@ contract HedgeTest is Base {
     function test_hedge_5x_up10_issuersFirstThenShare() public {
         uint256 assetsBefore = usdVault.totalAssets();
         uint256 id = _hedge(100 * USD, 5);
-        (,,,,,, uint128 equity, uint128 lent, uint128 coins,,) = pm.positions(id);
+        (,,,,,, uint128 equity, uint128 lent, uint128 coins,,,,) = pm.positions(id);
         assertEq(lent, 400 * USD, "L = (m-1)X");
         assertEq(usdVault.lent(), 400 * USD);
         // fees: holders 2 %, RSF 0.5 % + 0.03 % of L, borrow 0.2 % of L
@@ -36,7 +36,7 @@ contract HedgeTest is Base {
 
     function test_hedge_1x_noLoan_noLiquidation_issuersZero() public {
         uint256 id = _hedge(100 * USD, 1);
-        (,,,,,,, uint128 lent,,,) = pm.positions(id);
+        (,,,,,,, uint128 lent,,,,,) = pm.positions(id);
         assertEq(lent, 0);
         _move(-5_000);
         assertFalse(pm.isLiquidatable(id), "1x never liquidates");
@@ -82,11 +82,11 @@ contract HedgeTest is Base {
     }
 
     function test_hedge_gap_fundEmpty_writeOff() public {
+        uint256 id = _hedge(100 * USD, 30); // opens while the fund still covers it
         uint256 seed = hedgeFund.balance();
         vm.prank(address(pm));
-        hedgeFund.cover(seed); // drain the seed
+        hedgeFund.cover(seed); // then the fund is drained
         usd.burn(address(pm), usd.balanceOf(address(pm)));
-        uint256 id = _hedge(100 * USD, 30);
         _move(-1_400);
         uint256 assetsBefore = usdVault.totalAssets();
         vm.prank(keeper);
@@ -112,7 +112,7 @@ contract ShortTest is Base {
     function test_short_5x_down10_tokensBackFirst() public {
         uint256 coinsBefore = tokenVault.totalAssets();
         uint256 id = _short(100 * USD, 5);
-        (,,,,,,, uint128 q, uint128 held, uint128 issuerUsd,) = pm.positions(id);
+        (,,,,,,, uint128 q, uint128 held, uint128 issuerUsd,,,) = pm.positions(id);
         assertEq(tokenVault.lent(), q, "q coins lent");
         assertGt(held, 0);
         assertGt(issuerUsd, 0);
@@ -188,7 +188,7 @@ contract GuardsTest is Base {
         _deploy(30, 56_000 * USD); // GAZZ-like pool
         vm.prank(trader);
         vm.expectRevert(); // TooLarge or WouldLiquidate: $3,000 notional in a $56k pool
-        pm.openHedge(address(coin), 100 * USD, 30, 0);
+        pm.openHedge(address(coin), 100 * USD, 30, 0, 0);
     }
 
     function test_caps() public {
@@ -196,13 +196,13 @@ contract GuardsTest is Base {
         pm.setMarket(address(coin), _market(10, 0));
         vm.startPrank(trader);
         vm.expectRevert(BackxPositionManager.BadM.selector);
-        pm.openHedge(address(coin), 100 * USD, 11, 0);
+        pm.openHedge(address(coin), 100 * USD, 11, 0, 0);
         vm.expectRevert(BackxPositionManager.BadM.selector);
-        pm.openShort(address(coin), 100 * USD, 1, 0);
+        pm.openShort(address(coin), 100 * USD, 1, 0, 0);
         vm.expectRevert(BackxPositionManager.TooLarge.selector);
-        pm.openHedge(address(coin), 10_000 * USD, 10, 0);
+        pm.openHedge(address(coin), 10_000 * USD, 10, 0, 0);
         vm.expectRevert(BackxPositionManager.MarketOff.selector);
-        pm.openHedge(address(0xBEEF), 100 * USD, 2, 0);
+        pm.openHedge(address(0xBEEF), 100 * USD, 2, 0, 0);
         vm.stopPrank();
     }
 
@@ -212,7 +212,7 @@ contract GuardsTest is Base {
         pm.pause();
         vm.prank(trader);
         vm.expectRevert();
-        pm.openHedge(address(coin), 100 * USD, 5, 0);
+        pm.openHedge(address(coin), 100 * USD, 5, 0, 0);
         vm.prank(trader);
         pm.close(id, 0); // still works
     }
@@ -253,5 +253,144 @@ contract GuardsTest is Base {
         vm.expectRevert(BackxPositionManager.BadParams.selector);
         pm.setFees(BackxPositionManager.Fees(500, 50, 3, 20, 200)); // holders above 3 %
         vm.stopPrank();
+    }
+}
+
+/// Take-profit (limit) orders: filled by a keeper once the TWAP reaches the limit, never worse than limit − slip.
+contract LimitTest is Base {
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+    }
+
+    function test_hedge_limit_fillsAtTarget() public {
+        vm.prank(trader);
+        uint256 id = pm.openHedge(address(coin), 100 * USD, 5, 0, 2_200 * USD); // sell at $2,200 (+10 %)
+        _move(500);
+        assertFalse(pm.isLimitReached(id));
+        vm.prank(keeper);
+        vm.expectRevert(BackxPositionManager.LimitNotReached.selector);
+        pm.executeLimit(id);
+
+        _move(1_000);
+        assertTrue(pm.isLimitReached(id));
+        uint256 before = usd.balanceOf(trader);
+        vm.prank(keeper);
+        pm.executeLimit(id);
+        assertEq(usdVault.lent(), 0, "principal back first");
+        assertGt(usd.balanceOf(trader) - before, 100 * USD, "trader took the profit");
+        assertEq(pm.hedgeStressUsd(), 0, "crash cover released");
+    }
+
+    function test_short_limit_fillsAtTarget() public {
+        vm.prank(trader);
+        uint256 id = pm.openShort(address(coin), 100 * USD, 5, 0, 1_800 * USD); // buy back at $1,800 (−10 %)
+        _move(-500);
+        assertFalse(pm.isLimitReached(id));
+        _move(-1_000);
+        uint256 before = usd.balanceOf(trader);
+        vm.prank(keeper);
+        pm.executeLimit(id);
+        assertEq(tokenVault.lent(), 0, "exactly q coins back");
+        assertGt(usd.balanceOf(trader) - before, 100 * USD);
+        assertEq(pm.shortStressUsd(), 0);
+    }
+
+    function test_limit_spikeAloneCannotFill() public {
+        vm.prank(trader);
+        uint256 id = pm.openHedge(address(coin), 100 * USD, 5, 0, 2_200 * USD);
+        pool.setSpotOnly(P0 * 12_000 / 10_000); // TWAP still at $2,000
+        assertFalse(pm.isLimitReached(id));
+        vm.prank(keeper);
+        vm.expectRevert(BackxPositionManager.LimitNotReached.selector);
+        pm.executeLimit(id);
+    }
+
+    function test_limit_rules() public {
+        vm.startPrank(trader);
+        vm.expectRevert(BackxPositionManager.BadLimit.selector); // hedge limit below today's price
+        pm.openHedge(address(coin), 100 * USD, 5, 0, 1_900 * USD);
+        vm.expectRevert(BackxPositionManager.BadLimit.selector); // short limit above today's price
+        pm.openShort(address(coin), 100 * USD, 5, 0, 2_100 * USD);
+        uint256 id = pm.openHedge(address(coin), 100 * USD, 5, 0, 0);
+        pm.setLimit(id, 2_500 * USD);
+        vm.stopPrank();
+        (,,,,,,,,,,, uint128 limitValue,) = pm.positions(id);
+        assertGt(limitValue, 0);
+
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(BackxPositionManager.NotOwner.selector);
+        pm.setLimit(id, 3_000 * USD);
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(BackxPositionManager.NotKeeper.selector);
+        pm.executeLimit(id);
+
+        vm.prank(trader);
+        pm.setLimit(id, 0); // cancel
+        _move(3_000);
+        vm.prank(keeper);
+        vm.expectRevert(BackxPositionManager.LimitNotReached.selector);
+        pm.executeLimit(id);
+        vm.prank(trader);
+        pm.close(id, 0); // closing by hand always works
+    }
+}
+
+/// Crash cover: the open positions' worst-case gap per side may never exceed what that side's fund holds.
+contract CrashCoverTest is Base {
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+    }
+
+    function test_fundLimitsOpenPositions() public {
+        // Hedge 30× $100, −30 % in one jump: L·c − E·(1 − c) ≈ 2,900·0.3 − 92·0.7 ≈ $806 per position.
+        uint256 id = _hedge(100 * USD, 30);
+        (,,,,,,,,,,,, uint128 stress) = pm.positions(id);
+        assertApproxEqAbs(stress, 806 * USD, 2 * USD);
+        // $100k fund: about 124 such positions, then it stops.
+        uint256 n = 1;
+        vm.startPrank(trader);
+        while (true) {
+            try pm.openHedge(address(coin), 100 * USD, 30, 0, 0) { n++; } catch (bytes memory err) {
+                assertEq(bytes4(err), BackxPositionManager.FundTooSmall.selector);
+                break;
+            }
+        }
+        vm.stopPrank();
+        assertApproxEqAbs(n, 124, 2);
+        assertLe(pm.hedgeStressUsd(), hedgeFund.balance());
+        // 1× borrows nothing: no crash risk, always allowed.
+        _hedge(100 * USD, 1);
+        // Shorts use their own fund.
+        _short(100 * USD, 10);
+    }
+
+    /// The estimate is never below what the fund really pays when the crash happens in one jump.
+    function test_stressCoversRealGap() public {
+        uint256 h = _hedge(100 * USD, 30);
+        uint256 s = _short(100 * USD, 30);
+        (,,,,,,,,,,,, uint128 hs) = pm.positions(h);
+        (,,,,,,,,,,,, uint128 ss) = pm.positions(s);
+        _move(-3_000);
+        uint256 f0 = hedgeFund.balance();
+        vm.prank(keeper);
+        pm.liquidate(h);
+        assertLe(f0 - hedgeFund.balance(), uint256(hs) * 105 / 100, "hedge gap within 5 % of the estimate");
+        _move(3_000);
+        f0 = shortFund.balance();
+        vm.prank(keeper);
+        pm.liquidate(s);
+        assertLe(f0 - shortFund.balance(), uint256(ss) * 110 / 100, "short gap within 10 % of the estimate");
+        assertEq(pm.hedgeStressUsd() + pm.shortStressUsd(), 0);
+    }
+
+    function test_crashCoverCannotBeSwitchedOff() public {
+        BackxPositionManager.Market memory mk = _market(30, 30);
+        mk.crashBps = 0;
+        vm.prank(safe);
+        vm.expectRevert(BackxPositionManager.BadParams.selector);
+        pm.setMarket(address(coin), mk);
+        vm.prank(safe);
+        vm.expectRevert(BackxPositionManager.BadParams.selector);
+        pm.setStressCover(1_000);
     }
 }

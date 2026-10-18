@@ -64,9 +64,9 @@ abstract contract Base is Test {
         tokenVault.deposit(2_500 * COIN, issuer);
         vm.stopPrank();
 
-        // Reserve Security Funds start with a small seed.
-        usd.mint(address(hedgeFund), 1_000 * USD);
-        usd.mint(address(shortFund), 1_000 * USD);
+        // Reserve Security Funds start with a seed large enough for the crash cover of the tests' positions.
+        usd.mint(address(hedgeFund), 100_000 * USD);
+        usd.mint(address(shortFund), 100_000 * USD);
 
         usd.mint(trader, 1_000_000 * USD);
         vm.prank(trader);
@@ -85,6 +85,8 @@ abstract contract Base is Test {
             maxNotionalUsd: uint128(50_000 * USD),
             maxOpenHedgeUsd: uint128(2_000_000 * USD),
             maxOpenShortUsd: uint128(2_000_000 * USD),
+            crashBps: 3_000,
+            pumpBps: 3_000,
             openHedgeUsd: 0,
             openShortUsd: 0
         });
@@ -96,12 +98,12 @@ abstract contract Base is Test {
 
     function _hedge(uint256 stake, uint8 m) internal returns (uint256 id) {
         vm.prank(trader);
-        id = pm.openHedge(address(coin), stake, m, 0);
+        id = pm.openHedge(address(coin), stake, m, 0, 0);
     }
 
     function _short(uint256 stake, uint8 m) internal returns (uint256 id) {
         vm.prank(trader);
-        id = pm.openShort(address(coin), stake, m, 0);
+        id = pm.openShort(address(coin), stake, m, 0, 0);
     }
 
     /// Smallest adverse move (in 0.01 % steps from entry) at which the position becomes liquidatable.

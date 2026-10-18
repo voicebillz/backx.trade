@@ -40,7 +40,8 @@ contract FuzzTest is Base {
         // Issuers never end below where they started (fund covers gaps; rounding ≤ 2 units).
         assertGe(usdVault.totalAssets() + 2, usdAssets, "usd issuers whole");
         assertGe(tokenVault.totalAssets() + 2, coinAssets, "coin issuers whole");
-        (address owner,,,,,,,,,,) = pm.positions(id);
+        (address owner,,,,,,,,,,,,) = pm.positions(id);
         assertEq(owner, address(0), "position gone");
+        assertEq(pm.hedgeStressUsd() + pm.shortStressUsd(), 0, "crash cover released");
     }
 }

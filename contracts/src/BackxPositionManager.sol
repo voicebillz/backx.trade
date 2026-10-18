@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {BackxReserveVault} from "./BackxReserveVault.sol";
 import {BackxReserveSecurityFund} from "./BackxReserveSecurityFund.sol";
@@ -26,6 +27,11 @@ import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 /// fee and impact) and must be confirmed by the TWAP oracle, so a one-block spike cannot trigger it.
 /// A gap (price past the trigger before the swap) is covered by the side's Reserve Security Fund first,
 /// then written off pro rata against the reserve.
+/// Crash cover: every position adds its worst-case gap (the market's crash/pump in one jump) to a running
+/// total per side, and no position opens unless the side's fund could pay that total. A rug or pump can
+/// then never reach the issuers' principal while the fund has money (docs/backx/FEES-AND-MARGINS.md §3).
+/// Limit (take-profit): the trader can set a price; a keeper sells (Hedge) or buys back (Short) once the
+/// TWAP reaches it, never worse than the limit minus limitSlipBps.
 contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -45,6 +51,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint128 maxNotionalUsd;         // per position: keeps impact ≈ ≤ 0.5 % per way
         uint128 maxOpenHedgeUsd;        // all hedges together, USD lent
         uint128 maxOpenShortUsd;        // all shorts together, USD value lent at open
+        uint16 crashBps;                // Hedge crash cover: one-jump fall the fund must survive (e.g. 3000 = −30 %)
+        uint16 pumpBps;                 // Short crash cover: one-jump rise the fund must survive (e.g. 10000 = +100 %)
         uint128 openHedgeUsd;
         uint128 openShortUsd;
     }
@@ -79,6 +87,14 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     /// @notice How close the TWAP must be to the trigger to confirm a liquidation. Must stay well under the
     /// smallest liquidation distance (≈1.5 % at 30×), or a one-block spot spike could liquidate.
     uint16 public twapConfirmBps = 25;
+    /// @notice A limit close may fill at most this much worse than the limit (pool fee + impact).
+    uint16 public limitSlipBps = 100;
+    /// @notice Share of the worst-case gap total the fund must hold. 10 000 = the fund covers every open
+    /// position crashing at once; lower assumes not all coins crash together.
+    uint16 public stressCoverBps = 10_000;
+    /// @notice Worst-case gap of all open positions, per side (USD). Must stay covered by that side's fund.
+    uint256 public hedgeStressUsd;
+    uint256 public shortStressUsd;
     mapping(address => bool) public keepers;
     mapping(address => Market) public markets;
     Params[MAX_M + 1] internal _params;
@@ -97,6 +113,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint128 amount;       // hedge: coins held. short: USD held (C)
         uint128 issuerUsd;    // short: borrow fee waiting to be bought as the coin at close
         uint128 lentUsd;      // USD value lent at open (open-interest accounting)
+        uint128 limitValue;   // take-profit: hedge = USD the coins must fetch, short = USD the q coins may cost. 0 = none
+        uint128 stressUsd;    // this position's share of the side's worst-case gap
     }
 
     mapping(uint256 => Position) public positions;
@@ -110,6 +128,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     event KeeperSet(address keeper, bool on);
     event Opened(uint256 indexed id, address indexed owner, address indexed token, bool isShort, uint8 m, uint256 stake, uint256 lent, uint256 amount);
     event Closed(uint256 indexed id, bool liquidated, uint256 toTrader, uint256 toIssuers, uint256 covered, uint256 writtenOff);
+    event LimitSet(uint256 indexed id, uint256 limitValue);
+    event LimitFilled(uint256 indexed id);
 
     error MarketOff();
     error BadM();
@@ -123,6 +143,9 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     error OracleMismatch();
     error Underwater();
     error BadParams();
+    error BadLimit();
+    error LimitNotReached();
+    error FundTooSmall();
 
     constructor(IERC20 usd_, BackxReserveSecurityFund hedgeFund_, BackxReserveSecurityFund shortFund_, address feeCollector_, address owner_)
         Ownable(owner_)
@@ -149,6 +172,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
 
     function setMarket(address token, Market calldata mk) external onlyOwner {
         if (mk.maxHedgeM > MAX_M || mk.maxShortM > MAX_M) revert BadM();
+        // Crash cover may not be switched off: at least a 20 % jump each way, at most −100 % / +500 %.
+        if (mk.crashBps < 2_000 || mk.crashBps > BPS || mk.pumpBps < 2_000 || mk.pumpBps > 50_000) revert BadParams();
         Market storage cur = markets[token];
         uint128 oh = cur.openHedgeUsd;
         uint128 os = cur.openShortUsd;
@@ -189,6 +214,16 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         twapConfirmBps = bps;
     }
 
+    function setLimitSlip(uint16 bps) external onlyOwner {
+        if (bps < 10 || bps > 500) revert BadParams();
+        limitSlipBps = bps;
+    }
+
+    function setStressCover(uint16 bps) external onlyOwner {
+        if (bps < 2_000 || bps > BPS) revert BadParams();
+        stressCoverBps = bps;
+    }
+
     function setKeeper(address k, bool on) external onlyOwner {
         keepers[k] = on;
         emit KeeperSet(k, on);
@@ -214,7 +249,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     // ---- open ------------------------------------------------------------------------------------
 
     /// @param minCoinsOut slippage guard for buying the coin (from the UI quote).
-    function openHedge(address token, uint256 stake, uint8 m, uint256 minCoinsOut)
+    /// @param limitPrice take-profit in USD base units per 1e18 coin base units, above today's price. 0 = none.
+    function openHedge(address token, uint256 stake, uint8 m, uint256 minCoinsOut, uint256 limitPrice)
         external
         nonReentrant
         whenNotPaused
@@ -239,6 +275,9 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
 
         usd.safeTransfer(feeCollector, holders);
         usd.safeTransfer(address(hedgeFund), rsf);
+        // Worst case in one jump of crashBps: L·c − E·(1 − c) of the principal is not covered by the coins.
+        uint256 stress = _gap(lentUsd * mk.crashBps, equity * (BPS - mk.crashBps));
+        _addStress(false, stress);
         if (lentUsd > 0) {
             usd.forceApprove(address(mk.usdVault), borrow);
             mk.usdVault.addEarnings(borrow);
@@ -253,14 +292,16 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         positions[id] = Position({
             owner: msg.sender, token: token, isShort: false, m: m, openedAt: uint40(block.timestamp),
             stake: SafeCast.toUint128(stake), equity: SafeCast.toUint128(equity), lent: SafeCast.toUint128(lentUsd), amount: SafeCast.toUint128(coins),
-            issuerUsd: 0, lentUsd: SafeCast.toUint128(lentUsd)
+            issuerUsd: 0, lentUsd: SafeCast.toUint128(lentUsd), limitValue: 0, stressUsd: SafeCast.toUint128(stress)
         });
         if (m > 1 && _hedgeTriggered(positions[id], mk)) revert WouldLiquidate();
+        if (limitPrice != 0) _setLimit(id, positions[id], limitPrice);
         emit Opened(id, msg.sender, token, false, m, stake, lentUsd, coins);
     }
 
     /// @param minUsdOut slippage guard for selling the borrowed coins.
-    function openShort(address token, uint256 stake, uint8 m, uint256 minUsdOut)
+    /// @param limitPrice take-profit in USD base units per 1e18 coin base units, below today's price. 0 = none.
+    function openShort(address token, uint256 stake, uint8 m, uint256 minUsdOut, uint256 limitPrice)
         external
         nonReentrant
         whenNotPaused
@@ -285,6 +326,9 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
 
         usd.safeTransfer(feeCollector, holders);
         usd.safeTransfer(address(shortFund), rsf);
+        // Worst case in one jump of pumpBps: buying q back costs N·(1 + c) but the position holds ≈ E + N.
+        uint256 stress = _gap(notional * mk.pumpBps, equity * BPS);
+        _addStress(true, stress);
 
         uint256 q = mk.oracle.tokenAmount(token, notional);
         mk.tokenVault.lend(q);
@@ -295,9 +339,11 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         positions[id] = Position({
             owner: msg.sender, token: token, isShort: true, m: m, openedAt: uint40(block.timestamp),
             stake: SafeCast.toUint128(stake), equity: SafeCast.toUint128(equity), lent: SafeCast.toUint128(q), amount: SafeCast.toUint128(equity + proceeds),
-            issuerUsd: SafeCast.toUint128(borrow), lentUsd: SafeCast.toUint128(notional)
+            issuerUsd: SafeCast.toUint128(borrow), lentUsd: SafeCast.toUint128(notional), limitValue: 0,
+            stressUsd: SafeCast.toUint128(stress)
         });
         if (_shortTriggered(positions[id], mk)) revert WouldLiquidate();
+        if (limitPrice != 0) _setLimit(id, positions[id], limitPrice);
         emit Opened(id, msg.sender, token, true, m, stake, q, equity + proceeds);
     }
 
@@ -325,11 +371,75 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         }
     }
 
+    /// @notice Set, move or cancel (0) the take-profit of an open position.
+    function setLimit(uint256 id, uint256 limitPrice) external {
+        Position storage pos = positions[id];
+        if (pos.owner != msg.sender) revert NotOwner();
+        _setLimit(id, pos, limitPrice);
+    }
+
+    /// @notice Closes a position at its limit once the TWAP has reached it (a one-block spike cannot).
+    /// Hedge: the sale must fetch ≥ limit − limitSlip. Short: the buy-back may cost ≤ limit + limitSlip.
+    /// The trader gets the normal close: principal to the issuers first, then p of the gain.
+    function executeLimit(uint256 id) external nonReentrant {
+        if (!permissionlessLiquidation && !keepers[msg.sender]) revert NotKeeper();
+        Position memory pos = positions[id];
+        if (pos.owner == address(0) || pos.limitValue == 0) revert LimitNotReached();
+        Market storage mk = markets[pos.token];
+        if (pos.isShort) {
+            if (mk.oracle.usdValue(pos.token, pos.lent) > pos.limitValue) revert LimitNotReached();
+            _closeShort(id, pos, false, uint256(pos.limitValue) * (BPS + limitSlipBps) / BPS);
+        } else {
+            if (mk.oracle.usdValue(pos.token, pos.amount) < pos.limitValue) revert LimitNotReached();
+            _closeHedge(id, pos, false, uint256(pos.limitValue) * (BPS - limitSlipBps) / BPS);
+        }
+        emit LimitFilled(id);
+    }
+
+    function isLimitReached(uint256 id) external view returns (bool) {
+        Position memory pos = positions[id];
+        if (pos.owner == address(0) || pos.limitValue == 0) return false;
+        Market storage mk = markets[pos.token];
+        return pos.isShort
+            ? mk.oracle.usdValue(pos.token, pos.lent) <= pos.limitValue
+            : mk.oracle.usdValue(pos.token, pos.amount) >= pos.limitValue;
+    }
+
     function isLiquidatable(uint256 id) external view returns (bool) {
         Position memory pos = positions[id];
         if (pos.owner == address(0)) return false;
         Market storage mk = markets[pos.token];
         return pos.isShort ? _shortTriggered(pos, mk) : (pos.m > 1 && _hedgeTriggered(pos, mk));
+    }
+
+    // ---- limit + crash cover --------------------------------------------------------------------
+
+    function _setLimit(uint256 id, Position storage pos, uint256 limitPrice) internal {
+        uint256 v;
+        if (limitPrice != 0) {
+            uint256 units = pos.isShort ? pos.lent : pos.amount;
+            v = Math.mulDiv(units, limitPrice, 1e18);
+            uint256 nowValue = markets[pos.token].oracle.usdValue(pos.token, units);
+            // Hedge sells above today's price, Short buys back below it (else it is not a limit, it is a close).
+            if (v == 0 || (pos.isShort ? v >= nowValue : v <= nowValue)) revert BadLimit();
+        }
+        pos.limitValue = SafeCast.toUint128(v);
+        emit LimitSet(id, v);
+    }
+
+    /// (a − b) / BPS, floored at zero. Inputs already scaled by BPS.
+    function _gap(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? (a - b) / BPS : 0;
+    }
+
+    /// Fails closed: the side's fund must cover stressCover of the side's total worst-case gap.
+    function _addStress(bool isShort, uint256 stress) internal {
+        if (stress == 0) return;
+        uint256 total = (isShort ? shortStressUsd : hedgeStressUsd) + stress;
+        uint256 fund = (isShort ? shortFund : hedgeFund).balance();
+        if (total * stressCoverBps > fund * BPS) revert FundTooSmall();
+        if (isShort) shortStressUsd = total;
+        else hedgeStressUsd = total;
     }
 
     // ---- triggers -------------------------------------------------------------------------------
@@ -365,6 +475,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         Market storage mk = markets[pos.token];
         delete positions[id];
         mk.openHedgeUsd -= pos.lentUsd;
+        hedgeStressUsd -= pos.stressUsd;
 
         // A liquidation may not sell more than liqMaxGap below the TWAP (no sandwich at the trigger).
         if (liquidated) minUsdOut = mk.oracle.usdValue(pos.token, pos.amount) * (BPS - liqMaxGapBps) / BPS;
@@ -406,6 +517,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         Market storage mk = markets[pos.token];
         delete positions[id];
         mk.openShortUsd -= pos.lentUsd;
+        shortStressUsd -= pos.stressUsd;
         Params memory pr = _params[pos.m];
 
         uint256 cost = mk.adapter.quoteExactOut(address(usd), pos.token, pos.lent);
