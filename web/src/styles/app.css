@@ -643,3 +643,8 @@ tr.zero { opacity: .5; }
 .ticket:not(.is-short) .chip-btn.on { color: var(--price-up); border-color: var(--price-up); }
 .ticket.is-short .chip-btn.on { color: var(--price-down); border-color: var(--price-down); }
 @media (max-width: 899px) { .chip-btn { min-height: 36px; padding: 6px 12px; } }
+
+/* Privy login modal (always dark, see privyBridge appearance): the email, SMS and "Other socials" icons are
+   Privy's own and use --privy-color-icon-muted (grey). Brand yellow instead. Privy sets its variables on
+   :root from a style tag added later, so html:root wins on specificity. */
+html:root { --privy-color-icon-muted: var(--brand); }
