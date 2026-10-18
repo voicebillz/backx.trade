@@ -140,6 +140,7 @@ authRouter.post('/session', async (req, res, next) => {
     await db.query(
       `insert into users (privy_did, wallet_address, signup_method, last_login_method, solana_address) values ($1, $2, $3, $3, $4)
        on conflict (privy_did) do update set last_login_at = now(), last_login_method = excluded.last_login_method,
+         signup_method = coalesce(users.signup_method, excluded.signup_method),
          solana_address = coalesce(excluded.solana_address, users.solana_address)`,
       [did, address, method, solanaAddress],
     );

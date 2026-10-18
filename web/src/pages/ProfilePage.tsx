@@ -9,6 +9,11 @@ import { CHAIN_LOGO, EVM_CHAINS, USDC, type EvmChain } from '../lib/assets';
 import { usd } from '../lib/format';
 import type { Balances } from '../lib/useBalances';
 
+const METHOD: Record<string, string> = {
+  email: 'Email', phone: 'Phone (SMS)', google: 'Google', twitter: 'X', discord: 'Discord', twitch: 'Twitch',
+  telegram: 'Telegram', farcaster: 'Farcaster', passkey: 'Passkey', apple: 'Apple',
+};
+
 const TABS: { id: Route; label: string }[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'security', label: 'Security' },
@@ -61,7 +66,7 @@ function ProfileTab({ me }: { me: Me }) {
         <div><dt>Picture</dt><dd><Avatar seed={me.avatarSeed} size={40} /><span className="muted small"> Assigned at sign-up</span></dd></div>
         <div><dt>EVM wallet</dt><dd className="num addr-line">{me.address} <Copy text={me.address} /></dd></div>
         <div><dt>Solana wallet</dt><dd className="num addr-line">{me.solanaAddress ? <>{me.solanaAddress} <Copy text={me.solanaAddress} /></> : <span className="muted">Being created. Sign in again if it does not show.</span>}</dd></div>
-        <div><dt>Signed up with</dt><dd>{me.signupMethod ?? '—'}</dd></div>
+        <div><dt>Signed up with</dt><dd>{me.signupMethod ? METHOD[me.signupMethod] ?? me.signupMethod : '—'}</dd></div>
         <div><dt>Member since</dt><dd>{new Date(me.memberSince).toLocaleString('en-GB')}</dd></div>
         <div><dt>Access</dt><dd>{me.isAdmin ? 'Admin (beta preview)' : 'Beta list'}</dd></div>
       </dl>
