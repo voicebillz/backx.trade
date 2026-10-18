@@ -5,16 +5,20 @@ import express from 'express';
 const PAGES = 2;              // 2 × 250 = 500 coins
 const PAGE_SIZE = 100;        // what the client gets per scroll page
 const CACHE_SEC = 90;
+// From sim/short_sim.py with a 1 % buffer: deep pools 0 gaps to 25×, $1M meme pools 0 gaps to 10×,
+// thin pools (GAZZ, $56k) gap from 2×. See docs/backx/SHORT-SPEC.md §6.
+const SHORT_CAP = { Major: 20, Large: 10, Mid: 5, Small: 1 };
 
+// shortMaxM: shorts lose on up-spikes, which gap harder than drops (docs/backx/SHORT-SPEC.md).
 function tier(mcap) {
-  if (mcap >= 10e9) return { maxM: 25, poolFee: 0.0005, kind: 'Major' };
-  if (mcap >= 1e9) return { maxM: 10, poolFee: 0.003, kind: 'Large' };
-  if (mcap >= 100e6) return { maxM: 5, poolFee: 0.003, kind: 'Mid' };
-  return { maxM: 3, poolFee: 0.003, kind: 'Small' };
+  if (mcap >= 10e9) return { maxM: 25, shortMaxM: SHORT_CAP.Major, poolFee: 0.0005, kind: 'Major' };
+  if (mcap >= 1e9) return { maxM: 10, shortMaxM: SHORT_CAP.Large, poolFee: 0.003, kind: 'Large' };
+  if (mcap >= 100e6) return { maxM: 5, shortMaxM: SHORT_CAP.Mid, poolFee: 0.003, kind: 'Mid' };
+  return { maxM: 3, shortMaxM: SHORT_CAP.Small, poolFee: 0.003, kind: 'Small' };
 }
 
 async function universe(redis) {
-  const cached = await redis.get('markets:v1');
+  const cached = await redis.get('markets:v2');
   if (cached) return JSON.parse(cached);
   const all = [];
   for (let page = 1; page <= PAGES; page++) {
@@ -46,7 +50,7 @@ async function universe(redis) {
       };
     })
     .sort((a, b) => b.change24h - a.change24h);
-  await redis.set('markets:v1', JSON.stringify(list), 'EX', CACHE_SEC);
+  await redis.set('markets:v2', JSON.stringify(list), 'EX', CACHE_SEC);
   return list;
 }
 

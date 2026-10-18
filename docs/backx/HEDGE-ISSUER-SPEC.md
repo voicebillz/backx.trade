@@ -5,6 +5,10 @@
 > `docs/backx/sim/`). Punkter merket **ÅPEN** må eieren avgjøre før kontraktene
 > skrives. Ekstern sikkerhetsreview er obligatorisk før ekte TVL.
 
+> **Tillegg 2026-10-18 (eier):** Short-siden og token-reserven er spesifisert i
+> `SHORT-SPEC.md`. Hedge tillater nå også **1×** (ingenting lånes, ingen likvidering, issuer 0 %).
+> Hver coin har to reserver: USD (backer Hedge) og selve tokenet (backer Short).
+
 ## 1. Produktet i én setning
 To sider av samme marked: **Hedger** tar en posisjon med multiplikator (2× og
 oppover) på en coin, og **Issuer** fyller multiplikatoren med egen kapital og

@@ -16,7 +16,8 @@ export interface Market {
   marketCap: number;   // USD
   depth: number;       // demo pool depth, USD
   poolFee: number;     // per swap
-  maxM: number;
+  maxM: number;        // Hedge
+  shortMaxM: number;   // Short: lower, up-spikes gap harder (docs/backx/SHORT-SPEC.md)
 }
 
 interface Page { items: Market[]; hasMore: boolean }
