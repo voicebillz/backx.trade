@@ -131,7 +131,13 @@ export function ComingSoon() {
   return (
     <div className="soon" role="dialog" aria-modal="true" aria-labelledby="soon-title" tabIndex={-1} ref={ref}>
       <div className="soon-card">
-        <div className="soon-mark"><Mark size={64} /></div>
+        <div className="soon-mark">
+          <Mark size={64} />
+          <span className="soon-x" aria-hidden="true">×</span>
+          <a className="soon-partner" href="https://gazz.fun" target="_blank" rel="noopener" aria-label="gazz.fun (opens in a new tab)">
+            <img src="/gazz-logo.svg" alt="" width="48" height="48" />
+          </a>
+        </div>
         <p className="soon-word">backx<span>.trade</span></p>
         <h1 id="soon-title">Coming soon</h1>
         <Steps />
