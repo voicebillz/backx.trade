@@ -103,7 +103,10 @@ function SecurityTab({ me, actions, signOutEverywhere }: { me: Me; actions: Priv
           {actions && actions.linked.length === 0 && <li className="muted">None</li>}
         </ul>
         <div className="link-buttons">
-          {(['email', 'phone', 'google', 'twitter', 'discord', 'twitch', 'telegram', 'farcaster'] as const).map((t) => (
+          {(['email', 'phone', 'google', 'twitter', 'discord', 'twitch', 'telegram', 'farcaster'] as const)
+            // Hide logins that are already linked (Privy types: google_oauth, phone, ...).
+            .filter((t) => !actions?.linked.some((l) => l.type.replace(/_oauth$/, '') === t))
+            .map((t) => (
             <button key={t} className="btn-mini" disabled={!ready} onClick={() => actions?.link(t)}>+ {t === 'twitter' ? 'X' : t[0].toUpperCase() + t.slice(1)}</button>
           ))}
         </div>
