@@ -83,13 +83,15 @@ function Session({ checked, me, onSession, onState }: Props) {
         } catch (e) {
           // Privy can need a moment before the new wallet shows on its API: one retry, then stop.
           if (e instanceof ApiError && e.status === 409 && i === 0) { await new Promise((r) => setTimeout(r, 2500)); continue; }
+          // This Privy session was signed out (here or "Log out everywhere" on another device): end it quietly.
+          if (e instanceof ApiError && e.code === 'session_revoked') { setConnecting(false); await logout().catch(() => {}); return; }
           setConnecting(false);
           setError(true);
           return;
         }
       }
     })();
-  }, [ready, authenticated, user, checked, me, getAccessToken, onSession]);
+  }, [ready, authenticated, user, checked, me, getAccessToken, onSession, logout]);
 
   // A Solana wallet created after the backx session started: re-run the exchange once so the
   // server learns its address (it only trusts Privy's API, never the client).

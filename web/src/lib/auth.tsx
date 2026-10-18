@@ -1,4 +1,5 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { navigate } from './router';
 import { api } from './api';
 
 export interface Me {
@@ -74,17 +75,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api<Me>('/api/auth/me').then(setMe).catch(() => setMe(null)).finally(() => setChecked(true));
   }, []);
 
-  const signOut = useCallback(async () => {
-    try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* server clears it when reachable */ }
+  // Privy is signed out BEFORE the local state clears: otherwise the bridge sees "Privy signed in,
+  // no backx session" for a moment and exchanges a fresh session (logging the user straight back in).
+  const endLocal = useCallback(async () => {
+    try { await privy?.logout(); } catch { /* the server already blocks this Privy session */ }
     setMe(null);
-    await privy?.logout();
+    navigate('trade');
   }, [privy]);
 
+  const signOut = useCallback(async () => {
+    try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* cookie expires on its own; Privy is signed out below */ }
+    await endLocal();
+  }, [endLocal]);
+
+  /** Throws if the server could not be reached: the other devices are then NOT signed out. */
   const signOutEverywhere = useCallback(async () => {
-    try { await api('/api/auth/logout-all', { method: 'POST' }); } catch { /* ignore */ }
-    setMe(null);
-    await privy?.logout();
-  }, [privy]);
+    await api('/api/auth/logout-all', { method: 'POST' });
+    await endLocal();
+  }, [endLocal]);
 
   const status: AuthStatus = !APP_ID ? 'unavailable'
     : me ? 'signedIn'

@@ -633,3 +633,5 @@ tr.zero { opacity: .5; }
   .topbar-prefs .icon-btn { min-width: 36px; }
   .bottom .demo-tag { display: none; }
 }
+.session-rows { display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 899px) { .session-rows .btn { min-height: 44px; } }

@@ -141,6 +141,11 @@ authRouter.post('/session', async (req, res, next) => {
   }
 
   try {
+    // A Privy session that was signed out (here or via "Log out everywhere") never gets a new backx session.
+    if (sid) {
+      const { rowCount } = await db.query('select 1 from revoked_privy_sids where privy_sid = $1', [sid]);
+      if (rowCount) return res.status(401).json({ error: 'session_revoked' });
+    }
     const { address, solanaAddress, method } = await privyAccount(did);
     // Social login only: no embedded wallet (yet) means no session.
     if (!address) return res.status(409).json({ error: 'wallet_pending' });
@@ -213,9 +218,30 @@ authRouter.delete('/avatar', async (req, res, next) => {
   }
 });
 
+/** Ends backx sessions and blocks their Privy sessions from logging back in. Old entries are pruned
+ *  (Privy sessions do not outlive 90 days). */
+async function revoke(where, arg) {
+  const client = await db.connect();
+  try {
+    await client.query('begin');
+    await client.query(
+      `insert into revoked_privy_sids (privy_sid, privy_did)
+         select distinct privy_sid, privy_did from sessions where ${where} and privy_sid is not null
+       on conflict (privy_sid) do nothing`, [arg]);
+    await client.query(`update sessions set revoked_at = now() where ${where} and revoked_at is null`, [arg]);
+    await client.query("delete from revoked_privy_sids where revoked_at < now() - interval '90 days'");
+    await client.query('commit');
+  } catch (e) {
+    await client.query('rollback').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 authRouter.post('/logout', async (req, res, next) => {
   try {
-    if (req.sessionHash) await db.query('update sessions set revoked_at = now() where token_hash = $1', [req.sessionHash]);
+    if (req.sessionHash) await revoke('token_hash = $1', req.sessionHash);
     setCookie(res, '', 0);
     res.json({ ok: true });
   } catch (e) {
@@ -226,7 +252,7 @@ authRouter.post('/logout', async (req, res, next) => {
 authRouter.post('/logout-all', async (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'unauthorized' });
   try {
-    await db.query('update sessions set revoked_at = now() where privy_did = $1 and revoked_at is null', [req.user.did]);
+    await revoke('privy_did = $1', req.user.did);
     setCookie(res, '', 0);
     res.json({ ok: true });
   } catch (e) {

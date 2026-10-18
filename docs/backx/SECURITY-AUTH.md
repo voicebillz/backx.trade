@@ -114,7 +114,8 @@ Anbefalt: **egen Privy-app** (se §0).
 - [ ] Egen Privy-app: kun social-metoder, Allowed origins = backx.trade, server avviser ikke-social/ikke-embedded
 - [ ] `jose`-verifisering med eksplisitt alg/issuer/audience, ingen fallback-id
 - [ ] Sesjonstoken hashet i DB, kun header/cookie, 7 dager glidende
-- [ ] «Log out everywhere» + tilbakekall
+- [x] «Log out everywhere» + tilbakekall: avslutter alle backx-sesjoner, og Privy-sesjonene deres (`sid`) blokkeres
+  (`revoked_privy_sids`), så en annen enhet ikke logger seg inn igjen av seg selv. Gjelder også vanlig «Sign out».
 - [ ] Håndhevet CSP (ingen `unsafe-eval`), HSTS, frame-ancestors none
 - [ ] CORS allowlist, origin-vakt, Redis rate limits
 - [ ] Penge-handlinger: lås + idempotency + ny Privy-sjekk

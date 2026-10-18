@@ -33,7 +33,7 @@ function Copy({ text, label = 'Copy' }: { text: string; label?: string }) {
 }
 
 export function ProfilePage({ route, balances }: { route: Route; balances: { data: Balances | null; error: boolean; refresh: () => void } }) {
-  const { me, actions, signOut, signOutEverywhere } = useAuth();
+  const { me, actions, signOut } = useAuth();
   if (!me) return null;
   return (
     <main id="main" className="page profile-page">
@@ -53,7 +53,7 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
         </nav>
         <div className="profile-body">
           {route === 'profile' && <ProfileTab me={me} />}
-          {route === 'security' && <SecurityTab me={me} actions={actions} signOutEverywhere={signOutEverywhere} />}
+          {route === 'security' && <SecurityTab me={me} actions={actions} />}
           {route === 'wallet' && <WalletTab me={me} actions={actions} balances={balances} />}
           {route === 'documents' && <DocumentsTab isAdmin={me.isAdmin} />}
         </div>
@@ -122,21 +122,52 @@ function AvatarPicker({ me, size, withActions }: { me: Me; size: number; withAct
 
 function ProfileTab({ me }: { me: Me }) {
   return (
+    <>
+      <section className="card">
+        <h2>Profile</h2>
+        <dl className="kv big">
+          <div><dt>Picture</dt><dd><AvatarPicker me={me} size={44} withActions /></dd></div>
+          <div><dt>EVM wallet</dt><dd className="num addr-line">{me.address} <Copy text={me.address} /></dd></div>
+          <div><dt>Solana wallet</dt><dd className="num addr-line">{me.solanaAddress ? <>{me.solanaAddress} <Copy text={me.solanaAddress} /></> : <span className="muted">Being created. Sign in again if it does not show.</span>}</dd></div>
+          <div><dt>Signed up with</dt><dd>{me.signupMethod ? METHOD[me.signupMethod] ?? me.signupMethod : '—'}</dd></div>
+          <div><dt>Member since</dt><dd>{new Date(me.memberSince).toLocaleString('en-GB')}</dd></div>
+          <div><dt>Access</dt><dd>{me.isAdmin ? 'Admin (beta preview)' : 'Beta list'}</dd></div>
+        </dl>
+      </section>
+      <SessionsCard />
+    </>
+  );
+}
+
+/** Sign out here, or on every device. Shown under Profile and Security (the header button is hidden on phones). */
+function SessionsCard() {
+  const { signOut, signOutEverywhere } = useAuth();
+  const [busy, setBusy] = useState<'one' | 'all' | null>(null);
+  const [err, setErr] = useState(false);
+  const run = (which: 'one' | 'all') => async () => {
+    setBusy(which);
+    setErr(false);
+    try { await (which === 'one' ? signOut() : signOutEverywhere()); } catch { setErr(true); setBusy(null); }
+  };
+  return (
     <section className="card">
-      <h2>Profile</h2>
-      <dl className="kv big">
-        <div><dt>Picture</dt><dd><AvatarPicker me={me} size={44} withActions /></dd></div>
-        <div><dt>EVM wallet</dt><dd className="num addr-line">{me.address} <Copy text={me.address} /></dd></div>
-        <div><dt>Solana wallet</dt><dd className="num addr-line">{me.solanaAddress ? <>{me.solanaAddress} <Copy text={me.solanaAddress} /></> : <span className="muted">Being created. Sign in again if it does not show.</span>}</dd></div>
-        <div><dt>Signed up with</dt><dd>{me.signupMethod ? METHOD[me.signupMethod] ?? me.signupMethod : '—'}</dd></div>
-        <div><dt>Member since</dt><dd>{new Date(me.memberSince).toLocaleString('en-GB')}</dd></div>
-        <div><dt>Access</dt><dd>{me.isAdmin ? 'Admin (beta preview)' : 'Beta list'}</dd></div>
-      </dl>
+      <h2>Sign out</h2>
+      <div className="session-rows">
+        <div className="row-between">
+          <span className="muted">Sign out of backx.trade on this device.</span>
+          <button className="btn btn-ghost btn-sm" onClick={run('one')} disabled={!!busy}>{busy === 'one' ? 'Signing out…' : 'Sign out'}</button>
+        </div>
+        <div className="row-between">
+          <span className="muted">Sign out on every device and browser, including this one.</span>
+          <button className="btn btn-danger btn-sm" onClick={run('all')} disabled={!!busy}>{busy === 'all' ? 'Signing out…' : 'Log out everywhere'}</button>
+        </div>
+      </div>
+      {err && <p className="field-err" role="alert">Could not reach the server, so other devices are still signed in. Try again.</p>}
     </section>
   );
 }
 
-function SecurityTab({ me, actions, signOutEverywhere }: { me: Me; actions: PrivyActions | null; signOutEverywhere: () => Promise<void> }) {
+function SecurityTab({ me, actions }: { me: Me; actions: PrivyActions | null }) {
   const [exporting, setExporting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const ready = !!actions;
@@ -194,13 +225,7 @@ function SecurityTab({ me, actions, signOutEverywhere }: { me: Me; actions: Priv
           }}
         />
       )}
-      <section className="card">
-        <h2>Sessions</h2>
-        <div className="row-between">
-          <span className="muted">Signs you out on every device and browser.</span>
-          <button className="btn btn-danger btn-sm" onClick={signOutEverywhere}>Log out everywhere</button>
-        </div>
-      </section>
+      <SessionsCard />
     </>
   );
 }

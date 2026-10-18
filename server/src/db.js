@@ -23,6 +23,14 @@ export async function migrate() {
     );
     create index if not exists sessions_did on sessions(privy_did);
 
+    -- Privy sessions ended by "Sign out" / "Log out everywhere". Another device still holding that
+    -- Privy session cannot exchange it for a new backx session (else it would log itself back in).
+    create table if not exists revoked_privy_sids (
+      privy_sid  text primary key,
+      privy_did  text not null,
+      revoked_at timestamptz not null default now()
+    );
+
     -- Beta sign-ups: every account created before launch. Only the method type is stored
     -- (email, phone, google, ...), never the email address or phone number itself.
     alter table users add column if not exists signup_method     text;
