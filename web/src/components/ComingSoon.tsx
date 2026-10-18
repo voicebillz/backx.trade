@@ -4,9 +4,9 @@ import { params } from '../lib/hedge';
 import { OverlayAccount } from './Account';
 
 const STEPS = [
-  { n: '01', title: 'Hedge', text: 'with multiplication' },
-  { n: '02', title: 'Issue', text: 'and earn on every hedge' },
-  { n: '03', title: 'Your wallet', text: 'your keys' },
+  { n: '01', title: 'Hedge' },
+  { n: '02', title: 'Issue' },
+  { n: '03', title: 'Your wallet' },
 ];
 const STEP_MS = 2600;
 const MIN = 2, MAX = 30;
@@ -30,7 +30,7 @@ function Steps() {
         return (
           <li key={s.n} className={state}>
             <span className="step-n">{s.n}</span>
-            <span className="step-text"><b>{s.title}</b> {s.text}</span>
+            <span className="step-text"><b>{s.title}</b></span>
             {/* key restarts the fill each time the step becomes active */}
             <span className="step-bar" aria-hidden="true"><i key={state === 'active' ? active : 'x'} /></span>
           </li>
