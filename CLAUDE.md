@@ -23,13 +23,14 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Brand mark: racing yellow `#FFD100` on black.
 
 ## Login and money (locked)
-- Social login only (Privy: email, Google, Apple, X). Own Privy app for backx, not gazz.fun's.
-  No external wallets, no WalletConnect, no "Connect wallet".
+- Privy login without wallets: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
+  (Apple once our Apple OAuth credentials exist; owner 2026-10-18). Own Privy app for backx, not gazz.fun's.
+  No external wallets, no WalletConnect, no "Connect wallet". Each method must also be on in the Privy dashboard.
 - Each user has their own Privy embedded wallet. Deposits go straight to it. No Relay, no bank, no escrow.
 - Withdrawals: user types the recipient address. Never a fixed recipient.
 
 ## Security
-- Web CSP is enforced in `web/vercel.json` (Privy base policy minus WalletConnect, plus Google Fonts and `api.backx.trade`).
+- Web CSP is enforced in `web/vercel.json` (Privy base policy minus WalletConnect, plus Telegram login, Google Fonts and `api.backx.trade`).
   No inline scripts, no `unsafe-eval`. New external hosts (RPC, price feeds) must be added to `connect-src` deliberately.
   `X-Frame-Options: DENY` + `frame-ancestors 'none'`. Re-test the CSP after every Privy SDK upgrade.
 - Never commit `.env`, keys or keypair files. `VITE_*` ends up in the browser: no secrets there.

@@ -18,9 +18,10 @@ export default function PrivyBridge(props: Props) {
     <PrivyProvider
       appId={props.appId}
       config={{
-        // Social login only (docs/backx/SECURITY-AUTH.md): no external wallets.
-        // Apple returns once our own Apple OAuth credentials are set up in Privy.
-        loginMethods: ['email', 'google', 'twitter'],
+        // No external wallets (docs/backx/SECURITY-AUTH.md): every method ends in the user's own embedded wallet.
+        // Each method must also be switched on in the Privy dashboard. Apple returns once our own
+        // Apple OAuth credentials are set up there.
+        loginMethods: ['email', 'sms', 'google', 'twitter', 'discord', 'twitch', 'telegram', 'farcaster', 'passkey'],
         embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
         appearance: { theme: '#0A0A0A', accentColor: '#FFD100', logo: '/backx-logo.png', walletChainType: 'ethereum-only' },
       }}

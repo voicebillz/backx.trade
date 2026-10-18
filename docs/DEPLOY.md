@@ -65,8 +65,13 @@ VITE_PRIVY_APP_ID=<samme app-id som PRIVY_APP_ID på Railway>
 
 ## 3. Privy (egen app for backx)
 
-- Login methods: kun **Email, Google, Apple, X**. Ingen «Wallet».
+- Login methods: **Email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, Passkeys**. Ingen «Wallet».
+  Apple først når egne Apple-nøkler er satt opp. Telegram krever en egen bot (se nedenfor).
 - Embedded wallets: Ethereum, «Create on login: users without wallets».
+- **Telegram:** lag en bot hos @BotFather (`/newbot`), sett domenet med `/setdomain` → `backx.trade`,
+  og lim inn bot-navn og bot-token i Privy. Bot-tokenet er hemmelig: bare i Privy.
+- **SMS:** koster per melding hos Privy, og er utsatt for SMS-svindel. Slå på Captcha (Cloudflare Turnstile) samtidig.
+- **Passkeys:** «Enable passkeys for sign up» av = passkey kan bare legges til etter første innlogging (anbefalt).
 - **Allowed origins:** kun `https://backx.trade` og `https://www.backx.trade`. Ikke `api.backx.trade` (serveren kaller ikke Privy fra en nettleser),
   ikke Vercel-preview-adresser og ikke `localhost` i produksjonsappen. Trenger vi lokal testing, lager vi en egen Privy-testapp.
 - App-id er offentlig. App-secret er hemmelig og går kun i Railway.
