@@ -48,5 +48,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Secrets live only in Railway variables. Never in `VITE_*`, never in git. Server refuses to boot without required env (no fallback values).
 - Login: Privy access token (Authorization header) → verified with `jose` → embedded wallet read from Privy's API
   with the app secret, never from the client → session cookie. `ADMIN_WALLETS` (Railway) lifts the coming-soon
-  overlay for those addresses. The overlay is cosmetic: never ship anything secret in the web bundle.
+  overlay for those addresses. Behind the overlay only a static blurred image is shown; the terminal is a
+  separate chunk loaded only after `/api/auth/me` says admin. Its file is still public, so never ship secrets in
+  the web bundle: real protection is the server requiring a session on every `/api` route.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.

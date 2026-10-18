@@ -18,7 +18,7 @@ function CopyAddress({ address }: { address: string }) {
 
 /** Sign-in block inside the coming-soon overlay. */
 export function OverlayAccount() {
-  const { status, me, signIn, signOut } = useAuth();
+  const { status, me, canSignIn, signIn, signOut } = useAuth();
 
   if (status === 'unavailable') return null;
   if (status === 'signedIn' && me) {
@@ -30,11 +30,11 @@ export function OverlayAccount() {
       </div>
     );
   }
-  const busy = status === 'checking' || status === 'connecting';
+  const connecting = status === 'connecting';
   return (
     <div className="soon-account" aria-live="polite">
-      <button className="soon-signin" onClick={signIn} disabled={busy} aria-busy={busy}>
-        {status === 'connecting' ? 'Setting up your wallet…' : status === 'checking' ? 'Checking session…' : 'Sign in'}
+      <button className="soon-signin" onClick={signIn} disabled={connecting || !canSignIn} aria-busy={connecting}>
+        {connecting ? 'Setting up your wallet…' : 'Sign in'}
       </button>
       {status === 'error' && <p className="soon-account-note err">Sign-in did not complete. Try again.</p>}
       {status === 'signedOut' && <p className="soon-account-note">Email, Google, Apple or X. Your own wallet is created for you.</p>}
@@ -44,7 +44,7 @@ export function OverlayAccount() {
 
 /** Topbar account (visible to admins before launch, everyone after). */
 export function TopbarAccount() {
-  const { status, me, signIn, signOut } = useAuth();
+  const { status, me, canSignIn, signIn, signOut } = useAuth();
   if (status === 'signedIn' && me) {
     return (
       <div className="top-account">
@@ -55,7 +55,7 @@ export function TopbarAccount() {
     );
   }
   return (
-    <button className="btn btn-primary" onClick={signIn} disabled={status === 'unavailable' || status === 'checking' || status === 'connecting'}>
+    <button className="btn btn-primary" onClick={signIn} disabled={!canSignIn || status === 'connecting'}>
       Sign in
     </button>
   );
