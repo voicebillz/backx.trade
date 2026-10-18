@@ -55,7 +55,7 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
           {route === 'profile' && <ProfileTab me={me} />}
           {route === 'security' && <SecurityTab me={me} actions={actions} signOutEverywhere={signOutEverywhere} />}
           {route === 'wallet' && <WalletTab me={me} actions={actions} balances={balances} />}
-          {route === 'documents' && <DocumentsTab />}
+          {route === 'documents' && <DocumentsTab isAdmin={me.isAdmin} />}
         </div>
       </div>
     </main>
@@ -377,13 +377,14 @@ function Withdraw({ me, actions, balances }: { me: Me; actions: PrivyActions | n
 // ---- Documents --------------------------------------------------------------
 
 const BRAND = [
-  { name: 'Profile picture', note: '4000 × 4000 · for X and other socials', file: 'backx-pfp' },
-  { name: 'Official banner', note: '4500 × 1500 · X header', file: 'backx-banner' },
-  { name: 'Logo', note: '3840 × 1280 · transparent PNG', file: 'backx-logo' },
-  { name: 'Mark', note: 'transparent PNG', file: 'backx-mark' },
+  { name: 'Profile picture', note: '4000 × 4000 · for X and other socials', file: 'backx-pfp', adminOnly: true },
+  { name: 'Official banner', note: '4500 × 1500 · X header', file: 'backx-banner', adminOnly: true },
+  { name: 'Logo', note: '3840 × 1280 · transparent PNG', file: 'backx-logo', adminOnly: false },
+  { name: 'Mark', note: 'transparent PNG', file: 'backx-mark', adminOnly: false },
 ] as const;
 
-function DocumentsTab() {
+/** Everyone gets the two transparent assets; admins also get the social images. */
+function DocumentsTab({ isAdmin }: { isAdmin: boolean }) {
   const [mode, setMode] = useState<'dark' | 'light'>('dark');
   return (
     <>
@@ -396,7 +397,7 @@ function DocumentsTab() {
           </div>
         </div>
         <div className="brand-grid">
-          {BRAND.map((b) => {
+          {BRAND.filter((b) => isAdmin || !b.adminOnly).map((b) => {
             const url = `/brand/${b.file}-${mode}.png`;
             return (
               <figure key={b.file} className={'brand-item ' + mode}>
@@ -408,13 +409,13 @@ function DocumentsTab() {
               </figure>
             );
           })}
-          <figure className="brand-item dark">
+          {isAdmin && <figure className="brand-item dark">
             <div className="brand-preview"><img src="/brand/backx-end-of-post.png" alt="End of post card" loading="lazy" /></div>
             <figcaption>
               <span><b>End of post</b><small className="muted">3840 × 2160 · last image in X threads</small></span>
               <a className="btn btn-primary btn-sm" href="/brand/backx-end-of-post.png" download="backx-end-of-post.png">Download</a>
             </figcaption>
-          </figure>
+          </figure>}
         </div>
       </section>
       <section className="card">
