@@ -1,0 +1,26 @@
+:root { --bg:#F5F7FA; --panel:#FFFFFF; --line:rgba(11,31,58,.09); --ink:#0B1526; --ink-2:#45526A; --link:#1D4ED8; --brand:#FFD100; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0A0F1A; --panel:#0F1626; --line:rgba(255,255,255,.07); --ink:#E6EBF2; --ink-2:#9CA8BA; --link:#6AA8FF; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg:#0A0F1A; --panel:#0F1626; --line:rgba(255,255,255,.07); --ink:#E6EBF2; --ink-2:#9CA8BA; --link:#6AA8FF; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.65 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 3px; }
+.skip { position: absolute; left: 8px; top: -80px; background: var(--link); color: #fff; padding: 8px 12px; border-radius: 6px; }
+.skip:focus { top: 8px; }
+header { border-bottom: 1px solid var(--line); background: var(--panel); }
+.bar { max-width: 760px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 16px; }
+.logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); font-weight: 700; letter-spacing: -.02em; }
+.logo-word span { font-weight: 500; color: var(--ink-2); }
+.logo img { width: 26px; height: 26px; }
+.bar nav { margin-left: auto; display: flex; gap: 16px; font-size: 14px; }
+.bar nav a { color: var(--ink-2); text-decoration: none; }
+.bar nav a[aria-current] { color: var(--ink); font-weight: 600; }
+main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+h1 { font-size: 32px; line-height: 1.15; letter-spacing: -.02em; margin: 0 0 8px; }
+.meta { color: var(--ink-2); font-size: 13px; margin: 0 0 32px; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+h2 { font-size: 18px; margin: 36px 0 8px; letter-spacing: -.01em; }
+p, li { color: var(--ink); }
+ul { padding-left: 20px; }
+.note { border: 1px solid var(--line); border-left: 3px solid var(--brand); background: var(--panel); padding: 12px 16px; border-radius: 6px; }
+footer { border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; }
+footer .bar { justify-content: space-between; }

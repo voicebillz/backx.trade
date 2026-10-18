@@ -52,6 +52,9 @@ if (v.startsWith('mark-')) {
   // Square, transparent, mark centred with ~10% padding.
   const fill = { yellow:'#FFD100', black:'#0A0A0A', white:'#FFFFFF' }[v.slice(5)];
   html = `<div class="stage">${mark(fill, H * 0.62)}</div>`;
+} else if (v === 'outline') {
+  // Yellow mark with a thin black edge: readable on white and on black (Privy light/dark).
+  html = `<div class="stage"><svg class="mark" viewBox="${VB}" style="height:${H * 0.62}px;overflow:visible" fill="#FFD100" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round" paint-order="stroke"><path d="${HEAD}"/><path d="${BODY}"/></svg></div>`;
 } else if (v.startsWith('logo-')) {
   // Horizontal lockup, transparent. logo-onlight = black text, logo-ondark = white text.
   const text = v === 'logo-onlight' ? '#0A0A0A' : '#FFFFFF';
