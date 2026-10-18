@@ -47,6 +47,7 @@ RPC_BSC=
 RPC_SOLANA=
 ```
 
+Swap (`/api/swap/*`) bruker LI.FI (`li.quest`) og CoinGecko fra serveren; ingen nøkkel trengs.
 Saldo (`/api/wallet/balances`) og markedslista (`/api/markets`, demo fra CoinGecko) krever innlogging og caches i Redis.
 
 Settes **senere**, ikke nå (vi sier fra når koden trenger dem):

@@ -2,7 +2,7 @@ import express from 'express';
 
 // Read-only balance lookups for the signed-in user's own wallets. Nothing here signs or sends.
 // Public RPCs by default; set RPC_* in Railway to use keyed endpoints (server-side only).
-const RPC = {
+export const RPC = {
   ethereum: process.env.RPC_ETHEREUM || 'https://ethereum-rpc.publicnode.com',
   base: process.env.RPC_BASE || 'https://base-rpc.publicnode.com',
   bsc: process.env.RPC_BSC || 'https://bsc-rpc.publicnode.com',
@@ -23,7 +23,7 @@ const SOL_ASSETS = [
   { chain: 'solana', chainName: 'Solana', symbol: 'USDC', name: 'USD Coin', decimals: 6, price: 'usd-coin', mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
 ];
 
-async function rpc(url, method, params) {
+export async function rpc(url, method, params) {
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

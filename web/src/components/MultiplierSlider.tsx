@@ -8,20 +8,14 @@ interface Props {
   label?: string;
 }
 
-const STOPS = [1, 2, 3, 5, 10, 15, 20, 25, 30];
-
 /**
  * Multiplication slider: rail fills from yellow toward red as it nears the coin's max,
- * glides between values, snaps to whole steps. Drag, click a stop, or use the keyboard.
+ * glides between values, snaps to whole steps. Drag or use the keyboard.
  */
 export function MultiplierSlider({ value, min, max, onChange, label = 'Multiplication' }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const t = max > min ? (value - min) / (max - min) : 0;
-  const stops = STOPS.filter((s) => s >= min && s <= max);
-  if (!stops.includes(max)) stops.push(max);
-  // Labels only where they have room; every stop still gets a dot on the rail.
-  const labels = max > 10 ? stops.filter((s) => s !== 2 && s !== 3) : stops;
 
   const fromPointer = (e: PointerEvent) => {
     const r = track.current!.getBoundingClientRect();
@@ -52,17 +46,7 @@ export function MultiplierSlider({ value, min, max, onChange, label = 'Multiplic
         style={{ ['--t' as string]: String(t) }}
       >
         <div className="msl-rail"><div className="msl-fill" /></div>
-        {stops.map((s) => (
-          <span key={s} className={'msl-dot' + (s <= value ? ' on' : '')} style={{ left: `${((s - min) / Math.max(max - min, 1)) * 100}%` }} />
-        ))}
         <div className="msl-thumb"><span className="msl-bubble num">{value}×</span></div>
-      </div>
-      <div className="msl-stops">
-        {labels.map((s) => (
-          <button key={s} type="button" className={s === value ? 'on' : ''} style={{ left: `${((s - min) / Math.max(max - min, 1)) * 100}%` }} onClick={() => onChange(s)} tabIndex={-1}>
-            {s}×
-          </button>
-        ))}
       </div>
     </div>
   );

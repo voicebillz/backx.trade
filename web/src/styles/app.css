@@ -558,3 +558,27 @@ tr.zero { opacity: .5; }
 .asset-opt small { font-size: 11px; color: var(--ink-3); }
 .asset-opt.on { border-color: var(--gold); background: var(--gold-bg); }
 .prefix.unit { display: inline-flex; align-items: center; gap: 4px; padding-right: 8px; white-space: nowrap; }
+
+/* Swap */
+.swap-wrap { max-width: 480px; margin: 0 auto; }
+.swap-card { display: flex; flex-direction: column; gap: 10px; }
+.swap-box { background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.swap-box .field-head .label { display: inline-flex; align-items: center; gap: 6px; }
+.swap-row { display: flex; align-items: center; gap: 10px; }
+.swap-amt { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 28px; font-weight: 500; letter-spacing: -.02em; color: var(--ink); padding: 0; }
+.swap-amt.out { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.swap-amt.loading { opacity: .5; }
+.token-btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 15px; flex: none; }
+.token-btn:hover { border-color: var(--brand); }
+.swap-flip { align-self: center; width: 36px; height: 36px; margin: -18px 0; z-index: 1; border-radius: 10px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); color: var(--ink-2); transition: transform 200ms var(--ease-out); }
+.swap-flip:hover { color: var(--brand-text); transform: rotate(180deg); }
+.swap-details { border-left: 0; padding-left: 0; }
+.swap-foot { text-align: center; margin-top: 12px; }
+.picker { width: min(440px, 100%); max-height: min(640px, 90vh); }
+.picker h2 { margin: 0; font-size: 18px; }
+.picker-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0; }
+.picker-list button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-radius: 8px; text-align: left; }
+.picker-list button:hover { background: var(--raised); }
+.picker-name { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.picker-name small { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 899px) { .nav a { padding: 0 8px; } }

@@ -17,7 +17,7 @@ function tier(mcap) {
   return { maxM: 3, shortMaxM: SHORT_CAP.Small, poolFee: 0.003, kind: 'Small' };
 }
 
-async function universe(redis) {
+export async function universe(redis) {
   const cached = await redis.get('markets:v2');
   if (cached) return JSON.parse(cached);
   const all = [];

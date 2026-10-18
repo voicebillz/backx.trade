@@ -10,7 +10,6 @@ const STEPS = [
 ];
 const STEP_MS = 2600;
 const MIN = 1, MAX = 30;
-const TICKS = [1, 5, 10, 15, 20, 25, 30];
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -115,11 +114,6 @@ function MultiplierBar() {
       >
         <div className="mbar-rail"><div className="mbar-fill" /></div>
         <div className="mbar-thumb" />
-      </div>
-      <div className="mbar-ticks" aria-hidden="true">
-        {TICKS.map((x) => (
-          <span key={x} style={{ left: `${((x - MIN) / (MAX - MIN)) * 100}%` }} className={m >= x ? 'on' : ''}>{x}×</span>
-        ))}
       </div>
     </div>
   );

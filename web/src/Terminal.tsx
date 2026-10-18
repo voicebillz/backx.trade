@@ -7,6 +7,7 @@ import { OrderTicket } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
 import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
 import { quote, shortQuote, type Side } from './lib/hedge';
 import { useTheme, usePriceColors } from './lib/theme';
@@ -43,6 +44,7 @@ export default function Terminal() {
       />
       {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} />}
       {route === 'issue' && <IssuePage markets={moving.items} />}
+      {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
     </div>
   );

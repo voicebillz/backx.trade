@@ -55,6 +55,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   the web bundle: real protection is the server requiring a session on every `/api` route.
 - Read-only data routes: `/api/wallet/balances` (user's own EVM + Solana wallets via RPC, CoinGecko prices) and
   `/api/markets` (demo universe from CoinGecko until Robinhood Chain markets list). Both need a session, cached in Redis.
+- Swap page (`/swap`, `/api/swap/*`): same-chain swaps on Ethereum, Base, BNB Chain routed by LI.FI, no bridges.
+  The server builds every quote for the signed-in user's own address and rejects any route whose tx or approval
+  does not target the LI.FI Diamond `0x1231…4EaE`; approvals are for the exact amount. User signs with Privy.
+  Solana swaps not built yet. Listed coins map to contracts via CoinGecko platforms (cached daily).
 - Withdrawals are signed by the user's own Privy wallet with Privy's confirm screen (EVM: ETH/Base/BNB, native + USDC).
   Amounts are parsed to base units and rounded down. Solana withdrawals not built yet.
 - Multiplication 1× is allowed for Hedge: nothing is borrowed, no liquidation, issuers get 0 % (owner 2026-10-18).
