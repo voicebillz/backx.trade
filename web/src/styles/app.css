@@ -275,7 +275,6 @@ th { text-align: left; font-weight: 500; color: var(--ink-3); height: 32px; padd
 
 /* topbar */
 .topbar { gap: 14px; }
-.logo-tile { background: var(--brand-ink); box-shadow: 0 0 0 1px rgba(255,209,0,.35); }
 .nav a { height: 32px; display: inline-flex; align-items: center; padding: 0 12px; color: var(--ink-2); font-weight: 500; text-decoration: none; position: relative; }
 .nav a:hover { color: var(--ink); }
 .nav a.active { color: var(--ink); }
@@ -489,3 +488,50 @@ tr.zero { opacity: .5; }
 .markets-list::-webkit-scrollbar, .msearch-panel ul::-webkit-scrollbar { display: none; }
 /* Soft fade at the bottom hints that the list continues. */
 .markets-list { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
+
+/* Export key confirmation */
+.export-modal { width: min(460px, 100%); }
+.export-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--down-bg); color: var(--down); }
+.export-modal h2 { margin: 0; font-size: 20px; }
+.export-modal .num { word-break: break-all; margin: -6px 0 0; }
+.export-warnings { margin: 0; padding: 12px 12px 12px 28px; border-radius: 10px; background: var(--down-bg); color: var(--ink); font-size: 12px; display: grid; gap: 6px; }
+.export-ack { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; cursor: pointer; }
+.export-ack input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--down); flex: none; }
+.export-phrase { margin: 4px 0 6px !important; padding: 10px 12px; border-radius: 8px; background: var(--raised); border: 1px dashed var(--line); font-size: 15px; letter-spacing: .02em; user-select: none; -webkit-user-select: none; }
+.input-wrap.bad { border-color: color-mix(in srgb, var(--down) 60%, transparent); }
+.input-wrap.good { border-color: var(--up); }
+.btn-danger-solid { background: var(--down); color: #fff; }
+
+/* Avatar upload */
+.avatar-picker { display: inline-flex; align-items: center; gap: 10px; }
+.avatar-edit { position: relative; border-radius: 50%; display: inline-flex; }
+.avatar-edit-overlay { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.5); color: #fff; opacity: 0; transition: opacity 160ms var(--ease-out); }
+.avatar-edit:hover .avatar-edit-overlay, .avatar-edit:focus-visible .avatar-edit-overlay, .avatar-edit:disabled .avatar-edit-overlay { opacity: 1; }
+
+/* Logo tile: larger mark, optically centred (its weight sits low-left), no muddy ring. */
+.logo-tile { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(145deg, #1A1A1A, #050505); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.logo-tile svg { transform: translate(1px, -1px); }
+.logo-word { font-size: 16px; }
+
+/* Documents */
+.docs-head { align-items: flex-start; margin-bottom: 14px; }
+.docs-head p { margin: 0; }
+.brand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.brand-item { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--raised); display: flex; flex-direction: column; }
+.brand-preview { display: grid; place-items: center; height: 170px; padding: 16px; background: #0A0A0A; }
+.brand-item.light .brand-preview { background: repeating-conic-gradient(#EEE 0% 25%, #FFF 0% 50%) 50% / 16px 16px; }
+.brand-item.dark .brand-preview { background: repeating-conic-gradient(#111 0% 25%, #0A0A0A 0% 50%) 50% / 16px 16px; }
+.brand-preview img { max-width: 100%; max-height: 138px; width: auto; height: auto; object-fit: contain; border-radius: 6px; min-width: 0; min-height: 0; }
+.brand-preview { overflow: hidden; }
+.brand-item figcaption { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; }
+.brand-item figcaption span { display: flex; flex-direction: column; line-height: 1.3; }
+.brand-item figcaption small { font-size: 11px; }
+.brand-item .btn { text-decoration: none; }
+.btn-ghost { text-decoration: none; }
+
+/* No visible scrollbars anywhere; everything still scrolls (wheel, touch, keyboard). */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.dd.icon-only .dd-btn { width: auto; padding: 0 8px; gap: 6px; }
+.dd.icon-only .dd-list { min-width: 200px; }
+@media (max-width: 899px) { .dd.compact.icon-only { display: block; } }

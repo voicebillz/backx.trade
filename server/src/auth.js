@@ -100,6 +100,13 @@ export async function loadSession(req, res, next) {
   }
 }
 
+/** Uploaded picture as a data URL, or null for the generated one. Only read where the profile is returned. */
+async function avatarUrl(did) {
+  const { rows } = await db.query('select avatar_mime, avatar_data from users where privy_did = $1', [did]);
+  const r = rows[0];
+  return r?.avatar_data ? `data:${r.avatar_mime};base64,${r.avatar_data.toString('base64')}` : null;
+}
+
 const me = (u) => ({
   address: u.address,
   solanaAddress: u.solanaAddress ?? null,
@@ -107,6 +114,7 @@ const me = (u) => ({
   avatarSeed: u.avatarSeed,
   memberSince: u.memberSince,
   signupMethod: u.signupMethod ?? null,
+  avatarUrl: u.avatarUrl ?? null,
 });
 
 export const authRouter = express.Router();
@@ -154,15 +162,55 @@ authRouter.post('/session', async (req, res, next) => {
       'select solana_address, avatar_seed, beta_signup_at, signup_method from users where privy_did = $1', [did],
     );
     const r = rows[0];
-    res.json(me({ address, solanaAddress: r.solana_address, avatarSeed: r.avatar_seed, memberSince: r.beta_signup_at, signupMethod: r.signup_method }));
+    res.json(me({ address, solanaAddress: r.solana_address, avatarSeed: r.avatar_seed, memberSince: r.beta_signup_at, signupMethod: r.signup_method, avatarUrl: await avatarUrl(did) }));
   } catch (e) {
     next(e);
   }
 });
 
-authRouter.get('/me', (req, res) => {
+authRouter.get('/me', async (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'unauthorized' });
-  res.json(me(req.user));
+  try {
+    res.json(me({ ...req.user, avatarUrl: await avatarUrl(req.user.did) }));
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Profile picture upload. The browser sends a ≤128 px PNG/JPEG/WebP as a data URL.
+// Checked by magic bytes, not by the claimed type; SVG is refused (it can carry script).
+const MAGIC = {
+  'image/png': (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  'image/jpeg': (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  'image/webp': (b) => b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WEBP',
+};
+const MAX_AVATAR_BYTES = 40 * 1024;
+
+authRouter.post('/avatar', async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'unauthorized' });
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body?.image ?? ''));
+  if (!m) return res.status(400).json({ error: 'bad_image' });
+  const bytes = Buffer.from(m[2], 'base64');
+  if (bytes.length > MAX_AVATAR_BYTES || !MAGIC[m[1]](bytes)) return res.status(400).json({ error: 'bad_image' });
+  try {
+    const key = `rl:avatar:${req.user.did}:${Math.floor(Date.now() / 3600000)}`;
+    const [[, n]] = await req.app.locals.redis.multi().incr(key).expire(key, 3700).exec();
+    if (n > 20) return res.status(429).json({ error: 'rate_limited' });
+    await db.query('update users set avatar_mime = $2, avatar_data = $3 where privy_did = $1', [req.user.did, m[1], bytes]);
+    res.json(me({ ...req.user, avatarUrl: `data:${m[1]};base64,${bytes.toString('base64')}` }));
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.delete('/avatar', async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    await db.query('update users set avatar_mime = null, avatar_data = null where privy_did = $1', [req.user.did]);
+    res.json(me({ ...req.user, avatarUrl: null }));
+  } catch (e) {
+    next(e);
+  }
 });
 
 authRouter.post('/logout', async (req, res, next) => {

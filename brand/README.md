@@ -10,8 +10,9 @@ Racing yellow `#FFD100` on black `#0A0A0A`. The mark is a vector redraw of the o
 | `backx-mark-black-4k.png` / `backx-mark-white-4k.png` | 3840×3840 | Single-colour mark, transparent |
 | `backx-logo-black-text-4k.png` | 3840×1280 | Mark + wordmark for light backgrounds, transparent |
 | `backx-logo-white-text-4k.png` | 3840×1280 | Mark + wordmark for dark backgrounds, transparent |
+| `x-profile-light-4000x4000.png` / `x-banner-light-4500x1500.png` | 4000² / 4500×1500 | Light versions (white ground) |
 | `x-end-of-post-3840x2160.png` | 3840×2160 | X "end of post" card (16:9) |
 | `backx-mark-*.svg` | vector | Source for any size |
 
 Regenerate: `src/brand.html` holds every variant; `node src/render.js <variant> <w> <h> <out.png> [1=transparent]`
-(needs `playwright-core` and Chromium). Variants: `mark-yellow|black|white`, `logo-onlight`, `logo-ondark`, `pfp`, `banner`, `endpost`, `outline`.
+(needs `playwright-core` and Chromium). Variants: `mark-yellow|black|white`, `logo-onlight`, `logo-ondark`, `pfp`, `banner`, `endpost`, `outline`, `pfp-light`, `banner-light`. Copies used by the site live in `web/public/brand/`.

@@ -67,19 +67,29 @@ if (v.startsWith('mark-')) {
   const text = v === 'logo-onlight' ? '#0A0A0A' : '#FFFFFF';
   const accent = v === 'logo-onlight' ? '#0A0A0A' : '#FFD100';
   html = `<div class="stage" style="gap:${H*0.09}px">${mark('#FFD100', H * 0.5)}${word(text, H * 0.36, accent)}</div>`;
+} else if (v === 'pfp-light') {
+  // Light profile picture: white square, yellow mark with a black edge so it holds on white.
+  html = `<div class="stage" style="background:#FFFFFF"><svg class="mark" viewBox="${VB}" style="height:${H * 0.5}px;overflow:visible" fill="#FFD100" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round" paint-order="stroke"><path d="${HEAD}"/><path d="${BODY}"/></svg></div>`;
 } else if (v === 'pfp') {
   // X profile picture: black square, yellow mark, safe inside the circle crop.
   html = `<div class="stage" style="background:#0A0A0A">${mark('#FFD100', H * 0.5)}</div>`;
-} else if (v === 'banner') {
-  html = `<div class="stage banner"><div class="grid"></div><canvas id="c" width="${W}" height="${H}"></canvas>
+} else if (v === 'banner' || v === 'banner-light') {
+  const light = v === 'banner-light';
+  // Light: near-white ground, black type, the "&" and accent in a deeper gold that reads on white.
+  const style = light ? 'background:#FAFAF7;color:#0A0A0A' : '';
+  const markEl = light
+    ? `<svg class="mark" viewBox="${VB}" style="height:120px;overflow:visible" fill="#FFD100" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round" paint-order="stroke"><path d="${HEAD}"/><path d="${BODY}"/></svg>`
+    : mark('#FFD100', 120);
+  html = `<div class="stage banner" style="${style}"><div class="grid" style="${light ? 'opacity:.6;filter:invert(1)' : ''}"></div><canvas id="c" width="${W}" height="${H}"></canvas>
     <div class="content">
-      <div class="brandrow">${mark('#FFD100', 120)}${word('#F2F2F2', 104, '#FFD100')}</div>
-      <h1>Hedge <em>&amp;</em> Issuer Trading</h1>
+      <div class="brandrow">${markEl}${word(light ? '#0A0A0A' : '#F2F2F2', 104, light ? '#B38600' : '#FFD100')}</div>
+      <h1>Hedge <em${light ? ' style="color:#D9A400"' : ''}>&amp;</em> Issuer Trading</h1>
     </div><div class="stripe"></div></div>`;
 }
 document.body.innerHTML = html;
 
-if (v === 'banner') {
+if (v === 'banner' || v === 'banner-light') {
+  const light = v === 'banner-light';
   // Quiet candle chart across the background: deterministic, so every export matches.
   const ctx = document.getElementById('c').getContext('2d');
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -91,7 +101,7 @@ if (v === 'banner') {
     const hi = Math.min(o, c) - rnd() * H * 0.03, lo = Math.max(o, c) + rnd() * H * 0.03;
     const up = c < o, x = i * step + step / 2;
     const a = i < 22 ? 0.10 : 0.16;
-    ctx.strokeStyle = ctx.fillStyle = up ? `rgba(255,209,0,${a + 0.04})` : `rgba(255,255,255,${a - 0.04})`;
+    ctx.strokeStyle = ctx.fillStyle = up ? `rgba(${light ? '217,164,0' : '255,209,0'},${a + 0.04})` : light ? `rgba(10,10,10,${a - 0.04})` : `rgba(255,255,255,${a - 0.04})`;
     ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(x, hi); ctx.lineTo(x, lo); ctx.stroke();
     ctx.fillRect(x - bw / 2, Math.min(o, c), bw, Math.max(6, Math.abs(c - o)));
@@ -99,8 +109,9 @@ if (v === 'banner') {
   }
   // Fade the chart under the text block so the headline stays crisp.
   const g = ctx.createLinearGradient(0, 0, W, 0);
-  g.addColorStop(0, 'rgba(10,10,10,0.2)'); g.addColorStop(0.33, 'rgba(10,10,10,0.88)');
-  g.addColorStop(0.9, 'rgba(10,10,10,0.88)'); g.addColorStop(1, 'rgba(10,10,10,0.5)');
+  const bg = light ? '250,250,247' : '10,10,10';
+  g.addColorStop(0, `rgba(${bg},0.2)`); g.addColorStop(0.33, `rgba(${bg},0.88)`);
+  g.addColorStop(0.9, `rgba(${bg},0.88)`); g.addColorStop(1, `rgba(${bg},0.5)`);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
 </script>

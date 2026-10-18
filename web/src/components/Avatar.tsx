@@ -1,5 +1,6 @@
 // Random profile picture assigned at sign-up (avatar_seed from the server): a two-tone gradient orb.
-export function Avatar({ seed, size = 32 }: { seed: number; size?: number }) {
+export function Avatar({ seed, src, size = 32 }: { seed: number; src?: string | null; size?: number }) {
+  if (src) return <img className="avatar" src={src} alt="" width={size} height={size} style={{ objectFit: 'cover' }} />;
   const h1 = seed % 360;
   const h2 = (h1 + 40 + ((seed >> 9) % 120)) % 360;
   const angle = (seed >> 3) % 360;

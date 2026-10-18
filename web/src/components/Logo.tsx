@@ -3,7 +3,7 @@ const BODY = 'M31.5,69.4 L44,68.9 C47,68.7 49.6,67.7 51.6,65.7 L92.5,25.6 C84,39
 
 export function Mark({ size = 22, color = 'var(--brand)' }: { size?: number; color?: string }) {
   return (
-    <svg viewBox="18 25 75 57.5" height={size} width={(size * 75) / 57.5} fill={color} aria-hidden="true">
+    <svg viewBox="18 25 75 57.5" height={size} width={(size * 75) / 57.5} fill={color} aria-hidden="true" shapeRendering="geometricPrecision">
       <path d={HEAD} />
       <path d={BODY} />
     </svg>
@@ -13,7 +13,7 @@ export function Mark({ size = 22, color = 'var(--brand)' }: { size?: number; col
 export function Logo() {
   return (
     <a className="logo" href="/" aria-label="backx.trade home">
-      <span className="logo-tile"><Mark size={15} /></span>
+      <span className="logo-tile"><Mark size={17} /></span>
       <span className="logo-word">backx<span>.trade</span></span>
     </a>
   );

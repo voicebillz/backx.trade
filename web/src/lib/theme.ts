@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
-export type PriceColors = 'green-up' | 'red-up' | 'blue-orange' | 'mono';
+export type PriceColors =
+  | 'green-up' | 'red-up' | 'blue-orange' | 'mono'
+  | 'teal-pink' | 'yellow-blue' | 'neon' | 'gold-violet';
 
 const THEME_KEY = 'backx.theme';
 const PRICE_KEY = 'backx.price';

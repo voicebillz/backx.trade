@@ -8,6 +8,7 @@ export interface Me {
   avatarSeed: number;
   memberSince: string;
   signupMethod: string | null;
+  avatarUrl: string | null;   // uploaded picture (data URL), null = generated avatar
 }
 
 /** A login linked to the Privy account (email, google, passkey, ...), for the Security page. */
@@ -38,6 +39,8 @@ export interface AuthState {
   /** Revokes every backx session for this account, then signs out here. */
   signOutEverywhere: () => Promise<void>;
   actions: PrivyActions | null;
+  /** Replace the profile after a change (e.g. new picture). */
+  updateMe: (m: Me) => void;
 }
 
 /** What the lazily loaded Privy bridge reports back. */
@@ -52,7 +55,7 @@ export interface PrivyState {
 
 const noop = () => {};
 const Ctx = createContext<AuthState>({
-  status: 'unavailable', me: null, canSignIn: false, signIn: noop, signOut: async () => {}, signOutEverywhere: async () => {}, actions: null,
+  status: 'unavailable', me: null, canSignIn: false, signIn: noop, signOut: async () => {}, signOutEverywhere: async () => {}, actions: null, updateMe: noop,
 });
 export const useAuth = () => useContext(Ctx);
 
@@ -98,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     signOutEverywhere,
     actions: me ? privy?.actions ?? null : null,
+    updateMe: setMe,
   };
 
   return (

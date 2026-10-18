@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { useAuth, type Me, type PrivyActions } from '../lib/auth';
 import { go, href, type Route } from '../lib/router';
 import { Avatar } from '../components/Avatar';
 import { CoinIcon } from '../components/CoinIcon';
 import { Dropdown } from '../components/Dropdown';
+import { ExportConfirm } from '../components/ExportConfirm';
 import { CHAIN_LOGO, EVM_CHAINS, USDC, type EvmChain } from '../lib/assets';
 import { usd } from '../lib/format';
+import { api } from '../lib/api';
 import type { Balances } from '../lib/useBalances';
 
 const METHOD: Record<string, string> = {
@@ -18,6 +20,7 @@ const TABS: { id: Route; label: string }[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'security', label: 'Security' },
   { id: 'wallet', label: 'Wallet' },
+  { id: 'documents', label: 'Documents' },
 ];
 
 function Copy({ text, label = 'Copy' }: { text: string; label?: string }) {
@@ -35,7 +38,7 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
   return (
     <main id="main" className="page profile-page">
       <header className="profile-hero">
-        <Avatar seed={me.avatarSeed} size={64} />
+        <AvatarPicker me={me} size={64} />
         <div>
           <h1>Your account {me.isAdmin && <span className="chip chip-admin">Admin</span>}</h1>
           <p className="page-sub num">{me.address.slice(0, 6)}…{me.address.slice(-4)} · member since {new Date(me.memberSince).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
@@ -52,9 +55,68 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
           {route === 'profile' && <ProfileTab me={me} />}
           {route === 'security' && <SecurityTab me={me} actions={actions} signOutEverywhere={signOutEverywhere} />}
           {route === 'wallet' && <WalletTab me={me} actions={actions} balances={balances} />}
+          {route === 'documents' && <DocumentsTab />}
         </div>
       </div>
     </main>
+  );
+}
+
+/** Downscale and centre-crop to a 128 px square in the browser; the server only accepts small images. */
+async function toSquare(file: File, px = 128): Promise<string> {
+  const bmp = await createImageBitmap(file);
+  const side = Math.min(bmp.width, bmp.height);
+  const c = document.createElement('canvas');
+  c.width = c.height = px;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, px, px);
+  bmp.close();
+  const webp = c.toDataURL('image/webp', 0.86);
+  return webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/jpeg', 0.88);
+}
+
+/** Click the picture to upload a new one. */
+function AvatarPicker({ me, size, withActions }: { me: Me; size: number; withActions?: boolean }) {
+  const { updateMe } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setErr(null);
+    if (!/^image\/(png|jpeg|webp|gif|avif|heic|heif)$/.test(file.type)) { setErr('Choose a PNG, JPEG or WebP image.'); return; }
+    if (file.size > 15 * 1024 * 1024) { setErr('That image is over 15 MB.'); return; }
+    setBusy(true);
+    try {
+      updateMe(await api<Me>('/api/auth/avatar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: await toSquare(file) }),
+      }));
+    } catch {
+      setErr('Upload failed. Try another image.');
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = '';
+    }
+  };
+  const reset = async () => {
+    setBusy(true);
+    try { updateMe(await api<Me>('/api/auth/avatar', { method: 'DELETE' })); } catch { setErr('Could not reset.'); } finally { setBusy(false); }
+  };
+
+  return (
+    <span className="avatar-picker">
+      <button type="button" className="avatar-edit" onClick={() => input.current?.click()} disabled={busy} aria-label="Change profile picture">
+        <Avatar seed={me.avatarSeed} src={me.avatarUrl} size={size} />
+        <span className="avatar-edit-overlay" aria-hidden="true">
+          {busy ? '…' : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>}
+        </span>
+      </button>
+      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => upload(e.target.files?.[0])} />
+      {withActions && me.avatarUrl && <button type="button" className="btn-mini" onClick={reset} disabled={busy}>Reset</button>}
+      {err && <span className="field-err">{err}</span>}
+    </span>
   );
 }
 
@@ -63,7 +125,7 @@ function ProfileTab({ me }: { me: Me }) {
     <section className="card">
       <h2>Profile</h2>
       <dl className="kv big">
-        <div><dt>Picture</dt><dd><Avatar seed={me.avatarSeed} size={40} /><span className="muted small"> Assigned at sign-up</span></dd></div>
+        <div><dt>Picture</dt><dd><AvatarPicker me={me} size={44} withActions /></dd></div>
         <div><dt>EVM wallet</dt><dd className="num addr-line">{me.address} <Copy text={me.address} /></dd></div>
         <div><dt>Solana wallet</dt><dd className="num addr-line">{me.solanaAddress ? <>{me.solanaAddress} <Copy text={me.solanaAddress} /></> : <span className="muted">Being created. Sign in again if it does not show.</span>}</dd></div>
         <div><dt>Signed up with</dt><dd>{me.signupMethod ? METHOD[me.signupMethod] ?? me.signupMethod : '—'}</dd></div>
@@ -76,6 +138,7 @@ function ProfileTab({ me }: { me: Me }) {
 
 function SecurityTab({ me, actions, signOutEverywhere }: { me: Me; actions: PrivyActions | null; signOutEverywhere: () => Promise<void> }) {
   const [exporting, setExporting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const ready = !!actions;
   return (
     <>
@@ -116,9 +179,21 @@ function SecurityTab({ me, actions, signOutEverywhere }: { me: Me; actions: Priv
         <p className="muted">Your wallets are self-custodial. Export a private key to use it in another wallet. Anyone with it controls your funds.</p>
         <div className="row-between">
           <span className="num small">{me.address.slice(0, 10)}…</span>
-          <button className="btn btn-ghost btn-sm" disabled={!ready || exporting} onClick={async () => { setExporting(true); try { await actions?.exportWallet(me.address); } finally { setExporting(false); } }}>Export EVM key</button>
+          <button className="btn btn-ghost btn-sm" disabled={!ready || exporting} onClick={() => setConfirming(true)}>Export EVM key</button>
         </div>
       </section>
+      {confirming && (
+        <ExportConfirm
+          address={me.address}
+          onClose={() => setConfirming(false)}
+          onConfirm={async () => {
+            setConfirming(false);
+            setExporting(true);
+            // The key itself is shown by Privy in its own iframe on another domain; this app never sees it.
+            try { await actions?.exportWallet(me.address); } finally { setExporting(false); }
+          }}
+        />
+      )}
       <section className="card">
         <h2>Sessions</h2>
         <div className="row-between">
@@ -296,5 +371,62 @@ function Withdraw({ me, actions, balances }: { me: Me; actions: PrivyActions | n
       {!actions && <p className="hint">Sign in again to sign withdrawals with your wallet.</p>}
       <p className="hint">Solana withdrawals come next. Until then you can export your keys under Security.</p>
     </section>
+  );
+}
+
+// ---- Documents --------------------------------------------------------------
+
+const BRAND = [
+  { name: 'Profile picture', note: '4000 × 4000 · for X and other socials', file: 'backx-pfp' },
+  { name: 'Official banner', note: '4500 × 1500 · X header', file: 'backx-banner' },
+  { name: 'Logo', note: '3840 × 1280 · transparent PNG', file: 'backx-logo' },
+  { name: 'Mark', note: 'transparent PNG', file: 'backx-mark' },
+] as const;
+
+function DocumentsTab() {
+  const [mode, setMode] = useState<'dark' | 'light'>('dark');
+  return (
+    <>
+      <section className="card">
+        <div className="row-between docs-head">
+          <div><h2>Branding</h2><p className="muted">Official backx.trade assets. Download in full resolution.</p></div>
+          <div className="seg seg-inline" role="tablist" aria-label="Asset version">
+            <button role="tab" aria-selected={mode === 'dark'} className={mode === 'dark' ? 'active' : ''} onClick={() => setMode('dark')}>Dark</button>
+            <button role="tab" aria-selected={mode === 'light'} className={mode === 'light' ? 'active' : ''} onClick={() => setMode('light')}>Light</button>
+          </div>
+        </div>
+        <div className="brand-grid">
+          {BRAND.map((b) => {
+            const url = `/brand/${b.file}-${mode}.png`;
+            return (
+              <figure key={b.file} className={'brand-item ' + mode}>
+                <div className="brand-preview"><img src={url} alt={`${b.name}, ${mode} version`} loading="lazy" /></div>
+                <figcaption>
+                  <span><b>{b.name}</b><small className="muted">{b.note}</small></span>
+                  <a className="btn btn-primary btn-sm" href={url} download={`${b.file}-${mode}.png`}>Download</a>
+                </figcaption>
+              </figure>
+            );
+          })}
+          <figure className="brand-item dark">
+            <div className="brand-preview"><img src="/brand/backx-end-of-post.png" alt="End of post card" loading="lazy" /></div>
+            <figcaption>
+              <span><b>End of post</b><small className="muted">3840 × 2160 · last image in X threads</small></span>
+              <a className="btn btn-primary btn-sm" href="/brand/backx-end-of-post.png" download="backx-end-of-post.png">Download</a>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+      <section className="card">
+        <h2>Legal</h2>
+        <div className="row-between">
+          <span className="muted">Operated by GAZZFUN LLC.</span>
+          <span className="link-buttons">
+            <a className="btn btn-ghost btn-sm" href="/terms" target="_blank" rel="noopener">Terms of Service ↗</a>
+            <a className="btn btn-ghost btn-sm" href="/privacy" target="_blank" rel="noopener">Privacy Policy ↗</a>
+          </span>
+        </div>
+      </section>
+    </>
   );
 }

@@ -54,3 +54,12 @@
 :root[data-price="red-up"] { --price-up:var(--down); --price-down:var(--up); }
 :root[data-price="blue-orange"] { --price-up:var(--info); --price-down:var(--warning); }
 :root[data-price="mono"] { --price-up:var(--ink); --price-down:var(--ink-2); }
+/* Extra modes: light-theme values first, brighter values for dark. */
+:root[data-price="teal-pink"] { --price-up:#0F766E; --price-down:#BE185D; }
+:root[data-price="yellow-blue"] { --price-up:#8A6A00; --price-down:#1D4ED8; }
+:root[data-price="neon"] { --price-up:#4D7C0F; --price-down:#BE123C; }
+:root[data-price="gold-violet"] { --price-up:#806208; --price-down:#6D28D9; }
+:root[data-theme="dark"][data-price="teal-pink"] { --price-up:#2DD4BF; --price-down:#F472B6; }
+:root[data-theme="dark"][data-price="yellow-blue"] { --price-up:#FFD100; --price-down:#4D8BFF; }
+:root[data-theme="dark"][data-price="neon"] { --price-up:#A3E635; --price-down:#FB7185; }
+:root[data-theme="dark"][data-price="gold-violet"] { --price-up:#E3B341; --price-down:#A78BFA; }

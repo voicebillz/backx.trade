@@ -32,6 +32,9 @@ export async function migrate() {
     -- Profile: a random avatar picked at sign-up, and the user's Solana embedded wallet.
     alter table users add column if not exists avatar_seed    integer not null default floor(random() * 2147483647)::int;
     alter table users add column if not exists solana_address text;
+    -- Uploaded profile picture (small, resized in the browser). Null = generated avatar.
+    alter table users add column if not exists avatar_mime text;
+    alter table users add column if not exists avatar_data bytea;
 
     -- Accounts created before sign-up methods were recorded: best known value is the latest login.
     update users set signup_method = last_login_method where signup_method is null and last_login_method is not null;

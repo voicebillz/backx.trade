@@ -8,10 +8,12 @@ interface Props<T extends string> {
   options: Option<T>[];
   onChange: (v: T) => void;
   compact?: boolean;
+  /** Button shows only the option's icon (label stays for screen readers and in the list). */
+  iconOnly?: boolean;
 }
 
 /** Listbox dropdown: keyboard (↑↓ Home End Enter Esc), click outside closes, themed in both modes. */
-export function Dropdown<T extends string>({ label, value, options, onChange, compact }: Props<T>) {
+export function Dropdown<T extends string>({ label, value, options, onChange, compact, iconOnly }: Props<T>) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const root = useRef<HTMLDivElement>(null);
@@ -42,13 +44,13 @@ export function Dropdown<T extends string>({ label, value, options, onChange, co
   };
 
   return (
-    <div className={'dd' + (open ? ' open' : '') + (compact ? ' compact' : '')} ref={root}>
+    <div className={'dd' + (open ? ' open' : '') + (compact ? ' compact' : '') + (iconOnly ? ' icon-only' : '')} ref={root}>
       <button
         type="button" className="dd-btn" aria-haspopup="listbox" aria-expanded={open} aria-label={`${label}: ${current.label}`}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); setOpen(true); } }}
       >
-        {current.icon}<span className="dd-label">{current.label}</span>
+        {current.icon}{!iconOnly && <span className="dd-label">{current.label}</span>}
         <svg className="dd-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
       {open && (

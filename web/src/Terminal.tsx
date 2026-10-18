@@ -43,7 +43,7 @@ export default function Terminal() {
       />
       {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} />}
       {route === 'issue' && <IssuePage markets={moving.items} />}
-      {(route === 'profile' || route === 'security' || route === 'wallet') && <ProfilePage route={route} balances={balances} />}
+      {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
     </div>
   );
 }
