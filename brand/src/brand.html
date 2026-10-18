@@ -1,0 +1,98 @@
+<!doctype html>
+<!--
+  backx.trade brand renderer. Each export is a variant picked by the URL hash,
+  rendered by render.js at full resolution (see brand/README.md).
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root { --yellow:#FFD100; --black:#0A0A0A; --ink:#F2F2F2; }
+  html, body { margin:0; width:100%; height:100%; background:transparent; overflow:hidden; }
+  body { font-family:"IBM Plex Sans", system-ui, sans-serif; }
+  .stage { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  svg.mark { display:block; }
+  .word { font-weight:700; letter-spacing:-0.035em; line-height:1; white-space:nowrap; }
+  .word span { font-weight:500; }
+
+  /* Banner */
+  .banner { background:var(--black); color:var(--ink); }
+  .banner .grid { position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size:150px 150px; }
+  .banner .stripe { position:absolute; left:0; right:0; bottom:0; height:18px; background:var(--yellow); }
+  .banner .content { position:absolute; left:1000px; right:400px; top:0; bottom:0;
+    display:flex; flex-direction:column; justify-content:center; }
+  .banner .brandrow { display:flex; align-items:center; gap:44px; margin-bottom:80px; }
+  .banner h1 { margin:0; font-weight:600; font-size:220px; letter-spacing:-0.035em; line-height:1; }
+  .banner h1 em { font-style:normal; color:var(--yellow); }
+  .banner p { margin:64px 0 0; font-family:"IBM Plex Mono", monospace; font-size:62px; color:#9A9A9A; letter-spacing:0.02em; }
+  .banner p b { color:var(--ink); font-weight:500; }
+  .banner canvas { position:absolute; inset:0; }
+</style>
+</head>
+<body>
+<script>
+const HEAD = 'M18.3,60 C22.5,57 26.5,55.6 31,55.6 C38,55.6 43.4,58.4 44.8,62.4 C45.4,64.6 43.8,65.6 41,65.6 C33,65.6 25,63.7 18.3,60 Z';
+const BODY = 'M31.5,69.4 L44,68.9 C47,68.7 49.6,67.7 51.6,65.7 L92.5,25.6 C84,39 70,60 60.4,75 C57.2,80 53.4,82 48.6,82 C42.6,82 37.5,77 31.5,69.4 Z';
+// Tight box around the mark (x 18.3–92.5, y 25.6–82).
+const VB = '18 25 75 57.5';
+const mark = (fill, h) => `<svg class="mark" viewBox="${VB}" style="height:${h}px" fill="${fill}"><path d="${HEAD}"/><path d="${BODY}"/></svg>`;
+const word = (color, size, accent) =>
+  `<div class="word" style="font-size:${size}px;color:${color}">backx<span style="color:${accent}">.trade</span></div>`;
+
+const v = location.hash.slice(1);
+const W = innerWidth, H = innerHeight;
+let html = '';
+
+if (v.startsWith('mark-')) {
+  // Square, transparent, mark centred with ~10% padding.
+  const fill = { yellow:'#FFD100', black:'#0A0A0A', white:'#FFFFFF' }[v.slice(5)];
+  html = `<div class="stage">${mark(fill, H * 0.62)}</div>`;
+} else if (v.startsWith('logo-')) {
+  // Horizontal lockup, transparent. logo-onlight = black text, logo-ondark = white text.
+  const text = v === 'logo-onlight' ? '#0A0A0A' : '#FFFFFF';
+  const accent = v === 'logo-onlight' ? '#0A0A0A' : '#FFD100';
+  html = `<div class="stage" style="gap:${H*0.09}px">${mark('#FFD100', H * 0.5)}${word(text, H * 0.36, accent)}</div>`;
+} else if (v === 'pfp') {
+  // X profile picture: black square, yellow mark, safe inside the circle crop.
+  html = `<div class="stage" style="background:#0A0A0A">${mark('#FFD100', H * 0.5)}</div>`;
+} else if (v === 'banner') {
+  html = `<div class="stage banner"><div class="grid"></div><canvas id="c" width="${W}" height="${H}"></canvas>
+    <div class="content">
+      <div class="brandrow">${mark('#FFD100', 120)}${word('#F2F2F2', 104, '#FFD100')}</div>
+      <h1>Hedge <em>&amp;</em> Issuer Trading</h1>
+    </div><div class="stripe"></div></div>`;
+}
+document.body.innerHTML = html;
+
+if (v === 'banner') {
+  // Quiet candle chart across the background: deterministic, so every export matches.
+  const ctx = document.getElementById('c').getContext('2d');
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const n = 64, step = W / n, bw = step * 0.42;
+  let p = H * 0.72;
+  for (let i = 0; i < n; i++) {
+    const drift = -H * 0.0062;
+    const o = p, c = o + drift + (rnd() - 0.5) * H * 0.07;
+    const hi = Math.min(o, c) - rnd() * H * 0.03, lo = Math.max(o, c) + rnd() * H * 0.03;
+    const up = c < o, x = i * step + step / 2;
+    const a = i < 22 ? 0.10 : 0.16;
+    ctx.strokeStyle = ctx.fillStyle = up ? `rgba(255,209,0,${a + 0.04})` : `rgba(255,255,255,${a - 0.04})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x, hi); ctx.lineTo(x, lo); ctx.stroke();
+    ctx.fillRect(x - bw / 2, Math.min(o, c), bw, Math.max(6, Math.abs(c - o)));
+    p = c;
+  }
+  // Fade the chart under the text block so the headline stays crisp.
+  const g = ctx.createLinearGradient(0, 0, W, 0);
+  g.addColorStop(0, 'rgba(10,10,10,0.2)'); g.addColorStop(0.33, 'rgba(10,10,10,0.88)');
+  g.addColorStop(0.9, 'rgba(10,10,10,0.88)'); g.addColorStop(1, 'rgba(10,10,10,0.5)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+</script>
+</body>
+</html>

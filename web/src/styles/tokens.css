@@ -1,0 +1,44 @@
+/* backx.trade tokens (docs/backx/DESIGN-KIT.md §C). Brand mark is racing yellow on black. */
+:root {
+  --bg:#F5F7FA; --panel:#FFFFFF; --raised:#EEF2F7; --line:rgba(11,31,58,.09);
+  --ink:#0B1526; --ink-2:#45526A; --ink-3:#5E6A81;
+  --navy:#0B1F3A; --action:#1D4ED8; --on-action:#FFFFFF; --gold:#806208;
+  --up:#0A774F; --down:#C8283A; --info:#1D5FD1; --warning:#A85A00;
+  --success:var(--up); --danger:var(--down);
+  --up-bg:rgba(10,119,79,.10); --down-bg:rgba(200,40,58,.10);
+  --gold-bg:rgba(128,98,8,.10); --warning-bg:rgba(168,90,0,.10); --info-bg:rgba(29,95,209,.10);
+  --brand:#FFD100; --brand-ink:#0A0A0A;
+  --scrim:rgba(245,247,250,.72);
+  --radius:6px; --u:8px;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --ease-out:cubic-bezier(0.22,1,0.36,1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0A0F1A; --panel:#0F1626; --raised:#162036; --line:rgba(255,255,255,.07);
+    --ink:#E6EBF2; --ink-2:#9CA8BA; --ink-3:#7E8BA0;
+    --action:#4D8BFF; --on-action:#0A0F1A; --gold:#E3B341;
+    --up:#22C38E; --down:#F2555F; --info:#6AA8FF; --warning:#F0A83A;
+    --up-bg:rgba(34,195,142,.12); --down-bg:rgba(242,85,95,.12);
+    --gold-bg:rgba(227,179,65,.12); --warning-bg:rgba(240,168,58,.12); --info-bg:rgba(106,168,255,.12);
+    --scrim:rgba(6,9,16,.74);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0A0F1A; --panel:#0F1626; --raised:#162036; --line:rgba(255,255,255,.07);
+  --ink:#E6EBF2; --ink-2:#9CA8BA; --ink-3:#7E8BA0;
+  --action:#4D8BFF; --on-action:#0A0F1A; --gold:#E3B341;
+  --up:#22C38E; --down:#F2555F; --info:#6AA8FF; --warning:#F0A83A;
+  --up-bg:rgba(34,195,142,.12); --down-bg:rgba(242,85,95,.12);
+  --gold-bg:rgba(227,179,65,.12); --warning-bg:rgba(240,168,58,.12); --info-bg:rgba(106,168,255,.12);
+  --scrim:rgba(6,9,16,.74);
+  color-scheme: dark;
+}
+/* Components use --price-up/--price-down for direction. Set via data-price on <html>. */
+:root { --price-up:var(--up); --price-down:var(--down); }
+:root[data-price="red-up"] { --price-up:var(--down); --price-down:var(--up); }
+:root[data-price="blue-orange"] { --price-up:var(--info); --price-down:var(--warning); }
+:root[data-price="mono"] { --price-up:var(--ink); --price-down:var(--ink-2); }
