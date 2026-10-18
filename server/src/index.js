@@ -1,15 +1,15 @@
 import express from 'express';
-import pg from 'pg';
 import Redis from 'ioredis';
 import { config } from './config.js';
+import { db, migrate } from './db.js';
+import { authRouter, loadSession } from './auth.js';
 
-const db = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
 // family: 0 lets ioredis resolve Railway's IPv6 private network.
 const redis = new Redis(config.redisUrl, { family: 0, maxRetriesPerRequest: 2, lazyConnect: false });
 redis.on('error', (e) => console.error('redis:', e.message));
-db.on('error', (e) => console.error('postgres:', e.message));
 
 const app = express();
+app.locals.redis = redis;
 app.disable('x-powered-by');
 // Exactly one proxy hop (Railway's edge) so req.ip is the client, not spoofable via X-Forwarded-For chains.
 app.set('trust proxy', 1);
@@ -89,8 +89,10 @@ app.use('/api', async (req, res, next) => {
 
 app.use('/api', express.json({ limit: '64kb' }));
 
-// Routes come here. Every route that touches a user requires a verified session
+// Every route that touches a user requires a verified session
 // (see docs/backx/SECURITY-AUTH.md). There are no public write routes.
+app.use('/api', loadSession);
+app.use('/api/auth', authRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }));
 app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
@@ -98,10 +100,13 @@ app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
 // Never leak stack traces.
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(err.type === 'entity.too.large' ? 413 : 400).json({ error: 'bad_request' });
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'too_large' });
+  if (err.status >= 400 && err.status < 500) return res.status(err.status).json({ error: 'bad_request' });
+  res.status(500).json({ error: 'server_error' });
 });
 
 // '::' listens on IPv4 and IPv6 (Railway private networking is IPv6).
+await migrate();
 const server = app.listen(config.port, process.env.HOST || '::', () => console.log(`backx api on :${config.port}`));
 
 for (const sig of ['SIGTERM', 'SIGINT']) {

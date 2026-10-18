@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js"
@@ -11,6 +13,7 @@
   "dependencies": {
     "express": "4.21.2",
     "ioredis": "5.4.2",
+    "jose": "6.2.11",
     "pg": "8.13.1"
   }
 }

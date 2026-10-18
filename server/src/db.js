@@ -1,0 +1,26 @@
+import pg from 'pg';
+import { config } from './config.js';
+
+export const db = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
+db.on('error', (e) => console.error('postgres:', e.message));
+
+// Idempotent schema. Balances are never stored here: they live on-chain.
+export async function migrate() {
+  await db.query(`
+    create table if not exists users (
+      privy_did      text primary key,
+      wallet_address text not null unique,
+      created_at     timestamptz not null default now(),
+      last_login_at  timestamptz not null default now()
+    );
+    create table if not exists sessions (
+      token_hash   bytea primary key,               -- SHA-256 of the cookie value, never the value itself
+      privy_did    text not null references users(privy_did) on delete cascade,
+      privy_sid    text,
+      created_at   timestamptz not null default now(),
+      expires_at   timestamptz not null,
+      revoked_at   timestamptz
+    );
+    create index if not exists sessions_did on sessions(privy_did);
+  `);
+}

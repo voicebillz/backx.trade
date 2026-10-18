@@ -21,14 +21,23 @@ function origins(raw) {
   return new Set(list);
 }
 
+// Admin wallets: comma-separated EVM addresses (the admin's backx embedded wallet).
+function wallets(raw) {
+  const list = (raw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  for (const a of list) if (!/^0x[0-9a-f]{40}$/.test(a)) throw new Error(`ADMIN_WALLETS has an invalid address: ${a}`);
+  return new Set(list);
+}
+
 export const config = {
   isProd,
   port: Number(process.env.PORT) || 8080,
   allowedOrigins: origins(required('ALLOWED_ORIGINS')),
   databaseUrl: required('DATABASE_URL'),
   redisUrl: required('REDIS_URL'),
-  // Needed once login is wired; required in production so it is set from day one.
-  privyAppId: isProd ? required('PRIVY_APP_ID') : process.env.PRIVY_APP_ID?.trim() || '',
+  privyAppId: required('PRIVY_APP_ID'),
+  // Server-only. Used to read the user's linked accounts from Privy.
+  privyAppSecret: required('PRIVY_APP_SECRET'),
+  adminWallets: wallets(process.env.ADMIN_WALLETS),
   // Requests per minute per IP across /api.
   rateLimitPerMin: Number(process.env.RATE_LIMIT_PER_MIN) || 120,
 };

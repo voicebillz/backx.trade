@@ -10,6 +10,7 @@ import { MARKETS, type Market } from './lib/markets';
 import { quote } from './lib/hedge';
 import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
+import { useAuth } from './lib/auth';
 
 const COMING_SOON = import.meta.env.VITE_COMING_SOON !== 'false';
 
@@ -25,10 +26,15 @@ export function App() {
   const search = useRef<HTMLInputElement>(null);
   const app = useRef<HTMLDivElement>(null);
 
+  const { me } = useAuth();
+  // Admin wallets (ADMIN_WALLETS on the server) see the app before launch.
+  const overlay = COMING_SOON && !me?.isAdmin;
+
   // Behind the coming-soon overlay nothing is focusable or announced.
   useEffect(() => {
-    if (COMING_SOON) app.current?.setAttribute('inert', '');
-  }, []);
+    if (overlay) app.current?.setAttribute('inert', '');
+    else app.current?.removeAttribute('inert');
+  }, [overlay]);
 
   const { price: live, dir, tick } = useTicker(market.price, market.kind === 'Meme' ? 0.004 : 0.0012);
 
@@ -88,7 +94,7 @@ export function App() {
           </div>
         )}
       </div>
-      {COMING_SOON && <ComingSoon />}
+      {overlay && <ComingSoon />}
     </>
   );
 }

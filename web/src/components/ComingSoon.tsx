@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { Mark } from './Logo';
 import { params } from '../lib/hedge';
+import { OverlayAccount } from './Account';
 
 const STEPS = [
   { n: '01', title: 'Hedge', text: 'with multiplication' },
@@ -142,6 +143,7 @@ export function ComingSoon() {
         <h1 id="soon-title">Coming soon</h1>
         <Steps />
         <MultiplierBar />
+        <OverlayAccount />
         <p className="soon-legal"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
       </div>
     </div>

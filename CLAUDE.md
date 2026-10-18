@@ -46,4 +46,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Body limit 64 KB, validate every address and number, never return stack traces or internal details.
 - Postgres and Redis never get public networking. Keepers/workers run as separate Railway services without a public domain.
 - Secrets live only in Railway variables. Never in `VITE_*`, never in git. Server refuses to boot without required env (no fallback values).
+- Login: Privy access token (Authorization header) → verified with `jose` → embedded wallet read from Privy's API
+  with the app secret, never from the client → session cookie. `ADMIN_WALLETS` (Railway) lifts the coming-soon
+  overlay for those addresses. The overlay is cosmetic: never ship anything secret in the web bundle.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.

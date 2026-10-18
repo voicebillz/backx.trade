@@ -26,8 +26,13 @@ ALLOWED_ORIGINS=https://backx.trade,https://www.backx.trade
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
 PRIVY_APP_ID=<app-id fra Privy-dashbordet for backx>
+PRIVY_APP_SECRET=<app-secret fra Privy-dashbordet>
+ADMIN_WALLETS=<din backx-wallet-adresse, flere skilles med komma>
 RATE_LIMIT_PER_MIN=120
 ```
+
+- `ADMIN_WALLETS`: adressene som ser hele siden før lansering (overlayet forsvinner for dem). Første gang:
+  logg inn på backx.trade, trykk «Copy» ved adressen i overlayet, lim den inn her og redeploy. Kan stå tom.
 
 - `${{Postgres.DATABASE_URL}}` og `${{Redis.REDIS_URL}}` skrives akkurat slik: Railway fyller inn de interne adressene selv. Heter tjenestene noe annet enn «Postgres»/«Redis», bytt navnet i klammene.
 - `PORT` settes av Railway automatisk. Ikke sett den selv.
@@ -37,7 +42,6 @@ Settes **senere**, ikke nå (vi sier fra når koden trenger dem):
 
 | Variabel | Når | Merk |
 |---|---|---|
-| `PRIVY_APP_SECRET` | Når login kobles på serveren | Hemmelig. Kun i Railway, aldri i Vercel |
 | `RPC_URL` | Når vi leser priser/saldo on-chain | Kan inneholde API-nøkkel, derfor kun på serveren |
 | Keeper-/fee-collector-nøkler | Når kontraktene finnes | Egen Railway-tjeneste uten offentlig domene, én nøkkel per rolle. Aldri Safe-/owner-nøkler |
 
