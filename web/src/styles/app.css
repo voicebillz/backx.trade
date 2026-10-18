@@ -583,3 +583,53 @@ tr.zero { opacity: .5; }
 .picker-name small { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 899px) { .nav a { padding: 0 8px; } }
 .swap-title { text-align: center; margin: 8px 0 20px; font-size: 28px; letter-spacing: -.02em; }
+
+/* Header: theme + colours sit before the account group on desktop. */
+.topbar-prefs { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.topbar-prefs + .topbar-right { margin-left: 0; }
+
+/* Phone: row 1 = logo · search · account, row 2 = nav tabs · theme + colours.
+   Nothing wider than the screen, touch targets ≥ 44px, search list full width under the header. */
+@media (max-width: 899px) {
+  /* Flex with a forced line break (::after) so each row sizes on its own. */
+  .topbar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; height: auto; padding: 8px 16px 0; }
+  .topbar::after { content: ""; order: 3; flex-basis: 100%; height: 0; }
+  .topbar > .logo { order: 0; }
+  .topbar > .msearch { order: 1; flex: 1 1 0; min-width: 0; position: static; height: 40px; }
+  .topbar > .topbar-right { order: 2; margin: 0; gap: 6px; }
+  .topbar > .nav { order: 4; flex: 1 1 auto; min-width: 0; overflow-x: auto; }
+  .topbar > .topbar-prefs { order: 5; margin: 0; }
+  .nav a { height: 44px; padding: 0 10px; white-space: nowrap; }
+  .nav a:first-child { padding-left: 0; }
+  .nav a:first-child.active::after { left: 0; }
+  .nav a.active::after { bottom: 0; }
+  .topbar-prefs .icon-btn, .topbar-prefs .dd-btn { height: 40px; min-width: 40px; }
+  .msearch kbd { display: none; }
+  .msearch-panel { left: 16px; right: 16px; top: 54px; width: auto; max-width: none; }
+  .msearch-panel ul { max-height: min(60vh, 420px); }
+  .msearch-row { grid-template-columns: 28px minmax(0, 1fr) auto 72px; min-height: 48px; font-size: 14px; }
+  .topbar-right .btn { height: 40px; }
+  .pfp-btn { padding: 4px; margin: -4px; }
+}
+@media (max-width: 380px) {
+  .btn-wallet { padding: 0 10px; }
+  .bal-btn { display: none; }
+}
+
+/* iPhone zooms into any field under 16px when tapped. Keep every field ≥ 16px on phones. */
+@media (max-width: 899px) {
+  input:not(.swap-amt), select, textarea { font-size: 16px !important; }
+}
+
+/* Phone: label above value in account lists, long addresses break cleanly, copy buttons stay whole. */
+@media (max-width: 899px) {
+  .kv.big div { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .kv.big dt { font-size: 13px; }
+  .addr-line { display: flex; align-items: center; gap: 8px; word-break: break-all; font-size: 13px; }
+  .btn-mini { flex: none; min-height: 32px; }
+}
+@media (max-width: 360px) {
+  .nav a { padding: 0 6px; font-size: 13px; }
+  .topbar-prefs .icon-btn { min-width: 36px; }
+  .bottom .demo-tag { display: none; }
+}

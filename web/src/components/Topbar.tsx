@@ -44,7 +44,8 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
         <a href={href('issue')} onClick={go('issue')} className={route === 'issue' ? 'active' : ''} aria-current={route === 'issue' ? 'page' : undefined}>Issue Reserve</a>
         <a href={href('swap')} onClick={go('swap')} className={route === 'swap' ? 'active' : ''} aria-current={route === 'swap' ? 'page' : undefined}>Swap</a>
       </nav>
-      <div className="topbar-right">
+      {/* Theme + colours: own group so the phone header can move it next to the nav. */}
+      <div className="topbar-prefs">
         <button className="icon-btn" onClick={() => onTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
           {theme === 'dark' ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
@@ -52,6 +53,9 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
           )}
         </button>
+        <Dropdown label="Price colors" value={priceColors} options={PRICE_OPTIONS} onChange={onPriceColors} compact iconOnly />
+      </div>
+      <div className="topbar-right">
         {me ? (
           <>
             <BalanceButton data={balances.data} error={balances.error} />
@@ -59,17 +63,13 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z" /><circle cx="16" cy="14.5" r="1.3" fill="currentColor" /></svg>
               <span>Wallet</span>
             </a>
-            <Dropdown label="Price colors" value={priceColors} options={PRICE_OPTIONS} onChange={onPriceColors} compact iconOnly />
             <a className="pfp-btn" href={href('profile')} onClick={go('profile')} aria-label="Profile and settings">
               <Avatar seed={me.avatarSeed} src={me.avatarUrl} size={32} />
               {me.isAdmin && <span className="pfp-badge" title="Admin">A</span>}
             </a>
           </>
         ) : (
-          <>
-            <Dropdown label="Price colors" value={priceColors} options={PRICE_OPTIONS} onChange={onPriceColors} compact iconOnly />
-            <button className="btn btn-primary" onClick={signIn} disabled={!canSignIn}>Sign in</button>
-          </>
+          <button className="btn btn-primary" onClick={signIn} disabled={!canSignIn}>Sign in</button>
         )}
       </div>
     </header>

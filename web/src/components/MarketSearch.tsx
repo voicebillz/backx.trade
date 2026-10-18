@@ -49,7 +49,7 @@ export function MarketSearch({ onSelect }: { onSelect: (m: Market) => void }) {
     <div className={'msearch' + (open ? ' open' : '')} ref={root}>
       <svg className="msearch-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
       <input
-        ref={input} value={q} placeholder="Search markets" aria-label="Search markets" autoComplete="off" spellCheck={false}
+        ref={input} value={q} placeholder="Search" aria-label="Search markets" autoComplete="off" spellCheck={false}
         role="combobox" aria-expanded={open} aria-controls={id} aria-activedescendant={items?.length ? `${id}-${active}` : undefined}
         onFocus={() => setOpen(true)} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onKeyDown={onKey}
       />
