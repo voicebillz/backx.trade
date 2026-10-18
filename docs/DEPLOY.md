@@ -84,3 +84,17 @@ VITE_PRIVY_APP_ID=<samme app-id som PRIVY_APP_ID på Railway>
 - Maks 64 KB per forespørsel, ingen stack traces i svar, `/health` sier bare ok/ikke ok.
 - Postgres og Redis har ingen offentlig adresse.
 - Viktig: origin-sjekken stopper andre nettsider, men ikke skript (de kan forfalske headere). Derfor må **alle** ruter som leser eller endrer brukerdata kreve en verifisert innlogging. Det står i reglene i `CLAUDE.md`.
+
+## 5. Se beta-påmeldinger
+Railway → Postgres → **Data** (eller «Query») og kjør:
+
+```sql
+select wallet_address, signup_method, last_login_method, beta_signup_at
+from users order by beta_signup_at desc;
+```
+
+Antall per innloggingsmåte:
+
+```sql
+select signup_method, count(*) from users group by 1 order by 2 desc;
+```

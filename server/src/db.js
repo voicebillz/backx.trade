@@ -22,5 +22,11 @@ export async function migrate() {
       revoked_at   timestamptz
     );
     create index if not exists sessions_did on sessions(privy_did);
+
+    -- Beta sign-ups: every account created before launch. Only the method type is stored
+    -- (email, phone, google, ...), never the email address or phone number itself.
+    alter table users add column if not exists signup_method     text;
+    alter table users add column if not exists last_login_method text;
+    alter table users add column if not exists beta_signup_at    timestamptz not null default now();
   `);
 }

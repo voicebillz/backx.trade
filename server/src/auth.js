@@ -41,8 +41,11 @@ async function verifyPrivy(token) {
   return { did: payload.sub, sid: typeof payload.sid === 'string' ? payload.sid : null };
 }
 
-/** The user's Privy embedded Ethereum wallet, read from Privy itself, never from the client. */
-async function embeddedWallet(did) {
+/**
+ * The user's Privy embedded Ethereum wallet and the login method used, read from Privy
+ * itself, never from the client. The method is the linked account verified most recently.
+ */
+async function privyAccount(did) {
   const r = await fetch(`https://api.privy.io/v1/users/${encodeURIComponent(did)}`, {
     headers: {
       Authorization: 'Basic ' + Buffer.from(`${config.privyAppId}:${config.privyAppSecret}`).toString('base64'),
@@ -55,7 +58,13 @@ async function embeddedWallet(did) {
   const w = (user.linked_accounts || []).find(
     (a) => a.type === 'wallet' && a.chain_type === 'ethereum' && a.wallet_client_type === 'privy',
   );
-  return w && /^0x[0-9a-fA-F]{40}$/.test(w.address) ? w.address.toLowerCase() : null;
+  const address = w && /^0x[0-9a-fA-F]{40}$/.test(w.address) ? w.address.toLowerCase() : null;
+  const logins = (user.linked_accounts || [])
+    .filter((a) => typeof a.type === 'string' && !/wallet/.test(a.type))
+    .sort((a, b) => (b.latest_verified_at || 0) - (a.latest_verified_at || 0));
+  // google_oauth → google, phone → phone, passkey → passkey. Short, fixed vocabulary.
+  const method = logins[0] ? logins[0].type.replace(/_oauth$/, '').slice(0, 32) : null;
+  return { address, method };
 }
 
 /** Loads the session from the cookie and slides its expiry. Sets req.user or null. */
@@ -108,14 +117,14 @@ authRouter.post('/session', async (req, res, next) => {
   }
 
   try {
-    const address = await embeddedWallet(did);
+    const { address, method } = await privyAccount(did);
     // Social login only: no embedded wallet (yet) means no session.
     if (!address) return res.status(409).json({ error: 'wallet_pending' });
 
     await db.query(
-      `insert into users (privy_did, wallet_address) values ($1, $2)
-       on conflict (privy_did) do update set last_login_at = now()`,
-      [did, address],
+      `insert into users (privy_did, wallet_address, signup_method, last_login_method) values ($1, $2, $3, $3)
+       on conflict (privy_did) do update set last_login_at = now(), last_login_method = excluded.last_login_method`,
+      [did, address, method],
     );
     const token = crypto.randomBytes(32).toString('base64url');
     await db.query(

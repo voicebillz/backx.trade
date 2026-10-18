@@ -24,8 +24,8 @@ export function OverlayAccount() {
   if (status === 'signedIn' && me) {
     return (
       <div className="soon-account" aria-live="polite">
-        <div className="soon-account-row"><span>Signed in</span><CopyAddress address={me.address} /></div>
-        <p className="soon-account-note">You are on the list. Full access opens at launch.</p>
+        <div className="soon-account-row"><span>Signed up</span><CopyAddress address={me.address} /></div>
+        <p className="soon-account-note">You are on the beta list. We will let you in soon.</p>
         <button className="soon-link" onClick={signOut}>Sign out</button>
       </div>
     );
@@ -34,7 +34,7 @@ export function OverlayAccount() {
   return (
     <div className="soon-account" aria-live="polite">
       <button className="soon-signin" onClick={signIn} disabled={connecting || !canSignIn} aria-busy={connecting}>
-        {connecting ? 'Setting up your wallet…' : 'Sign in'}
+        {connecting ? 'Setting up your wallet…' : 'Sign up for beta'}
       </button>
       {status === 'error' && <p className="soon-account-note err">Sign-in did not complete. Try again.</p>}
     </div>
