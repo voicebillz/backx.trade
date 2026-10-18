@@ -65,6 +65,8 @@ VITE_PRIVY_APP_ID=<samme app-id som PRIVY_APP_ID på Railway>
 - Embedded wallets: Ethereum, «Create on login: users without wallets».
 - **Allowed origins:** `https://backx.trade`, `https://www.backx.trade` (og `http://localhost:5173` bare mens vi utvikler).
 - App-id er offentlig. App-secret er hemmelig og går kun i Railway.
+- «Secure your app»: begge punktene er gjort i koden. CSP og X-Frame-Options sendes fra `web/vercel.json`
+  på alle sider. Huk av begge og trykk Continue. Sjekk: `curl -sI https://backx.trade | grep -i content-security`.
 
 ## 4. Hvorfor API-et ikke er åpent
 - CORS og origin-sjekk: kun `backx.trade` og `www.backx.trade` får svar. Andre nettsider får 403.

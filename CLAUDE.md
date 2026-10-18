@@ -29,6 +29,9 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Withdrawals: user types the recipient address. Never a fixed recipient.
 
 ## Security
+- Web CSP is enforced in `web/vercel.json` (Privy base policy minus WalletConnect, plus Google Fonts and `api.backx.trade`).
+  No inline scripts, no `unsafe-eval`. New external hosts (RPC, price feeds) must be added to `connect-src` deliberately.
+  `X-Frame-Options: DENY` + `frame-ancestors 'none'`. Re-test the CSP after every Privy SDK upgrade.
 - Never commit `.env`, keys or keypair files. `VITE_*` ends up in the browser: no secrets there.
 - Owner keys are never handled by a server or script. Safe `0xfa408F75490C0412d4a5F45FA7553Aff03249BE4` owns the contracts.
 - On-chain access is read-only unless the owner explicitly asks otherwise.

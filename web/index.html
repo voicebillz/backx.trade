@@ -15,18 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" />
-    <script>
-      // Theme before first paint: saved choice wins, else follow the browser (light only if it asks for light).
-      (function () {
-        try {
-          var t = localStorage.getItem('backx.theme');
-          if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-          document.documentElement.dataset.theme = t;
-          var p = localStorage.getItem('backx.price');
-          if (p) document.documentElement.dataset.price = p;
-        } catch (e) { document.documentElement.dataset.theme = 'dark'; }
-      })();
-    </script>
+    <script src="/theme-boot.js"></script>
   </head>
   <body>
     <div id="root"></div>
