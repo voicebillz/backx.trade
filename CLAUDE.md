@@ -8,6 +8,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - `web/` React 18 + Vite + TypeScript trading terminal (Vercel). Landing page IS the terminal.
   A "Coming soon" overlay covers it for everyone while `VITE_COMING_SOON` is not `"false"`.
 - `brand/` logo, X profile picture and banner (4K sources + SVG).
+- `server/` API on Railway at `api.backx.trade` (Express, Postgres, Redis). Setup: `docs/DEPLOY.md`.
 - `docs/backx/` spec, design kit, security, simulations.
 
 ## Design rules (DESIGN-KIT part A)
@@ -32,3 +33,14 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Owner keys are never handled by a server or script. Safe `0xfa408F75490C0412d4a5F45FA7553Aff03249BE4` owns the contracts.
 - On-chain access is read-only unless the owner explicitly asks otherwise.
 - Contracts are not written until the open decisions in the spec (§11) are settled with the owner.
+
+## API (server/) — closed by default
+- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.
+- CORS + Origin/Referer guard: exact allowlist from `ALLOWED_ORIGINS` (https only, no wildcards, no preview domains). Fail closed.
+- The origin guard only stops other websites. Every route that reads or writes user data MUST require a verified session; there are no public write routes, ever.
+- Sessions: HttpOnly + Secure + SameSite=Lax cookie, only the SHA-256 hash stored in Postgres. Never tokens in query or body.
+- Rate limit every `/api` route in Redis; stricter limits on money routes. Redis down = 503, never "let it through".
+- Body limit 64 KB, validate every address and number, never return stack traces or internal details.
+- Postgres and Redis never get public networking. Keepers/workers run as separate Railway services without a public domain.
+- Secrets live only in Railway variables. Never in `VITE_*`, never in git. Server refuses to boot without required env (no fallback values).
+- Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.
