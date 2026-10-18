@@ -37,7 +37,7 @@ export function OverlayAccount() {
         {connecting ? 'Setting up your wallet…' : 'Sign in'}
       </button>
       {status === 'error' && <p className="soon-account-note err">Sign-in did not complete. Try again.</p>}
-      {status === 'signedOut' && <p className="soon-account-note">Email, Google, Apple or X. Your own wallet is created for you.</p>}
+      {status === 'signedOut' && <p className="soon-account-note">Email, Google or X. Your own wallet is created for you.</p>}
     </div>
   );
 }
