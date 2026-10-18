@@ -25,12 +25,13 @@ Med ekte tall per steg og $100-tabeller for alle nivåer: `SCENARIOS-100.md`.
 
 ### 2.1 Åpning
 1. Traderen setter inn innsatsen X i **USDC** (samme som Hedge).
-2. Åpningsgebyrer av innsatsen: 2 % holders + 0,5 % Reserve Security Fund → E₀.
-3. Notional **N = m · E₀** (ved 5× og $100: N ≈ $487,50).
+2. Gebyrene betales **i tillegg** til innsatsen (v4): 2 % holders + 0,5 % Reserve Security Fund av innsatsen,
+   0,25 % lånegebyr + 0,03 % fond av N. Ved 5× og $100: $100 + $3,90.
+3. Notional **N = m · X** (ved 5× og $100: N = $500).
    - Forskjell fra Hedge: på Hedge kjøper traderens egne penger også coinen, så bare
      (m − 1)·X lånes. På Short er traderens penger **sikkerhet i USD**, og *hele*
-     eksponeringen er lånte tokens. Derfor lånes m·E, ikke (m − 1)·X.
-4. Token-reserven låner ut **q = N / P₀ PONS**. Lånegebyr 0,2 % av N trekkes fra innsatsen → E.
+     eksponeringen er lånte tokens. Derfor lånes m·X, ikke (m − 1)·X.
+4. Token-reserven låner ut **q = N / P₀ PONS**. Lånegebyret holdes i posisjonen og kjøpes som PONS til issuers ved lukking.
 5. Posisjonskontrakten **selger q PONS** til USDC i én transaksjon (rute-motoren, `minOut`,
    TWAP-vakt). Posisjonen holder nå **C = E + N·(1 − kost)** USDC, låst.
 
@@ -38,7 +39,7 @@ Med ekte tall per steg og $100-tabeller for alle nivåer: `SCENARIOS-100.md`.
 1. Kontrakten **kjøper tilbake nøyaktig q PONS** (exact-output-swap) med USDC fra C.
 2. **Fossefall, alltid i denne rekkefølgen:**
    1. Issuer får **q PONS tilbake først** (samme antall tokens som ble lånt ut).
-   2. Gevinst (prisen falt): issuer får andelen **p** av gevinsten, traderen resten.
+   2. Gevinst (prisen falt): issuer får andelen **p = 10 %** av gevinsten, traderen resten.
    3. Likvidering: av traderens rest får issuer **s**, traderen (1 − s).
 3. Traderens utbetaling går i **USDC** rett til egen wallet. Rund alltid NED.
 4. Issuers andeler (lånegebyr, p, s) **kjøpes som PONS i samme transaksjon** og legges i
@@ -55,9 +56,9 @@ Med ekte tall per steg og $100-tabeller for alle nivåer: `SCENARIOS-100.md`.
 ## 3. Formler
 
 ```
-E₀ = X − 0,02·X − 0,005·X
-N  = m · E₀                         (USD-verdi av lånte tokens)
-lån-gebyr = 0,002 · N               E = E₀ − lån-gebyr
+E  = X                             (v4: gebyrene betales i tillegg)
+N  = m · X                         (USD-verdi av lånte tokens)
+betalt = X + 0,02·X + 0,005·X + 0,0025·N + 0,0003·N
 kost = pool-fee + N / pool-dybde    (per vei)
 C  = E + N·(1 − kost)               (USDC i posisjonen etter salget)
 tilbakekjøp(x) = N · x · (1 + kost) x = P / P₀

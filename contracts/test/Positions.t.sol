@@ -15,9 +15,10 @@ contract HedgeTest is Base {
         (,,,,,, uint128 equity, uint128 lent, uint128 coins,,,,) = pm.positions(id);
         assertEq(lent, 400 * USD, "L = (m-1)X");
         assertEq(usdVault.lent(), 400 * USD);
-        // fees: holders 2 %, RSF 0.5 % + 0.03 % of L, borrow 0.2 % of L
+        // v4: fees on top (holders 2 %, RSF 0.5 % + 0.03 % of L, borrow 0.25 % of L); equity = the full stake.
         assertEq(usd.balanceOf(feeCollector), 2 * USD);
-        assertEq(equity, 100 * USD - 2 * USD - 500_000 - 120_000 - 800_000);
+        assertEq(equity, 100 * USD);
+        assertEq(1_000_000 * USD - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000 + 120_000 + 1_000_000, "paid stake + fees");
 
         _move(1_000); // +10 %
         uint256 before = usd.balanceOf(trader);
@@ -29,9 +30,10 @@ contract HedgeTest is Base {
         uint256 out = uint256(coins) * 2_200 * USD / 1e18;
         out = out * (10_000 - 5 - out * 10_000 / (10_000_000 * USD)) / 10_000;
         uint256 rest = out - 400 * USD;
-        uint256 issuerShare = (rest - 100 * USD) * 2_500 / 10_000; // p = 25 % at 5×
+        uint256 issuerShare = (rest - 100 * USD) * 1_000 / 10_000; // p = 10 % (v4)
         assertEq(got, rest - issuerShare, "trader gets rest minus p");
-        assertEq(usdVault.totalAssets(), assetsBefore + 800_000 + issuerShare, "issuers: borrow fee + p");
+        assertEq(usdVault.totalAssets(), assetsBefore + 1_000_000 + issuerShare, "issuers: borrow fee + p");
+        assertGt(got, 100 * USD + 49 * USD - 10 * USD, "5x, +10 %: about +$45 before the fees paid on top");
     }
 
     function test_hedge_1x_noLoan_noLiquidation_issuersZero() public {
@@ -47,26 +49,27 @@ contract HedgeTest is Base {
         assertEq(usdVault.totalAssets(), assets, "issuers get 0 % at 1x");
     }
 
-    /// Contract trigger vs docs/backx/sim/sim3.py (v3): deep 30× hedge −1.84 %, 10× −7.29 %.
+    /// Contract trigger vs web/src/lib/hedge.ts and docs/backx/sim/sim4.py (v4): deep 30× hedge −2.10 %, 10× −7.62 %.
     function test_hedge_trigger_matches_sim() public {
         int256 t30 = _triggerBps(_hedge(100 * USD, 30), false);
-        assertApproxEqAbs(t30, -184, 6, "30x");
+        assertApproxEqAbs(t30, -210, 6, "30x");
         int256 t10 = _triggerBps(_hedge(100 * USD, 10), false);
-        assertApproxEqAbs(t10, -729, 6, "10x");
+        assertApproxEqAbs(t10, -762, 6, "10x");
     }
 
     function test_hedge_30x_liquidation_issuersWhole() public {
         uint256 assetsBefore = usdVault.totalAssets();
         uint256 id = _hedge(100 * USD, 30);
-        _move(-190); // just past the −1.84 % trigger
+        _move(-215); // just past the −2.10 % trigger
         assertTrue(pm.isLiquidatable(id));
         uint256 fundBefore = hedgeFund.balance();
+        uint256 traderBefore = usd.balanceOf(trader);
         vm.prank(keeper);
         pm.liquidate(id);
         assertEq(usdVault.lent(), 0);
         assertGe(usdVault.totalAssets(), assetsBefore, "issuers never lose on a normal liquidation");
         assertGe(hedgeFund.balance(), fundBefore, "fund untouched");
-        assertGt(usd.balanceOf(trader), 1_000_000 * USD - 100 * USD, "trader keeps (1-s) of the rest");
+        assertGt(usd.balanceOf(trader), traderBefore, "trader keeps (1-s) of the rest");
     }
 
     function test_hedge_30x_gap_fundCovers() public {
@@ -126,18 +129,18 @@ contract ShortTest is Base {
         assertGt(usd.balanceOf(trader) - before, 100 * USD, "short won");
     }
 
-    /// Contract trigger vs sim3 v3: deep 30× short +1.55 %, 10× +7.05 %.
+    /// Contract trigger vs hedge.ts / sim4 (v4): deep 30× short +1.75 %, 10× +7.23 %.
     function test_short_trigger_matches_sim() public {
         int256 t30 = _triggerBps(_short(100 * USD, 30), true);
-        assertApproxEqAbs(t30, 155, 6, "30x");
+        assertApproxEqAbs(t30, 175, 6, "30x");
         int256 t10 = _triggerBps(_short(100 * USD, 10), true);
-        assertApproxEqAbs(t10, 705, 8, "10x");
+        assertApproxEqAbs(t10, 723, 8, "10x");
     }
 
     function test_short_30x_liquidation_issuersWhole() public {
         uint256 coinsBefore = tokenVault.totalAssets();
         uint256 id = _short(100 * USD, 30);
-        _move(160);
+        _move(180);
         assertTrue(pm.isLiquidatable(id));
         vm.prank(keeper);
         pm.liquidate(id);
@@ -219,7 +222,7 @@ contract GuardsTest is Base {
 
     function test_access() public {
         uint256 id = _hedge(100 * USD, 30);
-        _move(-190);
+        _move(-215);
         vm.prank(makeAddr("stranger"));
         vm.expectRevert(BackxPositionManager.NotOwner.selector);
         pm.close(id, 0);
@@ -341,12 +344,21 @@ contract CrashCoverTest is Base {
         _deploy(5, 10_000_000 * USD);
     }
 
-    function test_fundLimitsOpenPositions() public {
-        // Hedge 30× $100, −30 % in one jump: L·c − E·(1 − c) ≈ 2,900·0.3 − 92·0.7 ≈ $806 per position.
+    /// Default: the gate is off and issuer reserves are used in full; exposure is still tracked.
+    function test_gateOffByDefault_reservesUsedInFull() public {
+        assertEq(pm.stressCoverBps(), 0);
+        for (uint256 i; i < 200; i++) _hedge(100 * USD, 30); // ≈ $160k worst case vs a $100k fund
+        assertGt(pm.hedgeStressUsd(), hedgeFund.balance(), "exposure above the fund is allowed");
+    }
+
+    function test_fundLimitsOpenPositions_whenSwitchedOn() public {
+        vm.prank(safe);
+        pm.setStressCover(10_000);
+        // Hedge 30× $100, −30 % in one jump: L·c − E·(1 − c) = 2,900·0.3 − 100·0.7 = $800 per position.
         uint256 id = _hedge(100 * USD, 30);
         (,,,,,,,,,,,, uint128 stress) = pm.positions(id);
-        assertApproxEqAbs(stress, 806 * USD, 2 * USD);
-        // $100k fund: about 124 such positions, then it stops.
+        assertApproxEqAbs(stress, 800 * USD, 1 * USD);
+        // $100k fund: about 125 such positions, then it stops.
         uint256 n = 1;
         vm.startPrank(trader);
         while (true) {
@@ -356,7 +368,7 @@ contract CrashCoverTest is Base {
             }
         }
         vm.stopPrank();
-        assertApproxEqAbs(n, 124, 2);
+        assertApproxEqAbs(n, 125, 3);
         assertLe(pm.hedgeStressUsd(), hedgeFund.balance());
         // 1× borrows nothing: no crash risk, always allowed.
         _hedge(100 * USD, 1);
@@ -383,7 +395,7 @@ contract CrashCoverTest is Base {
         assertEq(pm.hedgeStressUsd() + pm.shortStressUsd(), 0);
     }
 
-    function test_crashCoverCannotBeSwitchedOff() public {
+    function test_crashLevelsBounded() public {
         BackxPositionManager.Market memory mk = _market(30, 30);
         mk.crashBps = 0;
         vm.prank(safe);
@@ -392,5 +404,7 @@ contract CrashCoverTest is Base {
         vm.prank(safe);
         vm.expectRevert(BackxPositionManager.BadParams.selector);
         pm.setStressCover(1_000);
+        vm.prank(safe);
+        pm.setStressCover(0); // off again
     }
 }

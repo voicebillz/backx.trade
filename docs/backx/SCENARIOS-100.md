@@ -1,137 +1,149 @@
-# backx.trade: $100-scenarier for Hedge, Short og issuers (2026-10-18)
+# backx.trade: $100-scenarier for Hedge, Short og issuers (v4, 2026-10-18)
 
-> Laget med `sim/scenarios.py` (samme tall som `web/src/lib/hedge.ts` og kontraktene, v3).
+> Laget med `sim/scenarios.py` (samme tall som `web/src/lib/hedge.ts` og kontraktene, **v4**).
 > Én prisbevegelse, ingen tidsbane. **(L)** = likvidert av keeper akkurat på likvideringspunktet.
-> Alle tall er **etter alle gebyrer** (holders 2 %, lån 0,2 %, Reserve Security Fund, swap begge veier).
 > Ikke auditert, ikke deployet. Ingen lovnader om avkastning: dette er regneeksempler.
 
-## 1. Hvor pengene i en short kommer fra (eksempel: $100, 5×, PONS til $0,50, meme-pool)
+## 1. Hva v4 endret (eier 2026-10-18)
+
+| | v3 (før) | **v4 (nå)** |
+|---|---|---|
+| Posisjon ved 5× på $100 | $487,50 (gebyrer trukket fra innsatsen først) | **$500,00** (nøyaktig m × innsats) |
+| Gebyrene | trukket fra innsatsen | **betales i tillegg** til innsatsen (5×: $100 + $3,90) |
+| Issuers' andel av gevinst (p) | 15–30 % | **10 %** flatt (Hedge 1×: 0 %) |
+| Lånegebyr til issuers | 0,2 % av lånt | **0,25 %** av lånt |
+| Holders (gazz.fun) | 2 % av innsatsen | 2 % av innsatsen (uendret) |
+| Reserve Security Fund | 0,5 % + 0,03 % av lånt | uendret |
+| Fondet stopper nye posisjoner | ja | **nei** (kan slås på av Safe); fondet er siste utvei |
+
+Resultat, dyp pool, 5×, prisen beveger seg 10 % riktig vei: **Short +$40,63** (før +$33,47), Hedge +$40,84 (før +$34,23).
+Det er $50 brutto, minus 10 % til issuers og $4,45 i gebyrer. Issuers' **forventede** inntekt per posisjon er nesten
+uendret (sim4 på ekte priser: 5× Short $1,38 → $1,42), fordi den kommer fra lånegebyret og likvideringer, ikke fra
+gevinstandelen. Se `FEES-AND-MARGINS.md`.
+
+## 2. Hvor pengene i en short kommer fra (eksempel: $100, 5×, PONS til $0,50, meme-pool)
 
 | Steg | Hva skjer | Tall |
 |---|---|---|
 | 1 | **Issuer** har satt inn PONS i token-reserven («Issue PONS») | f.eks. 100 000 PONS |
-| 2 | **Traderen** setter inn $100 USDC. Gebyrer: holders $2,00, fondet $0,65, lån $0,97 | igjen: **$96,38** (sikkerhet) |
-| 3 | Kontrakten **låner 975 PONS** fra token-reserven (5 × $97,50 = $487,50) | q = 975 PONS |
-| 4 | De 975 PONS **selges med en gang** for USDC (pool-gebyr + impact 0,35 %) | ca. $485,80 |
-| 5 | Posisjonen holder nå **$582,18 USDC, låst** i kontrakten (traderens $96,38 + salget) | C = $582,18 |
-| 6a | **Prisen faller 10 % (til $0,45):** kontrakten kjøper tilbake nøyaktig 975 PONS for $440,28 | rest $141,90 |
-|    | → issuer får **975 PONS tilbake først**, pluss lånegebyr og 25 % av gevinsten (p ved 5×) (kjøpt som PONS) | issuer +$11,45 i PONS |
-|    | → traderen får resten i USDC | **$131,42 (+$31,42)** |
-| 6b | **Prisen stiger 10 % (til $0,55):** tilbakekjøpet koster $538,12 | traderen får $44,06 (−$55,94) |
-| 6c | **Prisen stiger 12,42 %:** keeper likviderer, kjøper tilbake 975 PONS | traderen $9,66, issuer +$23,52 |
-| 7 | **Gap** (prisen hopper så langt at $582 ikke holder til 975 PONS): **Reserve Security Fund kjøper resten**. Først når fondet er tomt, taper issuers pro rata. | |
+| 2 | **Traderen** betaler $100 innsats + gebyrer: holders $2,00, fondet $0,65, lån $1,25 | **$103,90** totalt |
+| 3 | Kontrakten **låner 1 000 PONS** fra token-reserven (5 × $100 = $500) | q = 1 000 PONS |
+| 4 | De 1 000 PONS **selges med en gang** for USDC (pool-gebyr + impact 0,35 %) | ca. $498,25 |
+| 5 | Posisjonen holder nå **$598,25 USDC, låst** i kontrakten (innsatsen $100 + salget) | C = $598,25 |
+| 6a | **Prisen faller 10 % (til $0,45):** kontrakten kjøper tilbake nøyaktig 1 000 PONS for $451,58 | rest $146,67 |
+|    | → issuer får **1 000 PONS tilbake først**, pluss lånegebyret og 10 % av gevinsten (kjøpt som PONS) | issuer +$5,92 i PONS |
+|    | → traderen får resten i USDC: $142,01 | **+$38,11** netto |
+| 6b | **Prisen stiger 10 % (til $0,55):** tilbakekjøpet koster $551,93 | traderen får $46,32 (**−$57,58** netto) |
+| 6c | **Prisen stiger 12,58 %:** keeper likviderer, kjøper tilbake 1 000 PONS | traderen $10,02, issuer +$24,62 |
+| 7 | **Gap** (prisen hopper så langt at USDC-en ikke holder til 1 000 PONS): **Reserve Security Fund kjøper resten**. Først når fondet er tomt, taper issuers pro rata. | |
 
 Kort sagt: **short-pengene er issuers' tokens, solgt.** Traderen låner ikke dollar, men PONS, og må
 levere samme antall PONS tilbake. Issuer får alltid **antall tokens** tilbake, pluss inntekt i PONS.
-Issuer eier PONS hele tiden, så de har kursrisikoen på sine egne tokens, akkurat som før de satte inn.
 
-Hedge er speilbildet: issuer setter inn **USDC** («Issue USD»), kontrakten låner (m−1)·$100 USDC,
-og traderens $100 + lånet kjøper coinen. Ved lukking selges coinen, og issuer får USDC tilbake først.
-
-## 2. Hva gap koster fondet (dyp pool, prisen hopper 10 % i ett hopp før keeper rekker å handle)
+## 3. Når fondet brukes (dyp pool, prisen hopper 10 % i ett hopp før keeper rekker å handle)
 
 | Posisjon | Fondet fikk inn | Fondet betaler ut | Issuers |
 |---|---|---|---|
-| Hedge 10× | $0,77 | $5,19 | hele (fondet dekker) |
-| Short 10× | $0,79 | $3,47 | hele |
-| Hedge 30× | $1,37 | $212,55 | hele, hvis fondet har nok |
-| Short 30× | $1,38 | $206,60 | hele, hvis fondet har nok |
+| Hedge 10× | $0,77 | $1,08 | hele |
+| Short 10× | $0,80 | $1,26 | hele |
+| Hedge 30× | $1,37 | $204,32 | hele, hvis fondet har nok |
+| Short 30× | $1,40 | $205,04 | hele, hvis fondet har nok |
 
-Et 10 %-hopp på ett minutt skjer nesten aldri på BTC/ETH (simuleringen: 0 gap på dype pooler ved 30×), men
-hvis det skjer på 30×, koster én posisjon fondet like mye som ca. 150 åpninger gir inn. Derfor
-er 30× bare tillatt på dype pooler, og meme-coins er låst til maks 10×.
+Fondet er **siste utvei**: det brukes bare når en krasj eller pumpe går fortere enn kontrakten rekker å
+likvidere (f.eks. PONS −90 % i ett hopp). Normale likvideringer koster fondet ingenting.
 
-Les tabellene slik: rad = multiplikator, kolonne = prisbevegelse. Traderens tall er netto gevinst/tap på $100. Issuers' tall er hva **den ene posisjonen** gir issuers totalt (lånegebyr + andel av gevinst, eller andel av resten ved likvidering). 1× Hedge låner ingenting, så issuers får 0.
+Les tabellene slik: rad = multiplikator, kolonne = prisbevegelse. Traderens tall er netto gevinst/tap etter
+alt som er betalt (innsats + gebyrer). Issuers' tall er hva **den ene posisjonen** gir issuers totalt.
 
-## 3. Dyp pool (BTC/ETH-type, 0,05 %, $10M)
+## 4. Dyp pool (BTC/ETH-type, 0,05 %, $10M)
 
 ### Hedge (tjener når prisen stiger): traderens gevinst/tap på $100
 
 | m | Likv. ved | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
-| 1× | aldri | −$22.08 | −$12.34 | −$7.47 | −$2.60 | +$2.27 | +$7.14 | +$16.88 |
-| 2× | -29.36 % | −$42.35 | −$22.64 | −$12.79 | −$2.93 | +$5.88 | +$14.26 | +$31.01 |
-| 3× | -20.95 % | −$62.62 | −$32.95 | −$18.11 | −$3.27 | +$9.25 | +$21.12 | +$44.86 |
-| 5× | -13.28 % | −$90.95 (L) | −$53.57 | −$28.77 | −$3.97 | +$15.63 | +$34.23 | +$71.43 |
-| 10× | -7.29 % | −$96.73 (L) | −$96.73 (L) | −$55.48 | −$5.76 | +$30.76 | +$65.56 | +$135.16 |
-| 20× | -3.41 % | −$97.75 (L) | −$97.75 (L) | −$97.75 (L) | −$9.66 | +$62.90 | +$132.56 | +$271.89 |
-| 30× | -1.84 % | −$96.88 (L) | −$96.88 (L) | −$96.88 (L) | −$13.95 | +$94.75 | +$199.26 | +$408.28 |
+| 1× | aldri | −$22.58 | −$12.59 | −$7.60 | −$2.60 | +$2.39 | +$7.39 | +$17.38 |
+| 2× | -29.78 % | −$42.95 | −$22.97 | −$12.98 | −$2.99 | +$6.02 | +$15.01 | +$33.00 |
+| 3× | -21.38 % | −$63.31 | −$33.35 | −$18.36 | −$3.38 | +$10.14 | +$23.63 | +$50.60 |
+| 5× | -13.67 % | −$94.26 (L) | −$54.11 | −$29.14 | −$4.17 | +$18.36 | +$40.84 | +$85.79 |
+| 10× | -7.62 % | −$101.62 (L) | −$101.62 (L) | −$56.16 | −$6.22 | +$38.85 | +$83.79 | +$173.68 |
+| 20× | -3.69 % | −$105.47 (L) | −$105.47 (L) | −$105.47 (L) | −$10.62 | +$79.53 | +$169.41 | +$349.16 |
+| 30× | -2.10 % | −$107.39 (L) | −$107.39 (L) | −$107.39 (L) | −$15.42 | +$119.85 | +$254.63 | +$524.20 |
 
 ### Issuers' inntekt fra den samme hedge-posisjonen
 
 | m | Lånegebyr | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
 | 1× | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 |
-| 2× | +$0.20 | +$0.20 | +$0.20 | +$0.20 | +$0.20 | +$1.24 | +$2.72 | +$5.67 |
-| 3× | +$0.40 | +$0.40 | +$0.40 | +$0.40 | +$0.40 | +$2.71 | +$5.68 | +$11.61 |
-| 5× | +$0.80 | +$21.92 | +$0.80 | +$0.80 | +$0.80 | +$6.01 | +$12.21 | +$24.61 |
-| 10× | +$1.80 | +$20.32 | +$20.32 | +$1.80 | +$1.80 | +$14.98 | +$29.90 | +$59.73 |
-| 20× | +$3.80 | +$24.08 | +$24.08 | +$24.08 | +$3.80 | +$30.76 | +$60.61 | +$120.32 |
-| 30× | +$5.80 | +$33.88 | +$33.88 | +$33.88 | +$5.80 | +$46.41 | +$91.20 | +$180.78 |
+| 2× | +$0.25 | +$0.25 | +$0.25 | +$0.25 | +$0.25 | +$1.23 | +$2.23 | +$4.23 |
+| 3× | +$0.50 | +$0.50 | +$0.50 | +$0.50 | +$0.50 | +$1.97 | +$3.47 | +$6.46 |
+| 5× | +$1.00 | +$22.84 | +$1.00 | +$1.00 | +$1.00 | +$3.44 | +$5.94 | +$10.93 |
+| 10× | +$2.25 | +$21.54 | +$21.54 | +$2.25 | +$2.25 | +$7.12 | +$12.12 | +$22.11 |
+| 20× | +$4.75 | +$25.90 | +$25.90 | +$25.90 | +$4.75 | +$14.46 | +$24.44 | +$44.41 |
+| 30× | +$7.25 | +$36.32 | +$36.32 | +$36.32 | +$7.25 | +$21.75 | +$36.72 | +$66.67 |
 
 ### Short (tjener når prisen faller): traderens gevinst/tap på $100
 
 | m | Likv. ved | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
-| 1× | +58.78 % | +$14.18 | +$5.89 | +$1.75 | −$2.82 | −$7.70 | −$12.58 | −$22.33 |
-| 2× | +28.97 % | +$30.49 | +$13.91 | +$5.61 | −$3.15 | −$12.91 | −$22.66 | −$42.17 |
-| 3× | +20.68 % | +$44.04 | +$20.63 | +$8.92 | −$3.48 | −$18.12 | −$32.75 | −$62.01 |
-| 5× | +13.04 % | +$70.05 | +$33.47 | +$15.17 | −$4.16 | −$28.54 | −$52.93 | −$90.33 (L) |
-| 10× | +7.05 % | +$132.45 | +$64.16 | +$30.01 | −$5.91 | −$54.69 | −$96.20 (L) | −$96.20 (L) |
-| 20× | +3.14 % | +$266.40 | +$129.81 | +$61.51 | −$9.70 | −$97.09 (L) | −$97.09 (L) | −$97.09 (L) |
-| 30× | +1.55 % | +$400.12 | +$195.21 | +$92.75 | −$13.86 | −$95.94 (L) | −$95.94 (L) | −$95.94 (L) |
+| 1× | +58.91 % | +$15.14 | +$6.13 | +$1.63 | −$2.88 | −$7.88 | −$12.89 | −$22.89 |
+| 2× | +29.11 % | +$32.77 | +$14.76 | +$5.76 | −$3.27 | −$13.27 | −$23.28 | −$43.29 |
+| 3× | +20.82 % | +$50.40 | +$23.39 | +$9.88 | −$3.66 | −$18.67 | −$33.67 | −$63.69 |
+| 5× | +13.20 % | +$85.65 | +$40.63 | +$18.12 | −$4.45 | −$29.46 | −$54.48 | −$93.88 (L) |
+| 10× | +7.23 % | +$173.73 | +$83.67 | +$38.65 | −$6.50 | −$56.53 | −$101.33 (L) | −$101.33 (L) |
+| 20× | +3.33 % | +$349.63 | +$169.51 | +$79.44 | −$10.90 | −$105.05 (L) | −$105.05 (L) | −$105.05 (L) |
+| 30× | +1.75 % | +$525.21 | +$255.00 | +$119.89 | −$15.70 | −$106.64 (L) | −$106.64 (L) | −$106.64 (L) |
 
 ### Issuers' inntekt fra den samme short-posisjonen
 
 | m | Lånegebyr | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
-| 1× | +$0.20 | +$2.70 | +$1.23 | +$0.50 | +$0.20 | +$0.20 | +$0.20 | +$0.20 |
-| 2× | +$0.39 | +$5.77 | +$2.84 | +$1.38 | +$0.39 | +$0.39 | +$0.39 | +$0.39 |
-| 3× | +$0.58 | +$11.59 | +$5.74 | +$2.82 | +$0.58 | +$0.58 | +$0.58 | +$0.58 |
-| 5× | +$0.97 | +$24.32 | +$12.13 | +$6.03 | +$0.97 | +$0.97 | +$0.97 | +$23.53 |
-| 10× | +$1.95 | +$58.71 | +$29.45 | +$14.81 | +$1.95 | +$1.95 | +$23.47 | +$23.47 |
-| 20× | +$3.90 | +$118.07 | +$59.53 | +$30.26 | +$3.90 | +$30.11 | +$30.11 | +$30.11 |
-| 30× | +$5.85 | +$177.33 | +$89.51 | +$45.60 | +$5.85 | +$42.41 | +$42.41 | +$42.41 |
+| 1× | +$0.25 | +$2.24 | +$1.24 | +$0.74 | +$0.25 | +$0.25 | +$0.25 | +$0.25 |
+| 2× | +$0.50 | +$4.48 | +$2.48 | +$1.48 | +$0.50 | +$0.50 | +$0.50 | +$0.50 |
+| 3× | +$0.75 | +$6.72 | +$3.72 | +$2.22 | +$0.75 | +$0.75 | +$0.75 | +$0.75 |
+| 5× | +$1.25 | +$11.20 | +$6.20 | +$3.70 | +$1.25 | +$1.25 | +$1.25 | +$24.63 |
+| 10× | +$2.50 | +$22.39 | +$12.39 | +$7.38 | +$2.50 | +$2.50 | +$24.97 | +$24.97 |
+| 20× | +$5.00 | +$44.75 | +$24.73 | +$14.73 | +$5.00 | +$32.49 | +$32.49 | +$32.49 |
+| 30× | +$7.50 | +$67.07 | +$37.04 | +$22.03 | +$7.50 | +$45.80 | +$45.80 | +$45.80 |
 
 
-## 4. Meme-pool (0,3 %, $1M)
+## 5. Meme-pool (0,3 %, $1M)
 
 ### Hedge (tjener når prisen stiger): traderens gevinst/tap på $100
 
 | m | Likv. ved | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
-| 1× | aldri | −$22.48 | −$12.79 | −$7.95 | −$3.10 | +$1.74 | +$6.59 | +$16.28 |
-| 2× | -28.98 % | −$43.19 | −$23.59 | −$13.79 | −$3.99 | +$4.94 | +$13.27 | +$29.93 |
-| 3× | -20.51 % | −$63.93 | −$34.42 | −$19.67 | −$4.92 | +$7.87 | +$19.67 | +$43.28 |
-| 5× | -12.76 % | −$90.95 (L) | −$56.20 | −$31.54 | −$6.89 | +$13.33 | +$31.82 | +$68.80 |
-| 10× | -6.65 % | −$96.73 (L) | −$96.73 (L) | −$61.88 | −$12.51 | +$25.81 | +$60.37 | +$129.49 |
+| 1× | aldri | −$23.00 | −$13.06 | −$8.09 | −$3.12 | +$1.85 | +$6.82 | +$16.76 |
+| 2× | -29.40 % | −$43.80 | −$23.93 | −$13.99 | −$4.06 | +$5.01 | +$13.95 | +$31.84 |
+| 3× | -20.95 % | −$64.64 | −$34.84 | −$19.94 | −$5.04 | +$8.57 | +$21.98 | +$48.81 |
+| 5× | -13.15 % | −$94.26 (L) | −$56.76 | −$31.94 | −$7.11 | +$15.58 | +$37.92 | +$82.61 |
+| 10× | -6.99 % | −$101.62 (L) | −$101.62 (L) | −$62.60 | −$13.00 | +$32.44 | +$77.08 | +$166.36 |
 
 ### Issuers' inntekt fra den samme hedge-posisjonen
 
 | m | Lånegebyr | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
 | 1× | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 | ±$0.00 |
-| 2× | +$0.20 | +$0.20 | +$0.20 | +$0.20 | +$0.20 | +$1.07 | +$2.54 | +$5.48 |
-| 3× | +$0.40 | +$0.40 | +$0.40 | +$0.40 | +$0.40 | +$2.37 | +$5.32 | +$11.22 |
-| 5× | +$0.80 | +$21.92 | +$0.80 | +$0.80 | +$0.80 | +$5.24 | +$11.41 | +$23.73 |
-| 10× | +$1.80 | +$20.32 | +$20.32 | +$1.80 | +$1.80 | +$12.86 | +$27.67 | +$57.30 |
+| 2× | +$0.25 | +$0.25 | +$0.25 | +$0.25 | +$0.25 | +$1.12 | +$2.11 | +$4.10 |
+| 3× | +$0.50 | +$0.50 | +$0.50 | +$0.50 | +$0.50 | +$1.79 | +$3.28 | +$6.26 |
+| 5× | +$1.00 | +$22.84 | +$1.00 | +$1.00 | +$1.00 | +$3.13 | +$5.62 | +$10.58 |
+| 10× | +$2.25 | +$21.54 | +$21.54 | +$2.25 | +$2.25 | +$6.41 | +$11.37 | +$21.29 |
 
 ### Short (tjener når prisen faller): traderens gevinst/tap på $100
 
 | m | Likv. ved | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
-| 1× | +58.11 % | +$13.80 | +$5.48 | +$1.33 | −$3.33 | −$8.22 | −$13.11 | −$22.89 |
-| 2× | +28.36 % | +$29.69 | +$13.06 | +$4.75 | −$4.19 | −$13.98 | −$23.76 | −$43.32 |
-| 3× | +20.07 % | +$42.87 | +$19.40 | +$7.66 | −$5.10 | −$19.77 | −$34.45 | −$63.79 |
-| 5× | +12.42 % | +$68.11 | +$31.42 | +$13.08 | −$7.02 | −$31.48 | −$55.94 | −$90.34 (L) |
-| 10× | +6.36 % | +$128.30 | +$59.78 | +$25.52 | −$12.49 | −$61.44 | −$96.21 (L) | −$96.21 (L) |
+| 1× | +58.25 % | +$14.72 | +$5.69 | +$1.18 | −$3.40 | −$8.42 | −$13.43 | −$23.46 |
+| 2× | +28.50 % | +$31.90 | +$13.85 | +$4.82 | −$4.34 | −$14.37 | −$24.40 | −$44.47 |
+| 3× | +20.22 % | +$49.06 | +$21.97 | +$8.42 | −$5.32 | −$20.37 | −$35.42 | −$65.52 |
+| 5× | +12.58 % | +$83.26 | +$38.11 | +$15.53 | −$7.40 | −$32.49 | −$57.58 | −$93.88 (L) |
+| 10× | +6.53 % | +$168.22 | +$77.86 | +$32.68 | −$13.30 | −$63.50 | −$101.34 (L) | −$101.34 (L) |
 
 ### Issuers' inntekt fra den samme short-posisjonen
 
 | m | Lånegebyr | ▼ -20 % | ▼ -10 % | ▼ -5 % | ■ +0 % | ▲ +5 % | ▲ +10 % | ▲ +20 % |
 |---|---|---|---|---|---|---|---|---|
-| 1× | +$0.20 | +$2.63 | +$1.16 | +$0.43 | +$0.20 | +$0.20 | +$0.20 | +$0.20 |
-| 2× | +$0.39 | +$5.63 | +$2.70 | +$1.23 | +$0.39 | +$0.39 | +$0.39 | +$0.39 |
-| 3× | +$0.58 | +$11.30 | +$5.43 | +$2.50 | +$0.58 | +$0.58 | +$0.58 | +$0.58 |
-| 5× | +$0.97 | +$23.68 | +$11.45 | +$5.33 | +$0.97 | +$0.97 | +$0.97 | +$23.52 |
-| 10× | +$1.95 | +$56.93 | +$27.57 | +$12.89 | +$1.95 | +$1.95 | +$23.45 | +$23.45 |
+| 1× | +$0.25 | +$2.19 | +$1.19 | +$0.69 | +$0.25 | +$0.25 | +$0.25 | +$0.25 |
+| 2× | +$0.50 | +$4.38 | +$2.38 | +$1.38 | +$0.50 | +$0.50 | +$0.50 | +$0.50 |
+| 3× | +$0.75 | +$6.57 | +$3.56 | +$2.06 | +$0.75 | +$0.75 | +$0.75 | +$0.75 |
+| 5× | +$1.25 | +$10.93 | +$5.92 | +$3.41 | +$1.25 | +$1.25 | +$1.25 | +$24.62 |
+| 10× | +$2.50 | +$21.78 | +$11.74 | +$6.72 | +$2.50 | +$2.50 | +$24.95 | +$24.95 |

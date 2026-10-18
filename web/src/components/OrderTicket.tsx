@@ -132,6 +132,7 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
           </>
         )}
         <div><dt>{short ? 'Short size' : 'Position size'}</dt><dd className="num">{usd(q.notional)}</dd></div>
+        <div><dt>You pay (stake + fees)</dt><dd className="num">{usd(q.paid)}</dd></div>
         {short && <div><dt>{market.symbol} borrowed</dt><dd className="num">{(q.loan / market.price).toLocaleString('en-US', { maximumFractionDigits: 4 })}</dd></div>}
       </dl>
 
@@ -167,12 +168,12 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
         {feesOpen && (
           <dl className="kv small">
             <div><dt>Holders (2% of stake)</dt><dd className="num">{usd(q.fees.holders)}</dd></div>
-            <div><dt>Borrow (0.2% of {short ? 'tokens lent' : 'loan'})</dt><dd className="num">{usd(q.fees.borrow)}</dd></div>
+            <div><dt>Borrow (0.25% of {short ? 'tokens lent' : 'loan'}, to issuers)</dt><dd className="num">{usd(q.fees.borrow)}</dd></div>
             <div><dt>Reserve Security Fund</dt><dd className="num">{usd(q.fees.rsf)}</dd></div>
             <div><dt>Swap + impact, both ways (est.)</dt><dd className="num">{usd(q.fees.swap)}</dd></div>
           </dl>
         )}
-        <p className="hint">No funding fees. One fee at open.</p>
+        <p className="hint">Paid once at open, on top of your stake. No funding fees.</p>
       </div>
 
       <button className={'btn btn-block ' + (short ? 'btn-short' : 'btn-primary')} disabled>

@@ -41,9 +41,12 @@ The owner is not a developer: explain briefly, in Norwegian.
   owner's request 2026-10-18; NOT audited, NOT deployed. Deploying needs owner sign-off on the open decisions, the
   swap adapter + TWAP oracle per pool, fork tests and an external audit. `forge test` must stay green.
 - Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
-- Crash cover (owner 2026-10-18): a side's open positions may never have a one-jump gap (market crashBps / pumpBps)
-  larger than that side's Reserve Security Fund; it cannot be switched off. Limit (take-profit) orders fill via keeper
-  on the TWAP, at most 1 % worse than the limit. Details: `docs/backx/FEES-AND-MARGINS.md` §3b–3c.
+- Fee model v4 (owner 2026-10-18): exposure is exactly m × stake, fees are paid ON TOP of the stake (holders 2 % of
+  stake to gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % + 0.03 % of lent), issuers' share of a gain p = 10 %.
+- Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
+  liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
+  Limit (take-profit) orders fill via keeper on the TWAP, at most 1 % worse than the limit.
+  Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.
@@ -74,6 +77,6 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Multiplication 1× is allowed for Hedge: nothing is borrowed, no liquidation, issuers get 0 % (owner 2026-10-18).
 - Two sides per coin (owner 2026-10-18): Hedge (price up) is backed by the coin's USD reserve (USDC); Short
   (price down) is backed by its token reserve (the coin itself, lent and sold, bought back first on close).
-  Math and caps: `docs/backx/SHORT-SPEC.md` (short notional m·E, 1 % liquidation buffer, lower max m on thin
+  Math and caps: `docs/backx/SHORT-SPEC.md` (short notional m·X, 1 % liquidation buffer, lower max m on thin
   pools). The ticket has Hedge | Short; issuing only happens on the Issue Reserve page.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.

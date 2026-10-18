@@ -16,20 +16,23 @@ import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 /// @title backx.trade positions: Hedge (price up) and Short (price down), real tokens on both sides.
 /// @notice docs/backx/HEDGE-ISSUER-SPEC.md, SHORT-SPEC.md, FEES-AND-MARGINS.md.
 ///
+/// Fee model v4 (docs/backx/sim/sim4.py): exposure is exactly m × stake and the fees are paid ON TOP of
+/// the stake, so 5× on $100 is a $500 position and a 10 % move is $50 before fees and the issuers' share.
 /// Hedge, stake X at multiplication m:
-///   USD reserve lends L = (m-1)·X. E = X − fees. E + L buys the coin. On close the coin is sold and the
+///   USD reserve lends L = (m-1)·X. X + L buys the coin. On close the coin is sold and the
 ///   USD reserve gets L back FIRST, then p of the gain (or s of what is left after a liquidation).
 /// Short, stake X at multiplication m:
-///   Token reserve lends q coins worth N = m·E0 (E0 = X − holders − RSF). They are sold; the position
-///   holds C = E + proceeds in USD. On close exactly q coins are bought back and returned FIRST, then the
-///   issuers' USD (borrow fee + p of the gain, or s of the rest) is bought as the coin and added.
+///   Token reserve lends q coins worth N = m·X. They are sold; the position holds C = X + proceeds in USD.
+///   On close exactly q coins are bought back and returned FIRST, then the issuers' USD (borrow fee +
+///   p of the gain, or s of the rest) is bought as the coin and added.
 /// Liquidation is measured on what the position would actually get/pay on the pool right now (net of
 /// fee and impact) and must be confirmed by the TWAP oracle, so a one-block spike cannot trigger it.
 /// A gap (price past the trigger before the swap) is covered by the side's Reserve Security Fund first,
 /// then written off pro rata against the reserve.
-/// Crash cover: every position adds its worst-case gap (the market's crash/pump in one jump) to a running
-/// total per side, and no position opens unless the side's fund could pay that total. A rug or pump can
-/// then never reach the issuers' principal while the fund has money (docs/backx/FEES-AND-MARGINS.md §3).
+/// Crash exposure: every position adds its worst-case gap (the market's crash/pump in one jump) to a running
+/// total per side, so the Safe can see how much a flash crash would cost the fund. Gating new positions on
+/// it is OFF by default (owner 2026-10-18: issuer reserves are used in full; the fund is the last resort for
+/// a crash the keepers cannot execute through) and the Safe can switch it on with setStressCover.
 /// Limit (take-profit): the trader can set a price; a keeper sells (Hedge) or buys back (Short) once the
 /// TWAP reaches it, never worse than the limit minus limitSlipBps.
 contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
@@ -89,9 +92,9 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     uint16 public twapConfirmBps = 25;
     /// @notice A limit close may fill at most this much worse than the limit (pool fee + impact).
     uint16 public limitSlipBps = 100;
-    /// @notice Share of the worst-case gap total the fund must hold. 10 000 = the fund covers every open
-    /// position crashing at once; lower assumes not all coins crash together.
-    uint16 public stressCoverBps = 10_000;
+    /// @notice 0 = off (default). Otherwise the share of the worst-case gap total the fund must hold before a
+    /// new position opens: 10 000 = every open position crashing at once.
+    uint16 public stressCoverBps;
     /// @notice Worst-case gap of all open positions, per side (USD). Must stay covered by that side's fund.
     uint256 public hedgeStressUsd;
     uint256 public shortStressUsd;
@@ -135,7 +138,6 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     error BadM();
     error TooLarge();
     error OpenInterestFull();
-    error NothingLeft();
     error NotOwner();
     error NotKeeper();
     error NotLiquidatable();
@@ -154,17 +156,17 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         hedgeFund = hedgeFund_;
         shortFund = shortFund_;
         feeCollector = feeCollector_;
-        fees = Fees({holdersBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 20, oracleDevBps: 200});
-        // Defaults from docs/backx/sim/sim3.py (variant v3): e floor ≈ 12 % at high m, buffer grows past 10×.
+        fees = Fees({holdersBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200});
+        // e, s and buffers from docs/backx/sim/sim3.py (v3): e floor ≈ 12 % at high m, buffer grows past 10×.
+        // p (issuers' share of a gain) is a flat 10 % since v4: sim4 shows it barely moves the issuers'
+        // expected income (that comes from the borrow fee and liquidations) but cut the trader's win by a third.
         uint16[31] memory e = [uint16(0), 4000, 4000, 3500, 3250, 3000, 2750, 2500, 2375, 2250, 2000,
             1920, 1840, 1760, 1680, 1600, 1560, 1520, 1480, 1440, 1400, 1380, 1360, 1340, 1320, 1300, 1280, 1260, 1240, 1220, 1200];
         uint16[31] memory s = [uint16(0), 5000, 5000, 6000, 6500, 7000, 7500, 8000, 8167, 8333, 8500,
             8600, 8700, 8800, 8900, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000];
-        uint16[31] memory p = [uint16(0), 1500, 1500, 2000, 2250, 2500, 2750, 3000, 3000, 3000, 3000,
-            3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000, 3000];
         for (uint8 m = 1; m <= MAX_M; m++) {
             uint16 extra = m > 10 ? uint16(2 * (m - 10)) : 0; // +0.02 % per step past 10×
-            _params[m] = Params(e[m], s[m], p[m], 30 + extra, 60 + extra);
+            _params[m] = Params(e[m], s[m], 1000, 30 + extra, 60 + extra);
         }
     }
 
@@ -220,7 +222,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     function setStressCover(uint16 bps) external onlyOwner {
-        if (bps < 2_000 || bps > BPS) revert BadParams();
+        if (bps != 0 && (bps < 2_000 || bps > BPS)) revert BadParams();
         stressCoverBps = bps;
     }
 
@@ -248,6 +250,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
 
     // ---- open ------------------------------------------------------------------------------------
 
+    /// @param stake margin X; the trader pays X + fees (holders, RSF, borrow) on top.
     /// @param minCoinsOut slippage guard for buying the coin (from the UI quote).
     /// @param limitPrice take-profit in USD base units per 1e18 coin base units, above today's price. 0 = none.
     function openHedge(address token, uint256 stake, uint8 m, uint256 minCoinsOut, uint256 limitPrice)
@@ -261,14 +264,13 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         if (m == 0 || m > mk.maxHedgeM) revert BadM();
         Fees memory f = fees;
 
-        usd.safeTransferFrom(msg.sender, address(this), stake);
         uint256 lentUsd = (uint256(m) - 1) * stake;
         uint256 holders = stake * f.holdersBps / BPS;
         uint256 rsf = stake * f.rsfStakeBps / BPS + lentUsd * f.rsfLentBps / BPS;
         uint256 borrow = lentUsd * f.borrowBps / BPS;
-        if (holders + rsf + borrow >= stake) revert NothingLeft();
-        uint256 equity = stake - holders - rsf - borrow;
-        uint256 notional = equity + lentUsd;
+        usd.safeTransferFrom(msg.sender, address(this), stake + holders + rsf + borrow);
+        uint256 equity = stake;
+        uint256 notional = equity + lentUsd; // = m · stake
         if (notional > mk.maxNotionalUsd) revert TooLarge();
         if (mk.openHedgeUsd + lentUsd > mk.maxOpenHedgeUsd) revert OpenInterestFull();
         mk.openHedgeUsd += SafeCast.toUint128(lentUsd);
@@ -299,6 +301,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         emit Opened(id, msg.sender, token, false, m, stake, lentUsd, coins);
     }
 
+    /// @param stake margin X; the trader pays X + fees (holders, RSF, borrow) on top.
     /// @param minUsdOut slippage guard for selling the borrowed coins.
     /// @param limitPrice take-profit in USD base units per 1e18 coin base units, below today's price. 0 = none.
     function openShort(address token, uint256 stake, uint8 m, uint256 minUsdOut, uint256 limitPrice)
@@ -312,16 +315,15 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         if (m == 0 || m > mk.maxShortM) revert BadM();
         Fees memory f = fees;
 
-        usd.safeTransferFrom(msg.sender, address(this), stake);
-        uint256 holders = stake * f.holdersBps / BPS;
-        uint256 e0 = stake - holders - stake * f.rsfStakeBps / BPS;
-        uint256 notional = uint256(m) * e0;
+        uint256 notional = uint256(m) * stake;
         if (notional > mk.maxNotionalUsd) revert TooLarge();
         if (mk.openShortUsd + notional > mk.maxOpenShortUsd) revert OpenInterestFull();
+        uint256 holders = stake * f.holdersBps / BPS;
         uint256 borrow = notional * f.borrowBps / BPS;
         uint256 rsf = stake * f.rsfStakeBps / BPS + notional * f.rsfLentBps / BPS;
-        if (holders + rsf + borrow >= stake) revert NothingLeft();
-        uint256 equity = stake - holders - rsf - borrow;
+        // The borrow fee stays in the position and is bought as the coin for the issuers at close.
+        usd.safeTransferFrom(msg.sender, address(this), stake + holders + rsf + borrow);
+        uint256 equity = stake;
         mk.openShortUsd += SafeCast.toUint128(notional);
 
         usd.safeTransfer(feeCollector, holders);
@@ -432,12 +434,14 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         return a > b ? (a - b) / BPS : 0;
     }
 
-    /// Fails closed: the side's fund must cover stressCover of the side's total worst-case gap.
+    /// Tracks the side's worst-case gap; when the Safe has switched the gate on, the fund must cover it.
     function _addStress(bool isShort, uint256 stress) internal {
         if (stress == 0) return;
         uint256 total = (isShort ? shortStressUsd : hedgeStressUsd) + stress;
-        uint256 fund = (isShort ? shortFund : hedgeFund).balance();
-        if (total * stressCoverBps > fund * BPS) revert FundTooSmall();
+        if (stressCoverBps != 0) {
+            uint256 fund = (isShort ? shortFund : hedgeFund).balance();
+            if (total * stressCoverBps > fund * BPS) revert FundTooSmall();
+        }
         if (isShort) shortStressUsd = total;
         else hedgeStressUsd = total;
     }

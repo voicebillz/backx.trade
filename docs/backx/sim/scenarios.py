@@ -1,4 +1,7 @@
-"""$100 scenarios for Hedge, Short and issuers (v3 numbers = web/src/lib/hedge.ts = contracts).
+"""$100 scenarios for Hedge, Short and issuers (v4 = web/src/lib/hedge.ts = contracts).
+
+v4: exposure is exactly m × stake and the fees are paid ON TOP of the stake; p is a flat 10 %.
+Trader numbers are net of everything paid (stake + fees).
 
 Deterministic: one price move, no path. Liquidation is assumed to happen exactly at the trigger
 (normal keeper). The gap row shows a jump past the trigger before the keeper acts.
@@ -6,11 +9,11 @@ Deterministic: one price move, no path. Liquidation is assumed to happen exactly
     python3 scenarios.py            # markdown tables to stdout
 """
 
-FEES = dict(holders=0.02, borrow=0.002, rsf_stake=0.005, rsf_lent=0.0003)
+FEES = dict(holders=0.02, borrow=0.0025, rsf_stake=0.005, rsf_lent=0.0003)
 E = [0, 4000, 4000, 3500, 3250, 3000, 2750, 2500, 2375, 2250, 2000, 1920, 1840, 1760, 1680, 1600, 1560,
      1520, 1480, 1440, 1400, 1380, 1360, 1340, 1320, 1300, 1280, 1260, 1240, 1220, 1200]
 S = [0, 5000, 5000, 6000, 6500, 7000, 7500, 8000, 8167, 8333, 8500] + [8600, 8700, 8800, 8900] + [9000] * 16
-P = [0, 1500, 1500, 2000, 2250, 2500, 2750] + [3000] * 24
+P = [0] + [1000] * 30
 POOLS = {"Dyp pool (BTC/ETH-type, 0,05 %, $10M)": (0.0005, 10_000_000, [1, 2, 3, 5, 10, 20, 30]),
          "Meme-pool (0,3 %, $1M)": (0.003, 1_000_000, [1, 2, 3, 5, 10])}
 MOVES = [-0.20, -0.10, -0.05, 0.0, 0.05, 0.10, 0.20]
@@ -25,49 +28,38 @@ def prm(m):
 
 
 def hedge(X, m, fee, depth):
-    """Returns setup + settle(x) -> (trader_payout, issuer_earn, liquidated, fund_paid)."""
-    holders = X * FEES["holders"]
-    if m == 1:
-        eq = X - holders - X * FEES["rsf_stake"]
-        c = fee + eq / depth
-        coins = eq * (1 - c)
-        rsf = X * FEES["rsf_stake"]
-
-        def settle(x):
-            return coins * x * (1 - c), 0.0, False, 0.0
-        return dict(eq=eq, loan=0, N=eq, rsf=rsf, borrow=0, liq=None), settle
-    e, s, p = prm(m)
+    """Returns setup + settle(x, gap) -> (trader_payout, issuer_earn, liquidated, fund_paid)."""
+    e, s_, p = prm(m)
     L = (m - 1) * X
     borrow = L * FEES["borrow"]
     rsf = X * FEES["rsf_stake"] + L * FEES["rsf_lent"]
-    eq = X - holders - rsf - borrow
-    N = eq + L
+    paid = X + X * FEES["holders"] + rsf + borrow
+    eq = X
+    N = m * X
     c = fee + N / depth
     coins = N * (1 - c)  # USD value at entry price of the coins held
-    xl = (L * (1 + buf("hedge", m)) + e * eq) / (coins * (1 - c))
+    xl = None if m == 1 else (L * (1 + buf("hedge", m)) + e * eq) / (coins * (1 - c))
 
     def settle(x, gap=False):
-        if x <= xl:
+        if xl is not None and x <= xl:
             exit_ = coins * (x if gap else xl) * (1 - c)
             rest = exit_ - L
             if rest < 0:  # gap: fund pays issuers the hole
                 return 0.0, borrow, True, -rest
-            return rest * (1 - s), borrow + rest * s, True, 0.0
+            return rest * (1 - s_), borrow + rest * s_, True, 0.0
         rest = coins * x * (1 - c) - L
-        gain = rest - X
-        cut = max(gain, 0) * p
+        cut = 0.0 if m == 1 else max(rest - eq, 0) * p
         return rest - cut, borrow + cut, False, 0.0
-    return dict(eq=eq, loan=L, N=N, rsf=rsf, borrow=borrow, liq=xl - 1), settle
+    return dict(eq=eq, loan=L, N=N, rsf=rsf, borrow=borrow, paid=paid, liq=None if xl is None else xl - 1), settle
 
 
 def short(X, m, fee, depth):
-    e, s, p = prm(m)
-    holders = X * FEES["holders"]
-    e0 = X - holders - X * FEES["rsf_stake"]
-    N = m * e0
+    e, s_, p = prm(m)
+    N = m * X
     borrow = N * FEES["borrow"]
     rsf = X * FEES["rsf_stake"] + N * FEES["rsf_lent"]
-    eq = X - holders - rsf - borrow
+    paid = X + X * FEES["holders"] + rsf + borrow
+    eq = X
     c = fee + N / depth
     C = eq + N * (1 - c)
     xl = (C - e * eq) / (N * (1 + c) * (1 + buf("short", m)))
@@ -77,12 +69,11 @@ def short(X, m, fee, depth):
             rest = C - N * (x if gap else xl) * (1 + c)
             if rest < 0:
                 return 0.0, borrow, True, -rest
-            return rest * (1 - s), borrow + rest * s, True, 0.0
+            return rest * (1 - s_), borrow + rest * s_, True, 0.0
         rest = C - N * x * (1 + c)
-        gain = rest - X
-        cut = max(gain, 0) * p
+        cut = max(rest - eq, 0) * p
         return rest - cut, borrow + cut, False, 0.0
-    return dict(eq=eq, loan=N, N=N, rsf=rsf, borrow=borrow, liq=xl - 1, C=C, cost=c), settle
+    return dict(eq=eq, loan=N, N=N, rsf=rsf, borrow=borrow, paid=paid, liq=xl - 1, C=C, cost=c), settle
 
 
 def money(v):
@@ -101,7 +92,7 @@ def table(kind, fee, depth, ms, X=100.0):
         cells, icells = [], []
         for mv in MOVES:
             got, earn, liqd, _ = settle(1 + mv)
-            cells.append(money(got - X) + (" (L)" if liqd else ""))
+            cells.append(money(got - info["paid"]) + (" (L)" if liqd else ""))
             icells.append(money(earn))
         out.append(f"| {m}× | {liq} | " + " | ".join(cells) + " |")
         iss.append(f"| {m}× | {money(info['borrow'])} | " + " | ".join(icells) + " |")
@@ -123,7 +114,7 @@ def main():
     info, settle = short(X, m, fee, depth)
     q = info["N"] / P0
     print(f"\n## Short-pengeflyt: $100, 5×, PONS ${P0}\n")
-    print(f"E={info['eq']:.2f} N={info['N']:.2f} q={q:,.1f} PONS cost={info['cost']*100:.3f}% "
+    print(f"paid={info['paid']:.2f} E={info['eq']:.2f} N={info['N']:.2f} q={q:,.1f} PONS cost={info['cost']*100:.3f}% "
           f"C={info['C']:.2f} liq={info['liq']*100:+.2f}% borrow={info['borrow']:.2f} rsf={info['rsf']:.2f}")
     for mv in (-0.10, 0.10, None):
         x = (1 + info["liq"]) if mv is None else 1 + mv

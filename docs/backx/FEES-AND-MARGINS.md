@@ -1,5 +1,26 @@
 # backx.trade: gebyrer, issuer-margin og Reserve Security Fund (2026-10-18)
 
+> **Gjeldende modell: v4** (eier 2026-10-18, `sim/sim4.py`, kontraktene, `web/src/lib/hedge.ts`):
+> - Posisjonen er **nøyaktig m × innsats** (5× på $100 = $500), og gebyrene **betales i tillegg** til innsatsen.
+> - Holders (gazz.fun) 2 % av innsatsen, uendret. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
+>   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
+> - Issuers' andel av en gevinst **p = 10 %** flatt (før 15–30 %). Hedge 1× låner ingenting: 0 %.
+> - e, s og buffere er uendret (v3), og likvideringen kommer litt senere enn før: dyp 30× Hedge −2,10 %, Short +1,75 %.
+> - Fondet stopper **ikke** nye posisjoner (§3b). Issuers' reserver brukes fullt ut, og fondet er siste utvei.
+>
+> Hvorfor: på ekte priser (sim4, begge retninger) kommer issuers' forventede inntekt fra lånegebyret og
+> likvideringer, ikke fra gevinstandelen. 5× Short: issuers $1,38 → **$1,42** per posisjon, mens traderen
+> ved +10 % riktig vei får **+$40,63** (før +$33,47). Tabellene i §1–2 under er fra v3 og viser hvorfor
+> gebyrene ble høye. Oppdaterte $100-tall står i `SCENARIOS-100.md`.
+
+| Dyp pool, per $100 | Traderen ved 10 % riktig vei, v3 → **v4** | Issuers' forventede inntekt per posisjon, v3 → **v4** |
+|---|---|---|
+| Hedge 5× | +$34,23 → **+$40,84** | $1,22 → **$1,17** |
+| Short 5× | +$33,47 → **+$40,63** | $1,38 → **$1,42** |
+| Hedge 10× | +$65,56 → **+$83,79** | $2,86 → **$2,62** |
+| Short 10× | +$64,16 → **+$83,67** | $3,12 → **$3,03** |
+| Short 30× | +$195,21 → **+$255,00** | $14,90 → **$14,43** |
+
 > Grunnlag: `sim/sim3.py` (Hedge og Short opp til 30×, samme ekte minuttpriser som før, begge
 > prisretninger, 1 500 utvalg per tidshorisont, treg keeper som lukker på minuttets slutt) og
 > kontraktene i `contracts/` (20 tester inkl. 30×, gap og fuzz, alle grønne). **Ikke auditert.**
@@ -85,10 +106,13 @@ Derfor er Short den farligste siden.
 - Hver coin har en **krasj** (Hedge) og en **pumpe** (Short) som fondet skal tåle i ett hopp (`crashBps`, `pumpBps`).
 - Hver posisjon regner ut sitt verste hull ved åpning: Hedge `L·c − E·(1−c)`, Short `N·c − E`.
   Testet mot det kontrakten faktisk betaler ved et hopp: innenfor 5 %.
-- Summen for alle åpne posisjoner på en side må være **≤ det fondet har**. Ellers avvises nye posisjoner
-  (`FundTooSmall`). Åpne posisjoner berøres aldri. Når posisjoner lukkes, frigjøres plassen.
-- Krasjvernet kan ikke slås av: minst 20 % hver vei. `stressCoverBps` (standard 100 %, minst 20 %) lar Safe si at
-  fondet bare må dekke en del av summen, ut fra at ikke alle coins krasjer samtidig.
+- Summen per side vises alltid (`hedgeStressUsd`, `shortStressUsd`), så Safe og dashboardet ser hva en flash-krasj
+  ville kostet fondet.
+- **Sperren er AV som standard** (eier 2026-10-18): issuers' reserver skal brukes fullt ut, og fondet er siste utvei
+  når en krasj går fortere enn kontrakten rekker å likvidere. Safe kan slå den på (`setStressCover`, 20–100 %). Da
+  avvises nye posisjoner (`FundTooSmall`) når summen er større enn den andelen av fondet. Åpne posisjoner berøres aldri.
+- Risikoen med sperren av: blir fondet tomt i en stor krasj, tar issuers resten pro rata. Det er derfor nivåene
+  under, maks multiplikator per coin og maks posisjonsstørrelse fortsatt gjelder.
 
 Anbefalte nivåer (**ÅPEN**, eier bestemmer):
 
@@ -99,9 +123,8 @@ Anbefalte nivåer (**ÅPEN**, eier bestemmer):
 | Mid / meme | 70 % | 200 % |
 | Small (GAZZ-type) | 90 % | av |
 
-Hva det betyr: et fond på **$100 000** tåler ca. 124 Hedge-posisjoner à $100 på 30× i en major
-(krasj 30 %), eller ca. 166 på 10× i en memecoin (krasj 70 %). Fondet må derfor **fylles før lansering**
-(**ÅPEN:** hvor mye), og det vokser med hver posisjon. Uten penger i fondet kan bare Hedge 1× åpnes.
+Hva det betyr hvis sperren slås på: et fond på **$100 000** tåler ca. 125 Hedge-posisjoner à $100 på 30× i en major
+(krasj 30 %), eller ca. 166 på 10× i en memecoin (krasj 70 %). **ÅPEN:** om og hvor mye fondet fylles før lansering.
 
 ## 3c. Limit-ordre (take profit)
 
@@ -143,8 +166,9 @@ Sikkerhet i koden:
 - Eier kan endre parametere bare innenfor harde grenser (e ≥ 5 %, holders ≤ 3 %, buffer ≤ 5 % …).
 - Lukking og likvidering virker alltid, også når nye posisjoner er pauset.
 
-Tester (`forge test`, 27 stk.): limit-ordre begge sider (TWAP-vern, regler, tilgang), krasjvern (fondet stopper nye
-posisjoner, estimatet dekker faktisk gap, kan ikke slås av), Hedge og Short 5× med gevinst (issuers først), 1× uten lån, likvideringsnivå
+Tester (`forge test`, 28 stk.): v4-gebyrer på toppen og p = 10 %, limit-ordre begge sider (TWAP-vern, regler,
+tilgang), krasjvern (av som standard, reservene brukes fullt; når slått på stopper fondet nye posisjoner; estimatet
+dekker faktisk gap), Hedge og Short 5× med gevinst (issuers først), 1× uten lån, likvideringsnivå
 30× og 10× = simuleringen (±0,06 %), likvidering 30× uten tap, gap 30× dekket av fondet (begge sider),
 tomt fond → avskrivning, eier kan ikke lukke under null, TWAP-vern, caps, pause, tilgang,
 uttaksgrense, parametergrenser, og fuzz (3 000 tilfeldige posisjoner 1–30×, ±30 %): alltid

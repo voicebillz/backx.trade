@@ -107,6 +107,9 @@ begrenser høy multiplikator (se §6).
 
 ### Parametertabell (fra simuleringen, sim2.py)
 
+> v4 (2026-10-18): p er nå **10 % flatt** for alle m (Hedge 1×: 0 %), og gebyrene betales i tillegg til innsatsen.
+> Kolonnen p under er historikk (v3). Gjeldende tall: `FEES-AND-MARGINS.md`.
+
 | m | e (hedgers rest ved likv.) | s (issuers andel av resten) | p (issuers andel av gevinst) |
 |---|---|---|---|
 | 2× | 40 % | 50 % | 15 % |
@@ -124,7 +127,7 @@ begrenser høy multiplikator (se §6).
 | Gebyr | Sats | Går til |
 |---|---|---|
 | Holders | **2 % av innsatsen** ved åpning (aldri av hele posisjonen) | 30 % $GAZZ / 30 % TANKS / 40 % treasury-middleman (se §8) |
-| Lånegebyr | **0,2 % av lånt beløp L** ved åpning | Issuer-vaulten |
+| Lånegebyr | **0,25 % av lånt beløp L** ved åpning, i tillegg til innsatsen (v4) | Issuer-vaulten |
 | Safety fund | **0,5 % av innsatsen** ved åpning | Dekker issuer ved gap. Simulert: dekket alle gap med overskudd på likvide coins |
 | Swap + price impact | pool-fee per vei | LP-ere (ikke oss). Idé: kjør gjennom våre egne PCS Infinity-pooler med hook, så tilfaller en del issuers og holders |
 
