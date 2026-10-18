@@ -21,6 +21,8 @@ Copy: «Issue» og «Short», aldri «leverage», aldri «zero risk».
 
 ## 2. Pengeflyt for en short (eksempel: $100, 5×, PONS)
 
+Med ekte tall per steg og $100-tabeller for alle nivåer: `SCENARIOS-100.md`.
+
 ### 2.1 Åpning
 1. Traderen setter inn innsatsen X i **USDC** (samme som Hedge).
 2. Åpningsgebyrer av innsatsen: 2 % holders + 0,5 % Reserve Security Fund → E₀.
