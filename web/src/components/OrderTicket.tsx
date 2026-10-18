@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type { Market } from '../lib/markets';
 import { price, usd } from '../lib/format';
 import type { Quote } from '../lib/hedge';
+import { MultiplierSlider } from './MultiplierSlider';
 
 interface Props {
   market: Market;
@@ -14,13 +15,9 @@ interface Props {
   q: Quote;
 }
 
-const MARKS = [2, 3, 5, 10, 15, 20, 25, 30];
-
 export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }: Props) {
   const [feesOpen, setFeesOpen] = useState(false);
   const id = useId();
-  const marks = MARKS.filter((x) => x <= market.maxM);
-  const near = (m - 2) / Math.max(market.maxM - 2, 1); // 0..1, colours the track toward --down
 
   return (
     <aside className={'panel ticket' + (side === 'issue' ? ' is-issue' : '')} aria-label="Order ticket">
@@ -45,26 +42,21 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
 
           <div className="field">
             <div className="field-head">
-              <label htmlFor={id + 'm'} className="label">Multiplication</label>
+              <span className="label">Multiplication</span>
               <span className="num m-value">{m}×</span>
             </div>
-            <input
-              id={id + 'm'} type="range" min={2} max={market.maxM} step={1} value={m}
-              onChange={(e) => onM(+e.target.value)}
-              className="m-slider"
-              style={{ ['--near' as string]: String(near) }}
-              aria-valuetext={`${m} times`}
-            />
-            <div className="m-marks">
-              {marks.map((x) => (
-                <button key={x} className={x === m ? 'active' : ''} onClick={() => onM(x)}>{x}×</button>
-              ))}
-            </div>
+            <MultiplierSlider value={m} min={1} max={market.maxM} onChange={onM} />
           </div>
 
           <dl className="kv">
-            <div><dt>Liquidation price</dt><dd className="num down">{price(q.liqPrice)}</dd></div>
-            <div><dt>Liquidation at</dt><dd className="num down">▼ −{(q.liqDrop * 100).toFixed(1)}%</dd></div>
+            {q.noLiquidation ? (
+              <div><dt>Liquidation</dt><dd className="num ok">None at 1×</dd></div>
+            ) : (
+              <>
+                <div><dt>Liquidation price</dt><dd className="num down">{price(q.liqPrice)}</dd></div>
+                <div><dt>Liquidation at</dt><dd className="num down">▼ −{(q.liqDrop * 100).toFixed(1)}%</dd></div>
+              </>
+            )}
             <div><dt>Position size</dt><dd className="num">{usd(q.equity + q.loan)}</dd></div>
           </dl>
 
@@ -72,8 +64,14 @@ export function OrderTicket({ market, side, onSide, stake, onStake, m, onM, q }:
             <div className="label">If it rises 10%</div>
             <div className="wf-row"><span>You</span><span className={'num ' + (q.ifUp10.hedger >= 0 ? 'up' : 'down')}>{q.ifUp10.hedger >= 0 ? '+' : '−'}{usd(Math.abs(q.ifUp10.hedger))}</span></div>
             <div className="wf-row"><span>Issuers</span><span className="num gold">+{usd(q.ifUp10.issuers)}</span></div>
-            <div className="label" style={{ marginTop: 8 }}>If liquidated</div>
-            <div className="wf-row"><span>You keep</span><span className="num">{usd(q.ifLiquidated.hedgerKeeps)}</span></div>
+            {q.noLiquidation ? (
+              <p className="hint">1× borrows nothing: no liquidation, issuers get 0%.</p>
+            ) : (
+              <>
+                <div className="label" style={{ marginTop: 8 }}>If liquidated</div>
+                <div className="wf-row"><span>You keep</span><span className="num">{usd(q.ifLiquidated.hedgerKeeps)}</span></div>
+              </>
+            )}
           </div>
 
           <div className="fees">

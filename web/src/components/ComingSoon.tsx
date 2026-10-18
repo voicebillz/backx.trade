@@ -9,8 +9,8 @@ const STEPS = [
   { n: '03', title: 'Your wallet' },
 ];
 const STEP_MS = 2600;
-const MIN = 2, MAX = 30;
-const TICKS = [2, 5, 10, 15, 20, 25, 30];
+const MIN = 1, MAX = 30;
+const TICKS = [1, 5, 10, 15, 20, 25, 30];
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -94,13 +94,13 @@ function MultiplierBar() {
 
   const m = Math.round(Math.min(Math.max(value, MIN), MAX));
   const t = (Math.min(Math.max(value, MIN), MAX) - MIN) / (MAX - MIN);
-  const liq = ((1 - params(m).e) / m) * 100;
+  const liq = m > 1 ? ((1 - params(m).e) / m) * 100 : null; // 1× borrows nothing: no liquidation
 
   return (
     <div className="mbar">
       <div className="mbar-head">
         <span className="mbar-label">Multiplication</span>
-        <span className="mbar-liq">Liquidation at <b>▼ −{liq.toFixed(1)}%</b></span>
+        <span className="mbar-liq">{liq == null ? <>No liquidation <b className="ok-text">at 1×</b></> : <>Liquidation at <b>▼ −{liq.toFixed(1)}%</b></>}</span>
       </div>
       <div className="mbar-value"><span>{m}</span>×</div>
       <div

@@ -1,85 +1,119 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Topbar } from './components/Topbar';
 import { MarketList } from './components/MarketList';
 import { CoinHeader } from './components/CoinHeader';
 import { PriceChart } from './components/PriceChart';
 import { OrderTicket } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
-import { MARKETS, type Market } from './lib/markets';
+import { IssuePage } from './pages/IssuePage';
+import { ProfilePage } from './pages/ProfilePage';
+import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
 import { quote } from './lib/hedge';
 import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
+import { useRoute, navigate } from './lib/router';
+import { useAuth } from './lib/auth';
+import { useBalances } from './lib/useBalances';
 
-/** The trading terminal. Loaded as its own chunk, only once the visitor may see it (see App.tsx). */
+/** The app shell after sign-in. Loaded as its own chunk, only once the visitor may see it (see App.tsx). */
 export default function Terminal() {
   const { theme, setTheme } = useTheme();
   const { priceColors, setPriceColors } = usePriceColors();
-  const [view, setView] = useState<'trade' | 'issue' | 'portfolio'>('trade');
-  const [market, setMarket] = useState<Market>(MARKETS[1]);
+  const route = useRoute();
+  const { me } = useAuth();
+  const balances = useBalances(!!me);
+  const moving = useMovingMarkets();
+  const [market, setMarket] = useState<Market | null>(null);
+
+  // Start on ETH (from the suggestions), falling back to the top mover.
+  useEffect(() => {
+    if (market) return;
+    searchMarkets('').then((r) => setMarket((cur) => cur ?? r.items.find((m) => m.symbol === 'ETH') ?? r.items[0] ?? null)).catch(() => {});
+  }, [market]);
+  useEffect(() => { if (!market && moving.items[0]) setMarket(moving.items[0]); }, [market, moving.items]);
+
+  const selectMarket = useCallback((m: Market) => { setMarket(m); navigate('trade'); }, []);
+
+  return (
+    <div className="app">
+      <a className="skip" href="#main">Skip to content</a>
+      <Topbar
+        route={route} theme={theme} onTheme={setTheme} priceColors={priceColors} onPriceColors={setPriceColors}
+        onSelectMarket={selectMarket} balances={balances}
+      />
+      {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} />}
+      {route === 'issue' && <IssuePage markets={moving.items} />}
+      {(route === 'profile' || route === 'security' || route === 'wallet') && <ProfilePage route={route} balances={balances} />}
+    </div>
+  );
+}
+
+interface TradeProps {
+  market: Market | null;
+  moving: ReturnType<typeof useMovingMarkets>;
+  onSelect: (m: Market) => void;
+  theme: ReturnType<typeof useTheme>['theme'];
+  priceColors: ReturnType<typeof usePriceColors>['priceColors'];
+}
+
+function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   const [side, setSide] = useState<'hedge' | 'issue'>('hedge');
   const [stake, setStake] = useState('100');
   const [m, setM] = useState(5);
   const [sheet, setSheet] = useState(false);
-  const search = useRef<HTMLInputElement>(null);
+  const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
-  const { price: live, dir, tick } = useTicker(market.price, market.kind === 'Meme' ? 0.004 : 0.0012);
-
-  useEffect(() => { setM((x) => Math.min(x, market.maxM)); }, [market]);
-  useEffect(() => { setSide(view === 'issue' ? 'issue' : 'hedge'); }, [view]);
-
-  // ⌘K / Ctrl+K focuses market search.
+  useEffect(() => { if (market) setM((x) => Math.min(x, market.maxM)); }, [market]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); search.current?.focus(); }
-      if (e.key === 'Escape') setSheet(false);
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheet(false); };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
   }, []);
 
   const q = useMemo(
-    () => quote(Math.max(parseFloat(stake) || 0, 0), m, market.price, market.poolFee, market.depth),
+    () => market && quote(Math.max(parseFloat(stake) || 0, 0), m, market.price, market.poolFee, market.depth),
     [stake, m, market],
   );
 
-  const ticket = (
+  const ticket = market && q && (
     <OrderTicket market={market} side={side} onSide={setSide} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
   );
 
   return (
     <>
-      <div className="app">
-        <a className="skip" href="#main">Skip to content</a>
-        <Topbar
-          view={view} onView={setView} theme={theme} onTheme={setTheme}
-          priceColors={priceColors} onPriceColors={setPriceColors}
-          onSearch={() => search.current?.focus()}
-        />
-        <main id="main" className="terminal">
-          <MarketList ref={search} selected={market.symbol} onSelect={setMarket} />
-          <div className="center">
-            <CoinHeader market={market} live={live} dir={dir} tick={tick} />
-            <PriceChart market={market} theme={theme} priceColors={priceColors} entry={market.price} liqPrice={q.liqPrice} />
-          </div>
-          <div className="ticket-col">{ticket}</div>
-          <BottomPanel />
-        </main>
-
-        {/* Mobile: sticky Hedge / Issue bar opens the ticket as a bottom sheet. */}
-        <div className="mobile-bar">
-          <button className="btn btn-primary" onClick={() => { setSide('hedge'); setSheet(true); }}>Hedge</button>
-          <button className="btn btn-gold" onClick={() => { setSide('issue'); setSheet(true); }}>Issue</button>
+      <main id="main" className="terminal">
+        <MarketList {...moving} selected={market?.id ?? null} onSelect={onSelect} />
+        <div className="center">
+          {market && q ? (
+            <>
+              <CoinHeader market={market} live={live} dir={dir} tick={tick} />
+              <PriceChart market={market} theme={theme} priceColors={priceColors} entry={market.price} liqPrice={q.noLiquidation ? null : q.liqPrice} />
+            </>
+          ) : (
+            <>
+              <div className="coin-header" aria-busy="true"><span className="sk sk-w30" /><span className="sk sk-w60" /></div>
+              <div className="panel chart-panel sk-chart" aria-busy="true" />
+            </>
+          )}
         </div>
-        {sheet && (
-          <div className="sheet-scrim" onClick={() => setSheet(false)}>
-            <div className="sheet" role="dialog" aria-modal="true" aria-label="Order ticket" onClick={(e) => e.stopPropagation()}>
-              <div className="sheet-grip" aria-hidden="true" />
-              <button className="icon-btn sheet-close" onClick={() => setSheet(false)} aria-label="Close">✕</button>
-              {ticket}
-            </div>
-          </div>
-        )}
+        <div className="ticket-col">{ticket ?? <div className="panel ticket sk-chart" aria-busy="true" />}</div>
+        <BottomPanel />
+      </main>
+
+      {/* Mobile: sticky Hedge / Issue bar opens the ticket as a bottom sheet. */}
+      <div className="mobile-bar">
+        <button className="btn btn-primary" onClick={() => { setSide('hedge'); setSheet(true); }}>Hedge</button>
+        <button className="btn btn-gold" onClick={() => { setSide('issue'); setSheet(true); }}>Issue</button>
       </div>
+      {sheet && ticket && (
+        <div className="sheet-scrim" onClick={() => setSheet(false)}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="Order ticket" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grip" aria-hidden="true" />
+            <button className="icon-btn sheet-close" onClick={() => setSheet(false)} aria-label="Close">✕</button>
+            {ticket}
+          </div>
+        </div>
+      )}
     </>
   );
 }

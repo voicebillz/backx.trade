@@ -28,5 +28,9 @@ export async function migrate() {
     alter table users add column if not exists signup_method     text;
     alter table users add column if not exists last_login_method text;
     alter table users add column if not exists beta_signup_at    timestamptz not null default now();
+
+    -- Profile: a random avatar picked at sign-up, and the user's Solana embedded wallet.
+    alter table users add column if not exists avatar_seed    integer not null default floor(random() * 2147483647)::int;
+    alter table users add column if not exists solana_address text;
   `);
 }

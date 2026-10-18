@@ -38,6 +38,17 @@ RATE_LIMIT_PER_MIN=120
 - `PORT` settes av Railway automatisk. Ikke sett den selv.
 - Serveren **nekter å starte** hvis noe mangler, eller hvis `ALLOWED_ORIGINS` ikke er https. Det er med vilje.
 
+Valgfritt (har offentlige standardverdier, bytt til egne nøkkel-RPC-er ved mer trafikk):
+
+```
+RPC_ETHEREUM=
+RPC_BASE=
+RPC_BSC=
+RPC_SOLANA=
+```
+
+Saldo (`/api/wallet/balances`) og markedslista (`/api/markets`, demo fra CoinGecko) krever innlogging og caches i Redis.
+
 Settes **senere**, ikke nå (vi sier fra når koden trenger dem):
 
 | Variabel | Når | Merk |

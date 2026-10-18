@@ -8,6 +8,9 @@
   --up-bg:rgba(10,119,79,.10); --down-bg:rgba(200,40,58,.10);
   --gold-bg:rgba(128,98,8,.10); --warning-bg:rgba(168,90,0,.10); --info-bg:rgba(29,95,209,.10);
   --brand:#FFD100; --brand-ink:#0A0A0A;
+  --brand-text:#8A6A00; --violet:#6D28D9; --cyan:#0E7490; --pink:#BE185D;
+  --brand-bg:rgba(255,209,0,.16); --violet-bg:rgba(109,40,217,.10); --cyan-bg:rgba(14,116,144,.10);
+  --shadow-pop:0 12px 40px rgba(11,21,38,.18);
   --scrim:rgba(245,247,250,.72);
   --soon-backdrop:url(/soon-backdrop-light.jpg);
   --radius:6px; --u:8px;
@@ -26,6 +29,9 @@
     --gold-bg:rgba(227,179,65,.12); --warning-bg:rgba(240,168,58,.12); --info-bg:rgba(106,168,255,.12);
     --scrim:rgba(6,9,16,.74);
     --soon-backdrop:url(/soon-backdrop-dark.jpg);
+    --brand-text:#FFD100; --violet:#A78BFA; --cyan:#22D3EE; --pink:#F472B6;
+    --brand-bg:rgba(255,209,0,.12); --violet-bg:rgba(167,139,250,.12); --cyan-bg:rgba(34,211,238,.10);
+    --shadow-pop:0 16px 48px rgba(0,0,0,.55);
     color-scheme: dark;
   }
 }
@@ -38,6 +44,9 @@
   --gold-bg:rgba(227,179,65,.12); --warning-bg:rgba(240,168,58,.12); --info-bg:rgba(106,168,255,.12);
   --scrim:rgba(6,9,16,.74);
   --soon-backdrop:url(/soon-backdrop-dark.jpg);
+  --brand-text:#FFD100; --violet:#A78BFA; --cyan:#22D3EE; --pink:#F472B6;
+  --brand-bg:rgba(255,209,0,.12); --violet-bg:rgba(167,139,250,.12); --cyan-bg:rgba(34,211,238,.10);
+  --shadow-pop:0 16px 48px rgba(0,0,0,.55);
   color-scheme: dark;
 }
 /* Components use --price-up/--price-down for direction. Set via data-price on <html>. */

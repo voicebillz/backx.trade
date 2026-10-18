@@ -1,7 +1,31 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
 
-export interface Me { address: string; isAdmin: boolean }
+export interface Me {
+  address: string;
+  solanaAddress: string | null;
+  isAdmin: boolean;
+  avatarSeed: number;
+  memberSince: string;
+  signupMethod: string | null;
+}
+
+/** A login linked to the Privy account (email, google, passkey, ...), for the Security page. */
+export interface LinkedLogin { type: string; label: string }
+
+export interface EvmTx { chainId: number; to: `0x${string}`; value?: bigint; data?: `0x${string}`; description: string }
+
+/** Account actions that need Privy; available once the Privy bridge has loaded. */
+export interface PrivyActions {
+  linked: LinkedLogin[];
+  passkeys: number;
+  mfaMethods: string[];
+  linkPasskey: () => void;
+  link: (type: 'email' | 'phone' | 'google' | 'twitter' | 'discord' | 'twitch' | 'telegram' | 'farcaster') => void;
+  showMfa: () => void;
+  exportWallet: (address: string) => Promise<void>;
+  sendEvm: (tx: EvmTx) => Promise<string>;
+}
 export type AuthStatus = 'checking' | 'signedOut' | 'connecting' | 'signedIn' | 'error' | 'unavailable';
 
 export interface AuthState {
@@ -11,6 +35,9 @@ export interface AuthState {
   canSignIn: boolean;
   signIn: () => void;
   signOut: () => Promise<void>;
+  /** Revokes every backx session for this account, then signs out here. */
+  signOutEverywhere: () => Promise<void>;
+  actions: PrivyActions | null;
 }
 
 /** What the lazily loaded Privy bridge reports back. */
@@ -20,10 +47,13 @@ export interface PrivyState {
   error: boolean;
   login: () => void;
   logout: () => Promise<void>;
+  actions: PrivyActions | null;
 }
 
 const noop = () => {};
-const Ctx = createContext<AuthState>({ status: 'unavailable', me: null, canSignIn: false, signIn: noop, signOut: async () => {} });
+const Ctx = createContext<AuthState>({
+  status: 'unavailable', me: null, canSignIn: false, signIn: noop, signOut: async () => {}, signOutEverywhere: async () => {}, actions: null,
+});
 export const useAuth = () => useContext(Ctx);
 
 const APP_ID = import.meta.env.VITE_PRIVY_APP_ID?.trim();
@@ -47,6 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await privy?.logout();
   }, [privy]);
 
+  const signOutEverywhere = useCallback(async () => {
+    try { await api('/api/auth/logout-all', { method: 'POST' }); } catch { /* ignore */ }
+    setMe(null);
+    await privy?.logout();
+  }, [privy]);
+
   const status: AuthStatus = !APP_ID ? 'unavailable'
     : me ? 'signedIn'
     : !checked ? 'checking'
@@ -60,6 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     canSignIn: !!privy?.ready && !me,
     signIn: privy?.login ?? noop,
     signOut,
+    signOutEverywhere,
+    actions: me ? privy?.actions ?? null : null,
   };
 
   return (

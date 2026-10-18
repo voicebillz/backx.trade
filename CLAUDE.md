@@ -12,7 +12,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - `docs/backx/` spec, design kit, security, simulations.
 
 ## Design rules (DESIGN-KIT part A)
-- Colours only via tokens in `web/src/styles/tokens.css`; dark default, follows browser, saved toggle wins.
+- Colours only via tokens in `web/src/styles/tokens.css`; dark is the standard for everyone (owner 2026-10-18),
+  the user's saved toggle wins. Browser preference is not followed.
 - Direction uses `--price-up`/`--price-down` and is never colour alone: always ▲/▼ and +/−.
 - Skeletons for anything waiting on data, never an empty panel or bare "Loading…".
 - WCAG 2.1 AA: skip link, `<main id="main">`, `:focus-visible`, `aria-label` on icon buttons.
@@ -52,4 +53,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   overlay for those addresses. Behind the overlay only a static blurred image is shown; the terminal is a
   separate chunk loaded only after `/api/auth/me` says admin. Its file is still public, so never ship secrets in
   the web bundle: real protection is the server requiring a session on every `/api` route.
+- Read-only data routes: `/api/wallet/balances` (user's own EVM + Solana wallets via RPC, CoinGecko prices) and
+  `/api/markets` (demo universe from CoinGecko until Robinhood Chain markets list). Both need a session, cached in Redis.
+- Withdrawals are signed by the user's own Privy wallet with Privy's confirm screen (EVM: ETH/Base/BNB, native + USDC).
+  Amounts are parsed to base units and rounded down. Solana withdrawals not built yet.
+- Multiplication 1× is allowed: nothing is borrowed, no liquidation, issuers get 0 % (owner 2026-10-18).
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.

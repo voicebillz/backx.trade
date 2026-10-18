@@ -31,6 +31,7 @@ export interface Quote {
   equity: number;      // E: stake after opening fees
   loan: number;        // L = (m − 1) × stake
   fees: { holders: number; borrow: number; safety: number; swap: number; total: number };
+  noLiquidation: boolean; // true at 1×
   liqDrop: number;     // fraction, e.g. 0.067
   liqPrice: number;
   ifUp10: { hedger: number; issuers: number };
@@ -42,6 +43,19 @@ export interface Quote {
  * is paid on the full position both ways and comes out of the hedger's side.
  */
 export function quote(stake: number, m: number, entry: number, poolFee: number, depthUsd: number): Quote {
+  // 1×: nothing is borrowed, so there is no liquidation and issuers get 0 %.
+  if (m <= 1) {
+    const holders = stake * FEES.holders, safety = stake * FEES.safety;
+    const swap = stake * (2 * poolFee + 0.0002 * (1e6 / Math.max(depthUsd, 1e4)));
+    const equity = stake - holders - safety;
+    return {
+      stake, m: 1, equity, loan: 0, noLiquidation: true,
+      fees: { holders, borrow: 0, safety, swap, total: holders + safety + swap },
+      liqDrop: 1, liqPrice: 0,
+      ifUp10: { hedger: equity * 0.1 - holders - safety - swap, issuers: 0 },
+      ifLiquidated: { hedgerKeeps: 0, issuers: 0 },
+    };
+  }
   const { e, s, p } = params(m);
   const holders = stake * FEES.holders;
   const safety = stake * FEES.safety;
@@ -63,7 +77,7 @@ export function quote(stake: number, m: number, entry: number, poolFee: number, 
   const ifLiquidated = { hedgerKeeps: rest * (1 - s), issuers: borrow + rest * s };
 
   return {
-    stake, m, equity, loan,
+    stake, m, equity, loan, noLiquidation: false,
     fees: { holders, borrow, safety, swap, total: holders + borrow + safety + swap },
     liqDrop, liqPrice: entry * (1 - liqDrop), ifUp10, ifLiquidated,
   };

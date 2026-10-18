@@ -40,22 +40,3 @@ export function OverlayAccount() {
     </div>
   );
 }
-
-/** Topbar account (visible to admins before launch, everyone after). */
-export function TopbarAccount() {
-  const { status, me, canSignIn, signIn, signOut } = useAuth();
-  if (status === 'signedIn' && me) {
-    return (
-      <div className="top-account">
-        {me.isAdmin && <span className="chip chip-admin">Admin</span>}
-        <CopyAddress address={me.address} />
-        <button className="btn btn-ghost" onClick={signOut}>Sign out</button>
-      </div>
-    );
-  }
-  return (
-    <button className="btn btn-primary" onClick={signIn} disabled={!canSignIn || status === 'connecting'}>
-      Sign in
-    </button>
-  );
-}

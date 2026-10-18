@@ -18,7 +18,7 @@ interface Props {
   theme: Theme;
   priceColors: PriceColors;
   entry: number;
-  liqPrice: number;
+  liqPrice: number | null; // null at 1×: nothing to liquidate
 }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -63,7 +63,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
     const s = series.current;
     if (!s) return;
     const sec = FRAMES.find((f) => f.id === frame)!.sec;
-    const precision = market.price >= 1 ? 2 : market.price >= 0.01 ? 5 : 7;
+    const precision = market.price >= 1 ? 2 : market.price >= 0.01 ? 5 : 8;
     s.applyOptions({ priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision } });
     s.setData(demoCandles(market, 240, sec).map((d) => ({ ...d, time: d.time as UTCTimestamp })));
     chart.current?.timeScale().fitContent();
@@ -76,7 +76,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
     lines.current.forEach((l) => s.removePriceLine(l));
     lines.current = [
       s.createPriceLine({ price: entry, color: css('--ink-3'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Entry' }),
-      s.createPriceLine({ price: liqPrice, color: css('--down'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Liq.' }),
+      ...(liqPrice != null ? [s.createPriceLine({ price: liqPrice, color: css('--down'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Liq.' })] : []),
     ];
   }, [entry, liqPrice, theme, ready]);
 
