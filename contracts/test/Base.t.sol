@@ -51,6 +51,7 @@ abstract contract Base is Test {
         hedgeFund.setManager(address(pm));
         shortFund.setManager(address(pm));
         pm.setKeeper(keeper, true);
+        pm.setKeeperGas(keeper, 100_000); // $0.10 per position to the keeper wallet
         pm.setMarket(address(coin), _market(30, 30));
         vm.stopPrank();
 

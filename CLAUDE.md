@@ -43,6 +43,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
 - Fee model v4 (owner 2026-10-18): exposure is exactly m × stake, fees are paid ON TOP of the stake (holders 2 % of
   stake to gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % + 0.03 % of lent), issuers' share of a gain p = 10 %.
+  Keeper gas: flat keeperGasUsd per position (default $0.10, max $5, ≈ 2× one close) paid at open straight to the
+  keeper wallet. The ticket shows only "Gas" and "You pay" (other fees baked in).
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
   Limit (take-profit) orders fill via keeper on the TWAP, at most 1 % worse than the limit.

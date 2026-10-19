@@ -2,6 +2,7 @@
 
 > Laget med `sim/scenarios.py` (samme tall som `web/src/lib/hedge.ts` og kontraktene, **v4**).
 > Én prisbevegelse, ingen tidsbane. **(L)** = likvidert av keeper akkurat på likvideringspunktet.
+> Tallene er uten keeper-gas ($0,10 per posisjon fra 2026-10-19, se `FEES-AND-MARGINS.md`), som kommer i tillegg.
 > Ikke auditert, ikke deployet. Ingen lovnader om avkastning: dette er regneeksempler.
 
 ## 1. Hva v4 endret (eier 2026-10-18)

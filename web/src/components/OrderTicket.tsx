@@ -106,7 +106,8 @@ export function OrderTicket({ market, stake, onStake, m, onM, q }: Props) {
           </>
         )}
         <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
-        <div><dt>You pay (all fees included)</dt><dd className="num">{usd(q.paid)}</dd></div>
+        <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas)}</dd></div>
+        <div><dt>You pay</dt><dd className="num">{usd(q.paid)}</dd></div>
       </dl>
 
       <div className="waterfall">

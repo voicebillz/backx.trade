@@ -5,6 +5,9 @@
 // v4: exposure is exactly m × stake and the fees are paid ON TOP of the stake.
 /** holders + Reserve Security Fund on the stake; borrow + RSF on the amount lent. */
 export const FEES = { holders: 0.02, borrow: 0.0025, rsfStake: 0.005, rsfLent: 0.0003 } as const;
+/** Keeper gas per position (contract keeperGasUsd, flat USD): ≈ 2× one close/liquidation; half pays it, half builds
+ *  the keeper's balance. Goes straight to the keeper wallet. ÅPEN: set from measured gas at deploy. */
+export const KEEPER_GAS = 0.1;
 /** Extra margin on the issuers' principal; grows 0.02 % per step past 10×. */
 export const buffer = (side: 'hedge' | 'short', m: number) => (side === 'hedge' ? 0.003 : 0.006) + 0.0002 * Math.max(m - 10, 0);
 /** Max position (notional) per coin: keeps price impact ≈ ≤ 0.5 % per way. */
@@ -28,12 +31,12 @@ export interface Quote {
   stake: number;
   m: number;
   equity: number;         // E: the stake (fees are paid on top)
-  /** What leaves the wallet: stake + holders + borrow + RSF. Trader results below are net of it. */
+  /** What leaves the wallet: stake + holders + borrow + RSF + keeper gas. Trader results below are net of it. */
   paid: number;
   /** Hedge: USD lent by the USD vault, (m−1)·X. Short: USD value of the tokens lent by the token vault, m·E. */
   loan: number;
   notional: number;       // exposure in USD
-  fees: { holders: number; borrow: number; rsf: number; swap: number; total: number };
+  fees: { holders: number; borrow: number; rsf: number; gas: number; swap: number; total: number };
   noLiquidation: boolean; // Hedge at 1× only (nothing borrowed)
   liqMove: number;        // fraction: price fall (Hedge) or rise (Short) that liquidates
   liqPrice: number;
@@ -66,7 +69,8 @@ export function quote(stake: number, m: number, entry: number, poolFee: number, 
   const loan = (mm - 1) * stake;
   const borrow = loan * FEES.borrow;
   const rsf = stake * FEES.rsfStake + loan * FEES.rsfLent;
-  const paid = stake + holders + borrow + rsf;
+  const gas = KEEPER_GAS;
+  const paid = stake + holders + borrow + rsf + gas;
   const equity = stake;
   const notional = mm * stake;
   const cost = oneWay(notional, poolFee, depthUsd);
@@ -89,7 +93,7 @@ export function quote(stake: number, m: number, entry: number, poolFee: number, 
   const rest = e * equity;
   return {
     side: 'hedge', stake, m: mm, equity, paid, loan, notional, noLiquidation,
-    fees: { holders, borrow, rsf, swap, total: holders + borrow + rsf + swap },
+    fees: { holders, borrow, rsf, gas, swap, total: holders + borrow + rsf + gas + swap },
     liqMove: noLiquidation ? 1 : Math.max(1 - liqRatio, 0), liqPrice: entry * liqRatio,
     ifWin10: { trader: win.trader, issuers: win.issuers },
     ifLiquidated: { traderKeeps: noLiquidation ? 0 : rest * (1 - s), issuers: borrow + rest * s },
@@ -109,7 +113,8 @@ export function shortQuote(stake: number, m: number, entry: number, poolFee: num
   const notional = mm * stake;
   const borrow = notional * FEES.borrow;
   const rsf = stake * FEES.rsfStake + notional * FEES.rsfLent;
-  const paid = stake + holders + borrow + rsf;
+  const gas = KEEPER_GAS;
+  const paid = stake + holders + borrow + rsf + gas;
   const equity = stake;
   const cost = oneWay(notional, poolFee, depthUsd);
   const usdHeld = equity + notional * (1 - cost);
@@ -128,7 +133,7 @@ export function shortQuote(stake: number, m: number, entry: number, poolFee: num
   const rest = e * equity;
   return {
     side: 'short', stake, m: mm, equity, paid, loan: notional, notional, noLiquidation: false,
-    fees: { holders, borrow, rsf, swap: notional * 2 * cost, total: holders + borrow + rsf + notional * 2 * cost },
+    fees: { holders, borrow, rsf, gas, swap: notional * 2 * cost, total: holders + borrow + rsf + gas + notional * 2 * cost },
     liqMove: Math.max(liqRatio - 1, 0), liqPrice: entry * liqRatio,
     ifWin10: { trader: win.trader, issuers: win.issuers },
     ifLiquidated: { traderKeeps: rest * (1 - s), issuers: borrow + rest * s },

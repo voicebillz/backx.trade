@@ -18,7 +18,8 @@ contract HedgeTest is Base {
         // v4: fees on top (holders 2 %, RSF 0.5 % + 0.03 % of L, borrow 0.25 % of L); equity = the full stake.
         assertEq(usd.balanceOf(feeCollector), 2 * USD);
         assertEq(equity, 100 * USD);
-        assertEq(1_000_000 * USD - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000 + 120_000 + 1_000_000, "paid stake + fees");
+        assertEq(1_000_000 * USD - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000 + 120_000 + 1_000_000 + 100_000, "paid stake + fees + gas");
+        assertEq(usd.balanceOf(keeper), 100_000, "gas straight to the keeper wallet");
 
         _move(1_000); // +10 %
         uint256 before = usd.balanceOf(trader);
@@ -444,5 +445,31 @@ contract LiqMarginTest is Base {
         vm.prank(safe);
         vm.expectRevert(BackxPositionManager.BadParams.selector);
         pm.setMarket(address(coin), mk);
+    }
+}
+
+contract KeeperGasTest is Base {
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+    }
+
+    function test_gasPerPosition_toKeeperWallet() public {
+        _hedge(100 * USD, 5);
+        _hedge(1_000 * USD, 1); // flat, not a share of the stake
+        assertEq(usd.balanceOf(keeper), 200_000);
+    }
+
+    function test_gasRules() public {
+        vm.prank(trader);
+        vm.expectRevert();
+        pm.setKeeperGas(trader, 1); // only the Safe
+        vm.prank(safe);
+        vm.expectRevert(BackxPositionManager.BadParams.selector);
+        pm.setKeeperGas(keeper, 6 * USD); // max $5
+        vm.prank(safe);
+        pm.setKeeperGas(address(0), 100_000); // no wallet: no gas fee
+        uint256 before = usd.balanceOf(trader);
+        _hedge(100 * USD, 1);
+        assertEq(before - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000, "stake + holders + RSF only");
     }
 }

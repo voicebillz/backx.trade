@@ -4,6 +4,10 @@
 > - Posisjonen er **nøyaktig m × innsats** (5× på $100 = $500), og gebyrene **betales i tillegg** til innsatsen.
 > - Holders (gazz.fun) 2 % av innsatsen, uendret. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
 >   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
+> - **Keeper-gas** (2026-10-19): et fast beløp per posisjon (standard $0,10, `keeperGasUsd`, maks $5) betales ved åpning
+>   rett til keeper-walleten. Settes til ca. 2× gassen for én lukking/likvidering: halvparten dekker gassen, halvparten
+>   bygger keeperens saldo. Billetten viser bare «Gas» og «You pay»; de andre gebyrene er bakt inn i «You pay».
+>   **ÅPEN:** beløpet settes fra målt gass på Robinhood Chain ved deploy.
 > - Issuers' andel av en gevinst **p = 10 %** flatt (før 15–30 %). Hedge 1× låner ingenting: 0 %.
 > - e, s og buffere er uendret (v3). I tillegg har hver coin en likvideringsmargin og lavere maks m (§2b, 2026-10-19).
 > - Fondet stopper **ikke** nye posisjoner (§3b). Issuers' reserver brukes fullt ut, og fondet er siste utvei.

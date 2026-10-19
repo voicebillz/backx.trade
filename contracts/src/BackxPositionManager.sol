@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -84,6 +85,12 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     BackxReserveSecurityFund public immutable hedgeFund;
     BackxReserveSecurityFund public immutable shortFund;
     address public feeCollector;
+    /// @notice Keeper gas (owner 2026-10-19): a flat USD amount per position, paid at open straight to the keeper
+    /// wallet. Set to ≈ 2× the gas of one close/liquidation: half pays that gas, half builds the keeper's balance.
+    /// No fee is charged while keeperWallet is unset.
+    address public keeperWallet;
+    uint256 public keeperGasUsd;
+    uint256 internal immutable _maxKeeperGas;
     Fees public fees;
     bool public permissionlessLiquidation;
     /// @notice How far below (sell) / above (buy) the TWAP a liquidation may execute. Wide enough to settle in
@@ -158,6 +165,9 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         hedgeFund = hedgeFund_;
         shortFund = shortFund_;
         feeCollector = feeCollector_;
+        uint256 one = 10 ** IERC20Metadata(address(usd_)).decimals();
+        keeperGasUsd = one / 10; // $0.10 until the Safe sets it from measured gas
+        _maxKeeperGas = one * 5;
         fees = Fees({holdersBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200});
         // e, s and buffers from docs/backx/sim/sim3.py (v3): e floor ≈ 12 % at high m, buffer grows past 10×.
         // p (issuers' share of a gain) is a flat 10 % since v4: sim4 shows it barely moves the issuers'
@@ -204,6 +214,16 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         }
         fees = f;
         emit FeesSet(f);
+    }
+
+    event KeeperGasSet(address wallet, uint256 amount);
+
+    /// @notice Keeper wallet and the flat gas fee per position (at most $5).
+    function setKeeperGas(address wallet, uint256 amount) external onlyOwner {
+        if (amount > _maxKeeperGas) revert BadParams();
+        keeperWallet = wallet;
+        keeperGasUsd = amount;
+        emit KeeperGasSet(wallet, amount);
     }
 
     function setFeeCollector(address c) external onlyOwner {
@@ -273,6 +293,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 rsf = stake * f.rsfStakeBps / BPS + lentUsd * f.rsfLentBps / BPS;
         uint256 borrow = lentUsd * f.borrowBps / BPS;
         usd.safeTransferFrom(msg.sender, address(this), stake + holders + rsf + borrow);
+        _payKeeperGas();
         uint256 equity = stake;
         uint256 notional = equity + lentUsd; // = m · stake
         if (notional > mk.maxNotionalUsd) revert TooLarge();
@@ -327,6 +348,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 rsf = stake * f.rsfStakeBps / BPS + notional * f.rsfLentBps / BPS;
         // The borrow fee stays in the position and is bought as the coin for the issuers at close.
         usd.safeTransferFrom(msg.sender, address(this), stake + holders + rsf + borrow);
+        _payKeeperGas();
         uint256 equity = stake;
         mk.openShortUsd += SafeCast.toUint128(notional);
 
@@ -419,6 +441,13 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     // ---- limit + crash cover --------------------------------------------------------------------
+
+    /// Straight from the trader to the keeper wallet, on top of everything else.
+    function _payKeeperGas() internal {
+        address w = keeperWallet;
+        uint256 g = keeperGasUsd;
+        if (w != address(0) && g > 0) usd.safeTransferFrom(msg.sender, w, g);
+    }
 
     function _setLimit(uint256 id, Position storage pos, uint256 limitPrice) internal {
         uint256 v;
