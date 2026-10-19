@@ -157,6 +157,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     error BadLimit();
     error LimitNotReached();
     error FundTooSmall();
+    error NotEnoughReserve();
 
     constructor(IERC20 usd_, BackxReserveSecurityFund hedgeFund_, BackxReserveSecurityFund shortFund_, address feeCollector_, address owner_)
         Ownable(owner_)
@@ -298,6 +299,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 notional = equity + lentUsd; // = m · stake
         if (notional > mk.maxNotionalUsd) revert TooLarge();
         if (mk.openHedgeUsd + lentUsd > mk.maxOpenHedgeUsd) revert OpenInterestFull();
+        // The issuers' USDC decides how far a hedge can multiply: never lend more than the reserve can give.
+        if (lentUsd > 0 && lentUsd > mk.usdVault.availableToLend()) revert NotEnoughReserve();
         mk.openHedgeUsd += SafeCast.toUint128(lentUsd);
 
         usd.safeTransfer(feeCollector, holders);
@@ -431,6 +434,22 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         return pos.isShort
             ? mk.oracle.usdValue(pos.token, pos.lent) <= pos.limitValue
             : mk.oracle.usdValue(pos.token, pos.amount) >= pos.limitValue;
+    }
+
+    /// @notice Highest multiplication a hedge of `stake` can open with right now: the market's cap, limited by the
+    /// USDC the issuers can lend (reserve, utilisation cap), the max position size and the open-interest cap.
+    function maxHedgeMFor(address token, uint256 stake) external view returns (uint8) {
+        Market storage mk = markets[token];
+        if (!mk.enabled || stake == 0) return 0;
+        uint256 m = mk.maxHedgeM;
+        uint256 byReserve = mk.usdVault.availableToLend() / stake + 1; // (m − 1)·stake ≤ available
+        uint256 bySize = mk.maxNotionalUsd / stake;                     // m·stake ≤ max position
+        uint256 oiRoom = mk.maxOpenHedgeUsd > mk.openHedgeUsd ? mk.maxOpenHedgeUsd - mk.openHedgeUsd : 0;
+        uint256 byOi = oiRoom / stake + 1;
+        if (byReserve < m) m = byReserve;
+        if (bySize < m) m = bySize;
+        if (byOi < m) m = byOi;
+        return uint8(m);
     }
 
     function isLiquidatable(uint256 id) external view returns (bool) {

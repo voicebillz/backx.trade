@@ -48,6 +48,10 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
   Limit (take-profit) orders fill via keeper on the TWAP, at most 1 % worse than the limit.
+- Multiplication follows the issued USDC (owner 2026-10-19): the market cap (maxHedgeM) is the standard, but a hedge can
+  only borrow what the reserve can lend ((m − 1)·stake ≤ availableToLend, 90 % util cap): `maxHedgeMFor` in the
+  contract, `maxHedgeMFor` in web/src/lib/reserves.ts for the ticket. Issuer rewards go INTO the reserve (ERC-4626
+  share price), shared pro rata, withdrawn with the principal, never claimed; new rewards vest over 24 h.
 - Liquidation margin (owner 2026-10-19): each market has liqMarginBps (server LIQ_MARGIN: Major 1 %, Large 1 %, Mid 1.5 %,
   Small 2 %) and Hedge caps Major 20×, Large 5×, Mid 3×, Small 2× (sim5: no gap with a 5-minute keeper + 0.5 %
   discrepancy). The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.

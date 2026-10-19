@@ -1,12 +1,16 @@
 import { useEffect, useId, useState } from 'react';
 import type { Market } from '../lib/markets';
-import { price, usd } from '../lib/format';
+import { price, usd, usdCompact } from '../lib/format';
 import { LIMIT_SLIP, maxNotional, type Quote } from '../lib/hedge';
 import { MultiplierSlider } from './MultiplierSlider';
 import { CoinIcon } from './CoinIcon';
 
 interface Props {
   market: Market;
+  /** Highest multiplication right now: the coin's cap, limited by the issuers' free USDC (contract maxHedgeMFor). */
+  maxM: number;
+  /** USDC the issuers' reserve can still lend. */
+  available: number;
   stake: string;
   onStake: (v: string) => void;
   m: number;
@@ -22,9 +26,10 @@ const STEPS = [0.1, 0.25, 0.5, 1];
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
 
 /** Hedge = price up, backed by the coin's USD reserve. Short is off in the product for now (owner 2026-10-19). */
-export function OrderTicket({ market, stake, onStake, m, onM, q }: Props) {
+export function OrderTicket({ market, maxM, available, stake, onStake, m, onM, q }: Props) {
   const id = useId();
-  const max = market.maxM;
+  const max = maxM;
+  const byReserve = max < market.maxM && Math.floor(available / Math.max(parseFloat(stake) || 0, 1)) + 1 <= max;
   const maxStake = Math.floor(maxNotional(market.depth) / Math.max(m, 1));
   const tooBig = (parseFloat(stake) || 0) > maxStake;
 
@@ -66,6 +71,13 @@ export function OrderTicket({ market, stake, onStake, m, onM, q }: Props) {
           <span className="num m-value">{m}×</span>
         </div>
         <MultiplierSlider value={Math.min(m, max)} min={1} max={max} onChange={onM} />
+        {max < market.maxM && (
+          <span className="hint">
+            {byReserve
+              ? `Up to ${max}× right now: issuers have ${usdCompact(available)} USDC free to lend on ${market.symbol} (cap ${market.maxM}×).`
+              : `Up to ${max}× at this stake (max position size). Lower the stake for up to ${market.maxM}×.`}
+          </span>
+        )}
       </div>
 
       <div className="field">

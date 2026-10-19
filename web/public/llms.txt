@@ -13,7 +13,11 @@
 - **Limit (take profit)**: a sell price above today's price; a keeper closes the position when the time-weighted price
   reaches it, at most 1 % worse than the limit.
 - **Issue Reserve**: users issue USDC to a coin's USD reserve. It is lent to hedges and returned first. Issuers earn a
-  borrow fee, 10 % of a hedge's gain, and most of what is left after a liquidation. Earnings are not guaranteed.
+  borrow fee, 10 % of a hedge's gain, and most of what is left after a liquidation. Rewards go into the reserve,
+  are shared by all issuers in proportion to their part and are withdrawn with the USDC (nothing to claim). Earnings
+  are not guaranteed.
+- **Available multiplication**: each coin has a cap, but a hedge can only borrow what the issuers' reserve can lend
+  right now, so the maximum shown can be lower when the reserve is busy.
 - **Reserve Security Fund**: funded by every position; covers the rare case where a crash moves faster than a
   liquidation can execute, before any issuer loses.
 - **Fees**: paid once at open and shown as one total ("You pay"), plus a small flat gas amount for the keeper.

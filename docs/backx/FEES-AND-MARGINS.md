@@ -119,6 +119,21 @@ Safe kan endre margin (maks 5 %) og maks m per coin. Kontrakttest: 20× med 1 % 
 Gebyrene vises ikke lenger som egen seksjon i billetten. De er bakt inn i tallene: «You pay (all fees included)»,
 likvideringsprisen (pool-gebyr og impact er med i salgsverdien) og resultatet ved +10 % / ved limit.
 
+## 2c. Multiplikator etter ledig USDC, og issuer-belønning i poolen (2026-10-19)
+
+**Maks multiplikator** er satt per coin i kontrakten (`maxHedgeM`), men det en bruker faktisk kan velge er begrenset
+av hva issuers kan låne ut akkurat nå: `(m − 1) · innsats ≤ ledig USDC` (reserven kan låne til 90 % er ute).
+`maxHedgeMFor(coin, innsats)` gir svaret (også begrenset av maks posisjonsstørrelse og samlet åpen posisjon), og
+`openHedge` avviser med `NotEnoughReserve` hvis lånet er større. Billetten viser samme grense og forklarer hvorfor.
+Hedge 1× låner ingenting og er alltid mulig.
+
+**Issuer-belønning** (lånegebyr, 10 % av gevinst, andel ved likvidering) går **inn i reserven**. Hver issuer eier
+andeler (ERC-4626), så belønningen fordeles automatisk på alle etter hvor stor del av poolen de eier, og tas ut
+sammen med innskuddet. Ingenting å «claime». Hver issuers del = andeler × andelspris (`convertToAssets`).
+Ny belønning **opptjenes jevnt over 24 timer** (`vestPeriod`, Safe kan sette 0–7 dager), så den som setter inn rett før
+en stor belønning og tar ut rett etter, får nesten ingenting (test: under 3 % etter 1 time). Ved et tap (write-off)
+spises belønning som ikke er opptjent ennå først. Testet: to like issuers får like mye, uttak gir innskudd + belønning.
+
 ## 3. Reserve Security Fund
 
 - **0,5 % av innsatsen + 0,03 % av beløpet som lånes** går til fondet ved hver åpning.

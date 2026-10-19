@@ -9,7 +9,8 @@ import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
-import { quote } from './lib/hedge';
+import { maxNotional, quote } from './lib/hedge';
+import { availableToLend, maxHedgeMFor } from './lib/reserves';
 import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
 import { useRoute, navigate } from './lib/router';
@@ -88,7 +89,9 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   const [sheet, setSheet] = useState(false);
   const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
-  const maxM = market ? market.maxM : 30; // no clamp before a market loads
+  // The coin's cap, limited by the USDC issuers can lend for this stake (contract maxHedgeMFor). No clamp before a market loads.
+  const stakeNum = Math.max(parseFloat(stake) || 0, 0);
+  const maxM = market ? maxHedgeMFor(market, stakeNum, maxNotional(market.depth)) : 30;
   useEffect(() => { setM((x) => Math.max(1, Math.min(x, maxM))); }, [maxM]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheet(false); };
@@ -102,7 +105,7 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   );
 
   const ticket = market && q && (
-    <OrderTicket market={market} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
+    <OrderTicket market={market} maxM={maxM} available={availableToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
   );
 
   return (

@@ -2,21 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Market } from '../lib/markets';
 import { usd, usdCompact } from '../lib/format';
 import { CoinIcon } from '../components/CoinIcon';
-
-// Every coin has a USD reserve (USDC) that lends dollars to Hedges (price up).
-// The token reserve for Shorts is off in the product for now (owner 2026-10-19; contracts keep it disabled).
-// Demo numbers, stable per coin, until the vaults exist on-chain.
-function demoReserves(m: Market) {
-  let s = [...m.id].reduce((a, c) => a * 31 + c.charCodeAt(0), 11) % 2147483647 || 11;
-  const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const base = m.marketCap > 1e10 ? 4e6 : m.marketCap > 1e9 ? 1.2e6 : 2.5e5;
-  const usdRes = Math.round(base * (0.4 + r()));
-  const usdUtil = 0.3 + r() * 0.6;
-  const aprBase = m.maxM >= 25 ? 6 : m.maxM >= 10 ? 11 : 16;
-  return {
-    usd: { reserve: usdRes, util: usdUtil, apr: aprBase * (0.6 + usdUtil) + r() * 3 },
-  };
-}
+import { demoReserves } from '../lib/reserves';
 
 function Util({ v }: { v: number }) {
   return <span className="util"><span className="util-bar"><i style={{ width: `${v * 100}%` }} /></span><span className="num">{Math.round(v * 100)}%</span></span>;
@@ -108,7 +94,7 @@ function IssueModal({ market, onClose }: { market: Market; onClose: () => void }
           <div><dt>Lent out</dt><dd className="num">{Math.round(v.usd.util * 100)}%</dd></div>
           <div><dt>Comes back first</dt><dd>Same dollars (USDC)</dd></div>
         </dl>
-        <p className="hint">Your USDC is lent to Hedges and comes back first when they close. A sudden drop past a liquidation can leave a gap; the Reserve Security Fund covers it first.</p>
+        <p className="hint">Your USDC is lent to Hedges and comes back first when they close. Rewards go straight into the reserve and are shared by all issuers in proportion to their part: nothing to claim, you withdraw them with your USDC (new rewards count in fully after 24 hours). A sudden drop past a liquidation can leave a gap; the Reserve Security Fund covers it first.</p>
         <button className="btn btn-gold btn-block" disabled>Issuing opens at launch</button>
       </div>
     </div>

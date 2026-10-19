@@ -33,6 +33,7 @@ contract HedgeTest is Base {
         uint256 rest = out - 400 * USD;
         uint256 issuerShare = (rest - 100 * USD) * 1_000 / 10_000; // p = 10 % (v4)
         assertEq(got, rest - issuerShare, "trader gets rest minus p");
+        vm.warp(block.timestamp + 1 days); // rewards vest into the share price over 24 h
         assertEq(usdVault.totalAssets(), assetsBefore + 1_000_000 + issuerShare, "issuers: borrow fee + p");
         assertGt(got, 100 * USD + 49 * USD - 10 * USD, "5x, +10 %: about +$45 before the fees paid on top");
     }
@@ -126,6 +127,7 @@ contract ShortTest is Base {
         vm.prank(trader);
         pm.close(id, type(uint256).max);
         assertEq(tokenVault.lent(), 0, "exactly q coins back");
+        vm.warp(block.timestamp + 1 days);
         assertGt(tokenVault.totalAssets(), coinsBefore, "issuers earn in the coin");
         assertGt(usd.balanceOf(trader) - before, 100 * USD, "short won");
     }
@@ -471,5 +473,118 @@ contract KeeperGasTest is Base {
         uint256 before = usd.balanceOf(trader);
         _hedge(100 * USD, 1);
         assertEq(before - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000, "stake + holders + RSF only");
+    }
+}
+
+/// Issuer rewards (owner 2026-10-19): everything goes INTO the reserve, split pro rata by shares, withdrawn with the
+/// principal, nothing to claim. Vesting over 24 h keeps a just-in-time depositor from taking rewards.
+contract RewardsTest is Base {
+    address issuer2 = makeAddr("issuer2");
+    address jit = makeAddr("jit");
+
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+        usd.mint(issuer2, 5_000_000 * USD);
+        vm.startPrank(issuer2);
+        usd.approve(address(usdVault), type(uint256).max);
+        usdVault.deposit(5_000_000 * USD, issuer2); // same size as issuer: 50 / 50
+        vm.stopPrank();
+    }
+
+    function _reward(uint256 amount) internal {
+        usd.mint(address(pm), amount);
+        vm.startPrank(address(pm));
+        usd.approve(address(usdVault), amount);
+        usdVault.addEarnings(amount);
+        vm.stopPrank();
+    }
+
+    function _value(address who) internal view returns (uint256) {
+        return usdVault.convertToAssets(usdVault.balanceOf(who));
+    }
+
+    function test_rewardsSplitProRata_andWithdrawable() public {
+        _reward(10_000 * USD);
+        vm.warp(block.timestamp + 1 days);
+        assertApproxEqAbs(_value(issuer), 5_005_000 * USD, 2, "half the reward");
+        assertApproxEqAbs(_value(issuer2), 5_005_000 * USD, 2, "half the reward");
+        uint256 before = usd.balanceOf(issuer2);
+        vm.startPrank(issuer2);
+        usdVault.redeem(usdVault.balanceOf(issuer2), issuer2, issuer2);
+        vm.stopPrank();
+        assertApproxEqAbs(usd.balanceOf(issuer2) - before, 5_005_000 * USD, 2, "principal + reward, no claim step");
+    }
+
+    function test_justInTimeDepositGetsAlmostNothing() public {
+        _reward(10_000 * USD);
+        usd.mint(jit, 10_000_000 * USD);
+        vm.startPrank(jit);
+        usd.approve(address(usdVault), type(uint256).max);
+        usdVault.deposit(10_000_000 * USD, jit); // half the pool, right after the reward
+        vm.warp(block.timestamp + 1 hours);
+        usdVault.redeem(usdVault.balanceOf(jit), jit, jit);
+        vm.stopPrank();
+        uint256 gain = usd.balanceOf(jit) - 10_000_000 * USD;
+        assertLt(gain, 10_000 * USD * 3 / 100, "under 3 % of a reward it did not back");
+        vm.warp(block.timestamp + 1 days);
+        assertGt(_value(issuer) + _value(issuer2), 10_009_000 * USD, "the backers keep the rest");
+    }
+
+    function test_realHedgeRewardsReachAllIssuers() public {
+        uint256 a1 = _value(issuer);
+        uint256 a2 = _value(issuer2);
+        uint256 id = _hedge(1_000 * USD, 5);
+        _move(1_000);
+        vm.prank(trader);
+        pm.close(id, 0);
+        vm.warp(block.timestamp + 1 days);
+        uint256 g1 = _value(issuer) - a1;
+        uint256 g2 = _value(issuer2) - a2;
+        assertGt(g1, 0);
+        assertApproxEqAbs(g1, g2, 2, "equal stakes, equal rewards");
+    }
+
+    function test_writeOffEatsUnvestedRewardsFirst() public {
+        _reward(10_000 * USD);
+        uint256 before = usdVault.totalAssets();
+        vm.prank(trader);
+        uint256 id = pm.openHedge(address(coin), 100 * USD, 20, 0, 0);
+        uint256 locked = usdVault.lockedNow();
+        assertGt(locked, 10_000 * USD);
+        id;
+        vm.prank(address(pm));
+        usdVault.writeOff(1_000 * USD);
+        assertEq(usdVault.lockedNow(), locked - 1_000 * USD, "loss taken from rewards still vesting");
+        assertGe(usdVault.totalAssets() + 2, before, "vested value untouched");
+    }
+}
+
+/// Multiplication follows the issued USDC: a hedge can never borrow more than the reserve can lend.
+contract ReserveLimitTest is Base {
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+        // Leave only $1,000 in the reserve: 90 % utilisation cap → $900 can be lent.
+        vm.startPrank(issuer);
+        usdVault.withdraw(4_999_000 * USD, issuer, issuer);
+        vm.stopPrank();
+    }
+
+    function test_maxMFollowsAvailableUsdc() public {
+        assertEq(pm.maxHedgeMFor(address(coin), 100 * USD), 10, "$900 available: (m-1)*$100 <= $900");
+        assertEq(pm.maxHedgeMFor(address(coin), 1_000 * USD), 1, "too little for a $1,000 stake to multiply");
+        vm.prank(trader);
+        vm.expectRevert(BackxPositionManager.NotEnoughReserve.selector);
+        pm.openHedge(address(coin), 100 * USD, 11, 0, 0);
+        _hedge(100 * USD, 10);
+        assertLe(pm.maxHedgeMFor(address(coin), 100 * USD), 1, "reserve used up");
+        _hedge(100 * USD, 1); // 1× borrows nothing: always possible
+    }
+
+    function test_capStillApplies() public {
+        vm.startPrank(issuer);
+        usd.mint(issuer, 10_000_000 * USD);
+        usdVault.deposit(10_000_000 * USD, issuer);
+        vm.stopPrank();
+        assertEq(pm.maxHedgeMFor(address(coin), 100 * USD), 30, "market cap when the reserve is deep");
     }
 }
