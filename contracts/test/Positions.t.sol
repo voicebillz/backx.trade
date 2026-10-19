@@ -3,6 +3,7 @@ pragma solidity 0.8.24;
 
 import {Base} from "./Base.t.sol";
 import {BackxPositionManager} from "../src/BackxPositionManager.sol";
+import {BackxReserveVault} from "../src/BackxReserveVault.sol";
 
 contract HedgeTest is Base {
     function setUp() public {
@@ -573,7 +574,7 @@ contract ReserveLimitTest is Base {
         assertEq(pm.maxHedgeMFor(address(coin), 100 * USD), 10, "$900 available: (m-1)*$100 <= $900");
         assertEq(pm.maxHedgeMFor(address(coin), 1_000 * USD), 1, "too little for a $1,000 stake to multiply");
         vm.prank(trader);
-        vm.expectRevert(BackxPositionManager.NotEnoughReserve.selector);
+        vm.expectRevert(BackxReserveVault.OverUtilised.selector);
         pm.openHedge(address(coin), 100 * USD, 11, 0, 0);
         _hedge(100 * USD, 10);
         assertLe(pm.maxHedgeMFor(address(coin), 100 * USD), 1, "reserve used up");

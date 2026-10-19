@@ -7,6 +7,8 @@ export const RPC = {
   base: process.env.RPC_BASE || 'https://base-rpc.publicnode.com',
   bsc: process.env.RPC_BSC || 'https://bsc-dataseed.bnbchain.org',
   solana: process.env.RPC_SOLANA || 'https://api.mainnet-beta.solana.com',
+  robinhood: process.env.RPC_ROBINHOOD || 'https://rpc.mainnet.chain.robinhood.com',
+  arbitrum: process.env.RPC_ARBITRUM || 'https://arb1.arbitrum.io/rpc',
 };
 
 // What we show. `price` is the CoinGecko id.
@@ -17,6 +19,9 @@ const EVM_ASSETS = [
   { chain: 'base', chainName: 'Base', symbol: 'USDC', name: 'USD Coin', decimals: 6, price: 'usd-coin', token: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' },
   { chain: 'bsc', chainName: 'BNB Chain', symbol: 'BNB', name: 'BNB', decimals: 18, price: 'binancecoin' },
   { chain: 'bsc', chainName: 'BNB Chain', symbol: 'USDC', name: 'USD Coin', decimals: 18, price: 'usd-coin', token: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d' },
+  // Where backx markets live / will live: the user's gas and USDC there.
+  { chain: 'robinhood', chainName: 'Robinhood Chain', symbol: 'ETH', name: 'Ether', decimals: 18, price: 'ethereum' },
+  { chain: 'arbitrum', chainName: 'Arbitrum', symbol: 'USDC', name: 'USD Coin', decimals: 6, price: 'usd-coin', token: '0xaf88d065e77c8cc2239327c5edb3a432268e5831' },
 ];
 const SOL_ASSETS = [
   { chain: 'solana', chainName: 'Solana', symbol: 'SOL', name: 'Solana', decimals: 9, price: 'solana' },
@@ -74,7 +79,7 @@ walletRouter.get('/balances', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'unauthorized' });
   const { redis } = req.app.locals;
   const { address, solanaAddress } = req.user;
-  const key = `bal:v1:${address}:${solanaAddress || '-'}`;
+  const key = `bal:v2:${address}:${solanaAddress || '-'}`;
   try {
     const cached = await redis.get(key);
     if (cached) return res.type('json').send(cached);

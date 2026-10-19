@@ -15,7 +15,7 @@ import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
 import { useRoute, navigate } from './lib/router';
 import { useAuth } from './lib/auth';
-import { useBalances } from './lib/useBalances';
+import { useBalances, usdcOf } from './lib/useBalances';
 
 // Admin portal: own chunk, only fetched when an admin opens it. The server guards every /api/admin call.
 const AdminPage = lazy(() => import('./pages/AdminPage'));
@@ -64,8 +64,8 @@ export default function Terminal() {
         route={route} theme={theme} onTheme={setTheme} priceColors={priceColors} onPriceColors={setPriceColors}
         onSelectMarket={selectMarket} balances={balances}
       />
-      {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} />}
-      {route === 'issue' && <IssuePage markets={moving.items} />}
+      {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} usdc={me ? usdcOf(balances.data) : null} />}
+      {route === 'issue' && <IssuePage markets={moving.items} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
       {(route === 'admin' || route === 'adminUsers') && (me?.isAdmin
@@ -81,9 +81,10 @@ interface TradeProps {
   onSelect: (m: Market) => void;
   theme: ReturnType<typeof useTheme>['theme'];
   priceColors: ReturnType<typeof usePriceColors>['priceColors'];
+  usdc: ReturnType<typeof usdcOf> | null;
 }
 
-function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
+function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProps) {
   const [stake, setStake] = useState('100');
   const [m, setM] = useState(5);
   const [sheet, setSheet] = useState(false);
@@ -105,7 +106,7 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   );
 
   const ticket = market && q && (
-    <OrderTicket market={market} maxM={maxM} available={availableToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
+    <OrderTicket market={market} usdc={usdc} maxM={maxM} available={availableToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
   );
 
   return (

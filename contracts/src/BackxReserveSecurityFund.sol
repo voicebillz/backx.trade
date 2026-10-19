@@ -3,17 +3,19 @@ pragma solidity 0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 /// @title Reserve Security Fund
 /// @notice Receives a small part of every position (USD) and pays it out only to cover a gap: a position
 /// that could not repay its issuers in full because the price jumped past liquidation before the swap.
 /// One fund per side (Hedge, Short), so short-side gaps never eat the hedge-side cover.
 /// There is no owner withdrawal: funds leave only to cover gaps (ÅPEN: surplus policy, see SHORT-SPEC §8).
-contract BackxReserveSecurityFund is Ownable2Step {
+/// Upgradeable: BeaconProxy per coin from BackxMarketFactory. Storage is APPEND-ONLY across versions.
+contract BackxReserveSecurityFund is Initializable, Ownable2StepUpgradeable {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable usd;
+    IERC20 public usd;
     address public manager;
     uint256 public totalCovered;
 
@@ -21,14 +23,22 @@ contract BackxReserveSecurityFund is Ownable2Step {
     event Covered(uint256 requested, uint256 paid);
 
     error NotManager();
-    error ManagerAlreadySet();
 
-    constructor(IERC20 usd_, address owner_) Ownable(owner_) {
-        usd = usd_;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
+    function initialize(IERC20 usd_, address owner_, address manager_) external initializer {
+        __Ownable_init(owner_);
+        __Ownable2Step_init();
+        usd = usd_;
+        manager = manager_;
+        emit ManagerSet(manager_);
+    }
+
+    /// @notice Not locked: the Safe can point the fund at a new PositionManager.
     function setManager(address manager_) external onlyOwner {
-        if (manager != address(0)) revert ManagerAlreadySet();
         manager = manager_;
         emit ManagerSet(manager_);
     }

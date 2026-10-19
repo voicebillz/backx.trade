@@ -45,6 +45,11 @@ RPC_ETHEREUM=
 RPC_BASE=
 RPC_BSC=
 RPC_SOLANA=
+RPC_ROBINHOOD=
+RPC_ARBITRUM=
+RPC_OPTIMISM=
+RPC_POLYGON=
+RPC_AVALANCHE=
 ```
 
 Swap (`/api/swap/*`) bruker LI.FI (`li.quest`) og CoinGecko fra serveren; ingen nøkkel trengs.
@@ -55,6 +60,8 @@ Settes **senere**, ikke nå (vi sier fra når koden trenger dem):
 | Variabel | Når | Merk |
 |---|---|---|
 | `RPC_URL` | Når vi leser priser/saldo on-chain | Kan inneholde API-nøkkel, derfor kun på serveren |
+| `FACTORY_<chainId>` (f.eks. `FACTORY_4663`, `FACTORY_8453`) | Etter engangs-`Deploy.s.sol` på den chainen | Adressen til BackxMarketFactory. Uten den sier «Deploy contracts» i adminportalen hva som mangler |
+| `RESERVE_STABLE_4663`, `RESERVE_STABLE_SYMBOL_4663`, `RESERVE_STABLE_DECIMALS_4663` | Når eier har valgt stablecoin på Robinhood Chain | Robinhood Chain har ingen USDC hos LI.FI ennå (USDG finnes). **ÅPEN** |
 | Keeper-/fee-collector-nøkler | Når kontraktene finnes | Egen Railway-tjeneste uten offentlig domene, én nøkkel per rolle. Aldri Safe-/owner-nøkler |
 
 Sjekk etter deploy: `https://api.backx.trade/health` skal vise `{"ok":true}`. Alle andre adresser fra nettleserens adressefelt skal gi `forbidden`, det er riktig.

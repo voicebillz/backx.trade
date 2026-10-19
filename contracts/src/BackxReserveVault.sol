@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title Issue Reserve vault
 /// @notice One per coin per side. USD reserve (asset = USDC) lends dollars to Hedges; token reserve
@@ -19,7 +21,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// New rewards vest linearly over `vestPeriod` (default 24 h) so someone who deposits just before a large
 /// reward and leaves right after cannot take a share that belongs to the issuers who backed the position.
 /// A write-off first eats rewards that have not vested yet.
-contract BackxReserveVault is ERC4626, Ownable2Step {
+/// Upgradeable: BeaconProxy per coin from BackxMarketFactory; the Safe upgrades all reserves on a chain at once
+/// through the beacon, no redeploy, shares and balances stay. Storage is APPEND-ONLY across versions.
+contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpgradeable {
     using SafeERC20 for IERC20;
 
     /// @notice The PositionManager: the only address that can lend, repay or write off.
@@ -27,11 +31,12 @@ contract BackxReserveVault is ERC4626, Ownable2Step {
     /// @notice Principal currently lent to open positions.
     uint256 public lent;
     /// @notice Lending stops above this utilisation so issuers can always leave with something.
-    uint16 public maxUtilBps = 9_000;
+    uint16 public maxUtilBps;
     /// @notice Rewards not yet vested, as of `lastReward`; they count in totalAssets as they vest.
-    uint256 public lockedRewards;
+    /// Packed in one storage slot with lastReward and vestPeriod: one write per reward instead of two.
+    uint176 public lockedRewards;
     uint40 public lastReward;
-    uint32 public vestPeriod = 1 days;
+    uint32 public vestPeriod;
 
     event ManagerSet(address manager);
     event MaxUtilSet(uint16 bps);
@@ -42,7 +47,6 @@ contract BackxReserveVault is ERC4626, Ownable2Step {
     event VestPeriodSet(uint32 secs);
 
     error NotManager();
-    error ManagerAlreadySet();
     error OverUtilised();
     error BadValue();
 
@@ -51,15 +55,27 @@ contract BackxReserveVault is ERC4626, Ownable2Step {
         _;
     }
 
-    constructor(IERC20 asset_, string memory name_, string memory symbol_, address owner_)
-        ERC20(name_, symbol_)
-        ERC4626(asset_)
-        Ownable(owner_)
-    {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
-    /// @notice Set once. A new manager means a new vault (issuers must be able to rely on who can lend).
+    function initialize(IERC20 asset_, string calldata name_, string calldata symbol_, address owner_, address manager_)
+        external
+        initializer
+    {
+        __ERC20_init(name_, symbol_);
+        __ERC4626_init(asset_);
+        __Ownable_init(owner_);
+        __Ownable2Step_init();
+        maxUtilBps = 9_000;
+        vestPeriod = 1 days;
+        manager = manager_;
+        emit ManagerSet(manager_);
+    }
+
+    /// @notice The Safe can move lending to a new PositionManager (e.g. after a migration). Not locked.
     function setManager(address manager_) external onlyOwner {
-        if (manager != address(0)) revert ManagerAlreadySet();
         if (manager_ == address(0)) revert BadValue();
         manager = manager_;
         emit ManagerSet(manager_);
@@ -68,9 +84,7 @@ contract BackxReserveVault is ERC4626, Ownable2Step {
     function setVestPeriod(uint32 secs) external onlyOwner {
         if (secs > 7 days) revert BadValue();
         // Keep what has vested so far; the rest vests over the new period from now.
-        lockedRewards = lockedNow();
-        lastReward = uint40(block.timestamp);
-        vestPeriod = secs;
+        (lockedRewards, lastReward, vestPeriod) = (uint176(lockedNow()), uint40(block.timestamp), secs);
         emit VestPeriodSet(secs);
     }
 
@@ -88,9 +102,10 @@ contract BackxReserveVault is ERC4626, Ownable2Step {
 
     /// @notice Rewards still vesting (in the vault, not yet in the share price).
     function lockedNow() public view returns (uint256) {
-        uint256 end = uint256(lastReward) + vestPeriod;
-        if (block.timestamp >= end || vestPeriod == 0) return 0;
-        return lockedRewards * (end - block.timestamp) / vestPeriod;
+        (uint256 locked, uint256 last, uint256 period) = (lockedRewards, lastReward, vestPeriod); // one SLOAD
+        uint256 end = last + period;
+        if (block.timestamp >= end || period == 0) return 0;
+        return locked * (end - block.timestamp) / period;
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -150,14 +165,12 @@ contract BackxReserveVault is ERC4626, Ownable2Step {
         lent -= principal;
         // Rewards that have not vested yet absorb the loss first.
         uint256 l = lockedNow();
-        lockedRewards = l > principal ? l - principal : 0;
-        lastReward = uint40(block.timestamp);
+        (lockedRewards, lastReward) = (uint176(l > principal ? l - principal : 0), uint40(block.timestamp));
         emit WrittenOff(principal);
     }
 
     function _lock(uint256 amount) internal {
         if (amount == 0) return;
-        lockedRewards = lockedNow() + amount;
-        lastReward = uint40(block.timestamp);
+        (lockedRewards, lastReward) = (SafeCast.toUint176(lockedNow() + amount), uint40(block.timestamp));
     }
 }

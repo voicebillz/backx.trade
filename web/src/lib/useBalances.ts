@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from './api';
 
 export interface Asset {
-  chain: 'ethereum' | 'base' | 'bsc' | 'solana';
+  chain: 'ethereum' | 'base' | 'bsc' | 'solana' | 'robinhood' | 'arbitrum';
   chainName: string;
   symbol: string;
   name: string;
@@ -30,4 +30,13 @@ export function useBalances(enabled: boolean) {
   }, [enabled, refresh]);
 
   return { data, error, refresh };
+}
+
+/** USDC across the user's wallets: investing (Hedge stake and Issue Reserve) is paid in USDC. */
+export function usdcOf(data: Balances | null): { total: number; parts: { chainName: string; amount: number }[] } {
+  const parts = (data?.assets ?? [])
+    .filter((a) => a.symbol === 'USDC' && Number(a.amount) > 0)
+    .map((a) => ({ chainName: a.chainName, amount: Number(a.amount) }))
+    .sort((a, b) => b.amount - a.amount);
+  return { total: parts.reduce((s, p) => s + p.amount, 0), parts };
 }

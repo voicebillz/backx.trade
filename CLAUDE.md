@@ -37,9 +37,19 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Never commit `.env`, keys or keypair files. `VITE_*` ends up in the browser: no secrets there.
 - Owner keys are never handled by a server or script. Safe `0xfa408F75490C0412d4a5F45FA7553Aff03249BE4` owns the contracts.
 - On-chain access is read-only unless the owner explicitly asks otherwise.
-- Contracts live in `contracts/` (Foundry, OpenZeppelin v5.1.0, owner = the Safe from the constructor). Written at the
-  owner's request 2026-10-18; NOT audited, NOT deployed. Deploying needs owner sign-off on the open decisions, the
-  swap adapter + TWAP oracle per pool, fork tests and an external audit. `forge test` must stay green.
+- Contracts live in `contracts/` (Foundry, OpenZeppelin v5.1.0 + contracts-upgradeable v5.1.0, owner = the Safe from
+  initialisation). Written at the owner's request 2026-10-18; NOT audited, NOT deployed. Deploying needs owner sign-off on
+  the open decisions, the swap adapter + TWAP oracle per pool, fork tests and an external audit. `forge test` must stay green.
+- Upgradeable, isolated per coin per chain (owner 2026-10-19): one `BackxMarketFactory` per EVM chain (UUPS, Safe-owned)
+  creates each coin's own BackxReserveVault + BackxReserveSecurityFund + BackxPositionManager as BeaconProxies in ONE
+  `createMarket` call. The Safe owns the three beacons and upgrades a contract type for every coin on a chain with one
+  `upgradeTo`; no redeploy, balances and positions stay. Storage is append-only across versions. Keepers settle many
+  positions per tx (`liquidateBatch`, `executeLimitBatch`). The admin portal never deploys with a server key: it builds
+  the createMarket transaction as a Safe Transaction Builder file, the Safe signs, the portal reads the factory to
+  record the new addresses.
+- Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, OP Mainnet, Polygon, Avalanche.
+  Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
+  are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).
 - Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
 - Fee model v4 (owner 2026-10-18): exposure is exactly m × stake, fees are paid ON TOP of the stake (holders 2 % of
   stake to gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % + 0.03 % of lent), issuers' share of a gain p = 10 %.
@@ -73,7 +83,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   the web bundle: real protection is the server requiring a session on every `/api` route.
 - Read-only data routes: `/api/wallet/balances` (user's own EVM + Solana wallets via RPC, CoinGecko prices) and
   `/api/markets` (demo universe from CoinGecko until Robinhood Chain markets list). Both need a session, cached in Redis.
-- Swap page (`/swap`, `/api/swap/*`): same-chain swaps on Ethereum, Base, BNB Chain routed by LI.FI, no bridges.
+- Investing (Hedge stake, Issue Reserve) is paid in USDC (owner 2026-10-19): the ticket and Issue modal show the user's
+  USDC, Max fills the largest amount that covers stake + fees, and USDC on another chain is moved to the market's chain
+  with `/api/swap/move-usdc` (LI.FI bridge, user signs, own address only, Diamond-only, exact approval, ≤ 3 % loss).
+- Swap page (`/swap`, `/api/swap/*`): same-chain swaps on Ethereum, Base, BNB Chain routed by LI.FI (bridging only via move-usdc above).
   The server builds every quote for the signed-in user's own address and rejects any route whose tx or approval
   does not target the LI.FI Diamond `0x1231…4EaE`; approvals are for the exact amount. User signs with Privy.
   Solana swaps not built yet. Listed coins map to contracts via CoinGecko platforms (cached daily).

@@ -714,3 +714,20 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .admin-actions .btn-mini, .status-pill { min-height: 36px; }
 }
 .admin-form .chip-btn.on, .method-chips .chip-btn.on { color: var(--brand-text); border-color: var(--brand); background: var(--brand-bg); }
+.chain-pick { display: flex; gap: 6px; flex-wrap: wrap; }
+.chain-pick .chip-btn:disabled { opacity: .4; }
+.token-search { gap: 8px; }
+.token-hits { list-style: none; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius); max-height: 220px; overflow-y: auto; background: var(--panel); }
+.token-hits button { width: 100%; text-align: left; padding: 8px; border-radius: 6px; display: flex; gap: 8px; align-items: baseline; min-height: 40px; }
+.token-hits button:hover { background: var(--raised); }
+.token-hits li.muted { padding: 8px; }
+.input-row { display: flex; gap: 8px; align-items: center; }
+.input-row .input-wrap { flex: 1; min-width: 0; }
+.deploy-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-right: 6px; white-space: nowrap; }
+.deploy-pill.draft { background: var(--raised); color: var(--ink-3); }
+.deploy-pill.proposed { background: var(--brand-bg); color: var(--brand-text); }
+.deploy-pill.deployed { background: var(--up-bg); color: var(--up); }
+.deploy-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 14px; }
+.deploy-steps li div { margin-top: 6px; }
+.deploy-steps .btn { text-decoration: none; }
+.missing-list { margin: 0; padding-left: 20px; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }

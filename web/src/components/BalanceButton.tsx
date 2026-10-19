@@ -28,7 +28,7 @@ export function BalanceButton({ data, error }: { data: Balances | null; error: b
             {held.map((a) => (
               <li key={a.chain + a.symbol}>
                 <span className="bal-asset">
-                  <span className="bal-logo"><CoinIcon symbol={a.symbol} size={22} /><img className="bal-chain" src={CHAIN_LOGO[a.chain]} alt="" width={11} height={11} /></span>
+                  <span className="bal-logo"><CoinIcon symbol={a.symbol} size={22} />{CHAIN_LOGO[a.chain] && <img className="bal-chain" src={CHAIN_LOGO[a.chain]} alt="" width={11} height={11} />}</span>
                   <span><b>{a.symbol}</b><small>{a.chainName}</small></span>
                 </span>
                 <span className="r"><span className="num">{amt(a.amount)}</span><small className="num">{a.usd != null ? usd(a.usd) : '—'}</small></span>

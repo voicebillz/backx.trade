@@ -1,8 +1,10 @@
 import express from 'express';
 import { RPC, rpc } from './wallet.js';
 import { universe } from './markets.js';
+import { CHAINS as MARKET_CHAINS } from './chains.js';
 
-// Same-chain swaps in the user's own wallet, routed by LI.FI across DEXes. No bridges.
+// Same-chain swaps in the user's own wallet, routed by LI.FI across DEXes. The one cross-chain route is
+// /move-usdc: USDC from the user's wallet to the market's reserve currency on another chain, to the SAME address.
 // The server only quotes and checks; the user's Privy wallet signs. Every quote is built for
 // the signed-in user's own address and only ever points at the LI.FI contract.
 const CHAINS = {
@@ -217,6 +219,70 @@ swapRouter.get('/receipt', async (req, res) => {
   try {
     const r = await rpc(RPC[chain], 'eth_getTransactionReceipt', [hash]);
     res.json({ status: r ? (r.status === '0x1' ? 'success' : 'reverted') : 'pending' });
+  } catch {
+    res.status(503).json({ error: 'unavailable' });
+  }
+});
+
+// ---- Move USDC to the chain a market lives on (owner 2026-10-19) ---------------------------------------------
+// Investing is paid in the market chain's reserve stablecoin (USDC where it exists). If the user's USDC sits on
+// another chain, the app moves it first with a LI.FI bridge route. Same rules as swaps: the user's own wallet
+// signs, the money only ever goes to the user's own address, the transaction and approval may only target the
+// LI.FI Diamond, approvals are for the exact amount, and routes that lose more than 3 % are refused.
+const MAX_BRIDGE_LOSS = 0.03;
+
+swapRouter.get('/move-usdc', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'unauthorized' });
+  const chain = String(req.query.from || '');
+  const toChainId = Number(req.query.toChainId);
+  const target = MARKET_CHAINS[toChainId];
+  if (!CHAINS[chain] || !target || CHAINS[chain].id === toChainId) return res.status(400).json({ error: 'bad_chain' });
+  if (!target.stable) return res.status(409).json({ error: 'no_stable', message: `${target.name} has no reserve stablecoin set yet.` });
+  const owner = req.user.address;
+  const usdc = STABLES[chain][0][2];
+  try {
+    const info = await tokenInfo(req.app.locals.redis, chain, usdc);
+    if (!info) return res.status(503).json({ error: 'unavailable' });
+    const amount = toUnits(String(req.query.amount || ''), info.decimals);
+    if (amount == null || amount <= 0n) return res.status(400).json({ error: 'bad_amount' });
+    const bal = await balanceOf(chain, usdc, owner);
+    if (bal < amount) return res.status(400).json({ error: 'insufficient', balance: fromUnits(bal, info.decimals) });
+
+    const qs = new URLSearchParams({
+      fromChain: String(CHAINS[chain].id), toChain: String(toChainId), fromToken: usdc, toToken: target.stable.address,
+      fromAmount: amount.toString(), fromAddress: owner, toAddress: owner, slippage: '0.005', integrator: 'backx', order: 'CHEAPEST',
+    });
+    const r = await fetch(`https://li.quest/v1/quote?${qs}`, { signal: AbortSignal.timeout(20000) });
+    const q = await r.json();
+    if (!r.ok) return res.status(400).json({ error: 'no_route', message: String(q.message || '').slice(0, 160) });
+
+    const tx = q.transactionRequest;
+    if (!tx || typeof tx.data !== 'string' || !/^0x[0-9a-fA-F]+$/.test(tx.data) || String(tx.to).toLowerCase() !== LIFI_DIAMOND
+      || Number(tx.chainId) !== CHAINS[chain].id || String(tx.from || owner).toLowerCase() !== owner
+      || String(q.action?.toAddress || '').toLowerCase() !== owner || Number(q.action?.toChainId) !== toChainId
+      || String(q.action?.toToken?.address || '').toLowerCase() !== target.stable.address) {
+      return res.status(502).json({ error: 'route_rejected' });
+    }
+    if (BigInt(tx.value || '0x0') !== 0n) return res.status(502).json({ error: 'route_rejected' }); // USDC in, no ETH out of the wallet
+    const spender = String(q.estimate?.approvalAddress || '').toLowerCase();
+    if (spender !== LIFI_DIAMOND) return res.status(502).json({ error: 'route_rejected' });
+    const approval = (await allowance(chain, usdc, owner, spender)) < amount
+      ? { to: usdc, data: '0x095ea7b3' + spender.slice(2).padStart(64, '0') + amount.toString(16).padStart(64, '0') }
+      : null;
+    const fromUsd = Number(q.estimate.fromAmountUSD) || 0;
+    const toUsd = Number(q.estimate.toAmountUSD) || 0;
+    const loss = fromUsd > 0 && toUsd > 0 ? 1 - toUsd / fromUsd : null;
+    if (loss == null || loss > MAX_BRIDGE_LOSS) return res.status(400).json({ error: 'price_impact', loss });
+    res.json({
+      quotedAt: Date.now(), loss, chainId: CHAINS[chain].id, toChainId,
+      fromAmount: fromUnits(amount, info.decimals),
+      toAmountMin: fromUnits(BigInt(q.estimate.toAmountMin), q.action.toToken.decimals),
+      toSymbol: target.stable.symbol, toChainName: target.name,
+      seconds: Number(q.estimate.executionDuration) || null,
+      route: String(q.toolDetails?.name || q.tool || 'Bridge').slice(0, 40),
+      approval,
+      tx: { to: LIFI_DIAMOND, data: tx.data, value: '0' },
+    });
   } catch {
     res.status(503).json({ error: 'unavailable' });
   }

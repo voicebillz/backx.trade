@@ -4,11 +4,12 @@ pragma solidity 0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {BackxReserveVault} from "./BackxReserveVault.sol";
 import {BackxReserveSecurityFund} from "./BackxReserveSecurityFund.sol";
 import {ISwapAdapter} from "./interfaces/ISwapAdapter.sol";
@@ -36,7 +37,11 @@ import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 /// a crash the keepers cannot execute through) and the Safe can switch it on with setStressCover.
 /// Limit (take-profit): the trader can set a price; a keeper sells (Hedge) or buys back (Short) once the
 /// TWAP reaches it, never worse than the limit minus limitSlipBps.
-contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
+///
+/// Upgradeable (owner 2026-10-19): one instance per coin per chain behind a BeaconProxy made by
+/// BackxMarketFactory. The Safe upgrades every market on a chain at once by pointing the beacon to new code: no
+/// redeploy, no migration, positions and balances stay where they are. Storage is APPEND-ONLY across versions.
+contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     uint256 internal constant BPS = 10_000;
@@ -81,26 +86,26 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint16 oracleDevBps;    // max distance between pool execution and TWAP
     }
 
-    IERC20 public immutable usd;
-    BackxReserveSecurityFund public immutable hedgeFund;
-    BackxReserveSecurityFund public immutable shortFund;
+    IERC20 public usd;
+    BackxReserveSecurityFund public hedgeFund;
+    BackxReserveSecurityFund public shortFund; // address(0) while Short is off
     address public feeCollector;
     /// @notice Keeper gas (owner 2026-10-19): a flat USD amount per position, paid at open straight to the keeper
     /// wallet. Set to ≈ 2× the gas of one close/liquidation: half pays that gas, half builds the keeper's balance.
     /// No fee is charged while keeperWallet is unset.
     address public keeperWallet;
     uint256 public keeperGasUsd;
-    uint256 internal immutable _maxKeeperGas;
+    uint256 internal _maxKeeperGas;
     Fees public fees;
     bool public permissionlessLiquidation;
     /// @notice How far below (sell) / above (buy) the TWAP a liquidation may execute. Wide enough to settle in
     /// a crash, narrow enough that a sandwich around the keeper cannot drain the issuers.
-    uint16 public liqMaxGapBps = 1_500;
+    uint16 public liqMaxGapBps;
     /// @notice How close the TWAP must be to the trigger to confirm a liquidation. Must stay well under the
     /// smallest liquidation distance (≈1.5 % at 30×), or a one-block spot spike could liquidate.
-    uint16 public twapConfirmBps = 25;
+    uint16 public twapConfirmBps;
     /// @notice A limit close may fill at most this much worse than the limit (pool fee + impact).
-    uint16 public limitSlipBps = 100;
+    uint16 public limitSlipBps;
     /// @notice 0 = off (default). Otherwise the share of the worst-case gap total the fund must hold before a
     /// new position opens: 10 000 = every open position crashing at once.
     uint16 public stressCoverBps;
@@ -130,7 +135,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     }
 
     mapping(uint256 => Position) public positions;
-    uint256 public nextId = 1;
+    uint256 public nextId;
 
     // ---- events / errors ------------------------------------------------------------------------
 
@@ -157,18 +162,44 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     error BadLimit();
     error LimitNotReached();
     error FundTooSmall();
-    error NotEnoughReserve();
 
-    constructor(IERC20 usd_, BackxReserveSecurityFund hedgeFund_, BackxReserveSecurityFund shortFund_, address feeCollector_, address owner_)
-        Ownable(owner_)
-    {
-        usd = usd_;
-        hedgeFund = hedgeFund_;
-        shortFund = shortFund_;
-        feeCollector = feeCollector_;
-        uint256 one = 10 ** IERC20Metadata(address(usd_)).decimals();
-        keeperGasUsd = one / 10; // $0.10 until the Safe sets it from measured gas
+    /// @notice Everything a new market needs, set in the same transaction as the proxy is created (no window in
+    /// which someone else could initialise it).
+    struct Init {
+        IERC20 usd;
+        BackxReserveSecurityFund hedgeFund;
+        BackxReserveSecurityFund shortFund;
+        address feeCollector;
+        address owner;         // the Safe
+        address keeper;
+        address keeperWallet;
+        address token;
+        Market market;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers(); // the implementation itself can never be initialised or used
+    }
+
+    function initialize(Init calldata a) external initializer {
+        __Ownable_init(a.owner);
+        __Ownable2Step_init();
+        __Pausable_init();
+        __ReentrancyGuard_init();
+        usd = a.usd;
+        hedgeFund = a.hedgeFund;
+        shortFund = a.shortFund;
+        feeCollector = a.feeCollector;
+        liqMaxGapBps = 1_500;
+        twapConfirmBps = 25;
+        limitSlipBps = 100;
+        nextId = 1;
+        uint256 one = 10 ** IERC20Metadata(address(a.usd)).decimals();
         _maxKeeperGas = one * 5;
+        keeperWallet = a.keeperWallet;
+        keeperGasUsd = a.keeperWallet == address(0) ? 0 : one / 10; // $0.10 until the Safe sets it from measured gas
+        if (a.keeper != address(0)) keepers[a.keeper] = true;
         fees = Fees({holdersBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200});
         // e, s and buffers from docs/backx/sim/sim3.py (v3): e floor ≈ 12 % at high m, buffer grows past 10×.
         // p (issuers' share of a gain) is a flat 10 % since v4: sim4 shows it barely moves the issuers'
@@ -181,11 +212,16 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
             uint16 extra = m > 10 ? uint16(2 * (m - 10)) : 0; // +0.02 % per step past 10×
             _params[m] = Params(e[m], s[m], 1000, 30 + extra, 60 + extra);
         }
+        if (a.token != address(0)) _setMarket(a.token, a.market);
     }
 
     // ---- owner (the Safe) ------------------------------------------------------------------------
 
     function setMarket(address token, Market calldata mk) external onlyOwner {
+        _setMarket(token, mk);
+    }
+
+    function _setMarket(address token, Market memory mk) internal {
         if (mk.maxHedgeM > MAX_M || mk.maxShortM > MAX_M) revert BadM();
         // Crash cover may not be switched off: at least a 20 % jump each way, at most −100 % / +500 %.
         if (mk.crashBps < 2_000 || mk.crashBps > BPS || mk.pumpBps < 2_000 || mk.pumpBps > 50_000) revert BadParams();
@@ -299,8 +335,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint256 notional = equity + lentUsd; // = m · stake
         if (notional > mk.maxNotionalUsd) revert TooLarge();
         if (mk.openHedgeUsd + lentUsd > mk.maxOpenHedgeUsd) revert OpenInterestFull();
-        // The issuers' USDC decides how far a hedge can multiply: never lend more than the reserve can give.
-        if (lentUsd > 0 && lentUsd > mk.usdVault.availableToLend()) revert NotEnoughReserve();
+        // The issuers' USDC decides how far a hedge can multiply: the vault's lend() refuses anything above
+        // availableToLend (OverUtilised); maxHedgeMFor tells the app the limit up front. One check, not two.
         mk.openHedgeUsd += SafeCast.toUint128(lentUsd);
 
         usd.safeTransfer(feeCollector, holders);
@@ -390,6 +426,37 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
 
     function liquidate(uint256 id) external nonReentrant {
         if (!permissionlessLiquidation && !keepers[msg.sender]) revert NotKeeper();
+        _liquidate(id);
+    }
+
+    // ---- keeper batches: one transaction, many positions (one base fee + one keeper check) -------------------
+
+    /// @notice Liquidates every position in `ids` that can settle right now; the rest are skipped, not reverted.
+    function liquidateBatch(uint256[] calldata ids) external returns (uint256 done) {
+        if (!permissionlessLiquidation && !keepers[msg.sender]) revert NotKeeper();
+        for (uint256 i; i < ids.length; ) {
+            try this.selfSettle(ids[i], false) { unchecked { ++done; } } catch { }
+            unchecked { ++i; }
+        }
+    }
+
+    /// @notice Fills every limit in `ids` that has been reached; the rest are skipped.
+    function executeLimitBatch(uint256[] calldata ids) external returns (uint256 done) {
+        if (!permissionlessLiquidation && !keepers[msg.sender]) revert NotKeeper();
+        for (uint256 i; i < ids.length; ) {
+            try this.selfSettle(ids[i], true) { unchecked { ++done; } } catch { }
+            unchecked { ++i; }
+        }
+    }
+
+    /// @dev Only this contract, from a batch: each settlement stays atomic and re-entrancy guarded on its own.
+    function selfSettle(uint256 id, bool limit) external nonReentrant {
+        if (msg.sender != address(this)) revert NotKeeper();
+        if (limit) _executeLimit(id);
+        else _liquidate(id);
+    }
+
+    function _liquidate(uint256 id) internal {
         Position memory pos = positions[id];
         if (pos.owner == address(0)) revert NotLiquidatable();
         Market storage mk = markets[pos.token];
@@ -414,6 +481,10 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     /// The trader gets the normal close: principal to the issuers first, then p of the gain.
     function executeLimit(uint256 id) external nonReentrant {
         if (!permissionlessLiquidation && !keepers[msg.sender]) revert NotKeeper();
+        _executeLimit(id);
+    }
+
+    function _executeLimit(uint256 id) internal {
         Position memory pos = positions[id];
         if (pos.owner == address(0) || pos.limitValue == 0) revert LimitNotReached();
         Market storage mk = markets[pos.token];

@@ -224,13 +224,35 @@ Sikkerhet i koden:
 - Eier kan endre parametere bare innenfor harde grenser (e ≥ 5 %, holders ≤ 3 %, buffer ≤ 5 % …).
 - Lukking og likvidering virker alltid, også når nye posisjoner er pauset.
 
-Tester (`forge test`, 28 stk.): v4-gebyrer på toppen og p = 10 %, limit-ordre begge sider (TWAP-vern, regler,
+Tester (`forge test`, 47 stk., inkl. oppgradering via beacon og fabrikk, isolasjon per coin, keeper-bunter): v4-gebyrer på toppen og p = 10 %, limit-ordre begge sider (TWAP-vern, regler,
 tilgang), krasjvern (av som standard, reservene brukes fullt; når slått på stopper fondet nye posisjoner; estimatet
 dekker faktisk gap), Hedge og Short 5× med gevinst (issuers først), 1× uten lån, likvideringsnivå
 30× og 10× = simuleringen (±0,06 %), likvidering 30× uten tap, gap 30× dekket av fondet (begge sider),
 tomt fond → avskrivning, eier kan ikke lukke under null, TWAP-vern, caps, pause, tilgang,
 uttaksgrense, parametergrenser, og fuzz (3 000 tilfeldige posisjoner 1–30×, ±30 %): alltid
 principal tilbake, ingenting fast i kontrakten, issuers aldri i minus.
+
+## 5b. Oppgraderbart, én fabrikk per chain, isolert per coin (2026-10-19)
+
+| Kontrakt | Hvordan |
+|---|---|
+| `BackxMarketFactory` | Én per EVM-chain (UUPS-proxy, eies av Safe). `createMarket` lager coinens reserve, fond og trading-kontrakt i én transaksjon |
+| Reserve, fond, trading-kontrakt | BeaconProxy per coin. Safe eier tre «beacons»: `upgradeTo(ny kode)` oppgraderer den kontrakttypen for **alle** coins på chainen samtidig, uten ny deploy og uten å flytte penger |
+| Isolasjon | Hver coin har egen reserve, eget fond og egen trading-kontrakt. En feil eller dårlig pris på én coin kan ikke røre en annen |
+
+Ingenting er låst: Safe kan oppgradere, bytte manager på reserve/fond og endre alle innstillinger. Det betyr også at
+**Safe-signerne har full makt over koden som holder brukernes penger**. Det er bevisst (eier 2026-10-19). Vurder en
+tidslås (f.eks. 48 t) foran oppgraderinger når det er TVL, så issuers rekker å ta ut før en endring trer i kraft.
+
+**Gass** (forge gas report, median): åpne Hedge ca. 394 000 (før proxy: 344 000), lukke ca. 306 000 (267 000),
+likvidere ca. 268 000. Tillegget er proxy-oppslaget som gjør oppgradering uten redeploy mulig, og 24-timers opptjening
+av belønning. Optimalisert: belønning pakket i én lagringsplass, én reserve-sjekk i stedet for to. Keeper: `liquidateBatch`
+og `executeLimitBatch` tar mange posisjoner i én transaksjon (ca. 227 000 per likvidering i bunt mot 268 000 enkeltvis).
+
+**Deploy fra adminportalen:** «Save and deploy contracts» lager en fil for Safe Transaction Builder med
+`createMarket` for coinen. Eieren åpner Safe, signerer, og «Check deployment» leser fabrikken og lagrer adressene.
+Serveren har aldri nøkler. Forutsetter: fabrikken er deployet på chainen (`script/Deploy.s.sol`, én gang),
+`FACTORY_<chainId>` på Railway, swap-adapter og TWAP-orakel for coinen, og samme Safe-adresse på den chainen.
 
 ## 6. Gjenstår før ekte penger
 1. `ISwapAdapter` for PCS Infinity / Uniswap v4 på Robinhood Chain (rute-motoren fra fondene).

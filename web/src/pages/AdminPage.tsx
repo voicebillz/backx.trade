@@ -8,9 +8,17 @@ import { CoinIcon } from '../components/CoinIcon';
 
 interface Asset {
   id: number; chainId: number; symbol: string; name: string; tokenAddress: string; decimals: number;
-  poolAddress: string | null; oracleAddress: string | null; poolFeeBps: number; maxM: number; liqMarginBps: number;
-  logoUrl: string | null; enabled: boolean; notes: string | null; updatedAt: string; updatedBy: string;
+  poolAddress: string | null; oracleAddress: string | null; adapterAddress: string | null; poolFeeBps: number; maxM: number;
+  liqMarginBps: number; maxPositionUsd: number; maxOpenUsd: number; logoUrl: string | null; enabled: boolean; notes: string | null;
+  updatedAt: string; updatedBy: string; deployStatus: 'draft' | 'proposed' | 'deployed';
+  deployed: { manager: string; usdVault: string; hedgeFund: string; factory: string } | null;
 }
+interface Chain {
+  id: number; key: string; name: string; explorer: string; factory: string | null;
+  stable: { symbol: string; address: string; decimals: number } | null;
+  wrappedNative: { symbol: string; address: string; decimals: number };
+}
+interface TokenHit { symbol: string; name: string; address: string; decimals: number }
 interface AuditRow { at: string; admin: string; action: string; target: string | null }
 interface UserRow {
   address: string; solanaAddress: string | null; signupMethod: string | null; lastLoginMethod: string | null;
@@ -21,7 +29,6 @@ interface UsersResp {
   stats: { total: number; day: number; week: number; active_day: number; methods: { method: string; n: number }[] };
 }
 
-const ROBINHOOD = 4663;
 const FEE_TIERS = [1, 5, 25, 30, 100];
 const ADDR = /^0x[0-9a-fA-F]{40}$/;
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -63,27 +70,35 @@ export default function AdminPage({ route }: { route: Route }) {
 
 // ---- Listed assets ----------------------------------------------------------------------------
 
+const STATUS: Record<Asset['deployStatus'], string> = { draft: 'Draft', proposed: 'Waiting for Safe', deployed: 'Live contracts' };
+
 function Assets() {
   const [items, setItems] = useState<Asset[] | null>(null);
+  const [chains, setChains] = useState<Chain[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [err, setErr] = useState(false);
   const [editing, setEditing] = useState<Asset | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Asset | null>(null);
+  const [deploying, setDeploying] = useState<Asset | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [a, l] = await Promise.all([api<{ items: Asset[] }>('/api/admin/assets'), api<{ items: AuditRow[] }>('/api/admin/audit')]);
-      setItems(a.items); setAudit(l.items); setErr(false);
+      const [a, l, c] = await Promise.all([
+        api<{ items: Asset[] }>('/api/admin/assets'), api<{ items: AuditRow[] }>('/api/admin/audit'), api<{ items: Chain[] }>('/api/admin/chains'),
+      ]);
+      setItems(a.items); setAudit(l.items); setChains(c.items); setErr(false);
     } catch { setErr(true); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
   const toggle = async (a: Asset) => {
-    try { await api(`/api/admin/assets/${a.id}`, json({ ...a, logoUrl: a.logoUrl ?? '', poolAddress: a.poolAddress ?? '', oracleAddress: a.oracleAddress ?? '', notes: a.notes ?? '', enabled: !a.enabled })); load(); }
+    try { await api(`/api/admin/assets/${a.id}`, json({ ...toBody(toForm(a)), enabled: !a.enabled })); load(); }
     catch { setErr(true); }
   };
+  const chainName = (id: number) => chains.find((c) => c.id === id)?.name ?? `Chain ${id}`;
 
   const enabled = items?.filter((a) => a.enabled).length ?? 0;
+  const live = items?.filter((a) => a.deployStatus === 'deployed').length ?? 0;
   return (
     <>
       <section className="card">
@@ -91,11 +106,12 @@ function Assets() {
           <dl className="admin-stats">
             <div><dt className="label">Listed</dt><dd className="num">{items ? items.length : '—'}</dd></div>
             <div><dt className="label">Enabled</dt><dd className="num">{items ? enabled : '—'}</dd></div>
-            <div><dt className="label">Chain</dt><dd>Robinhood Chain <span className="muted num">4663</span></dd></div>
+            <div><dt className="label">Live contracts</dt><dd className="num">{items ? live : '—'}</dd></div>
+            <div><dt className="label">Chains</dt><dd className="num">{chains.length || '—'}</dd></div>
           </dl>
-          <button className="btn btn-gold" onClick={() => setEditing('new')}>+ Add asset</button>
+          <button className="btn btn-gold" onClick={() => setEditing('new')} disabled={!chains.length}>+ Add asset</button>
         </div>
-        <p className="hint">This list is what the team prepares. The contracts are configured by the Safe; an asset here does nothing on-chain by itself.</p>
+        <p className="hint">Add and save, then <b>Deploy contracts</b>: the portal prepares one transaction that creates the coin's own reserve, security fund and trading contract. The Safe signs it; the server never holds keys.</p>
       </section>
 
       {err && <p className="field-err" role="alert">Could not reach the admin API. Sign in again or try later.</p>}
@@ -104,7 +120,7 @@ function Assets() {
         <div className="table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th>Asset</th><th>Token</th><th>Pool</th><th className="r">Pool fee</th><th className="r">Max</th><th className="r">Liq. margin</th><th>Status</th><th /></tr>
+              <tr><th>Asset</th><th>Chain</th><th>Token</th><th className="r">Max</th><th className="r">Liq. margin</th><th>Contracts</th><th>Status</th><th /></tr>
             </thead>
             <tbody>
               {items === null && !err && Array.from({ length: 4 }, (_, i) => <tr key={i} aria-hidden="true"><td colSpan={8}><span className="sk sk-w60" /></td></tr>)}
@@ -112,11 +128,15 @@ function Assets() {
               {items?.map((a) => (
                 <tr key={a.id}>
                   <td><span className="cell-market"><CoinIcon symbol={a.symbol} src={a.logoUrl ?? undefined} size={24} /><span><b>{a.symbol}</b><small className="muted"> {a.name}</small></span></span></td>
-                  <td><CopyAddr value={a.tokenAddress} /> <small className="muted num">{a.decimals} dec</small></td>
-                  <td>{a.poolAddress ? <CopyAddr value={a.poolAddress} /> : <span className="muted">—</span>}</td>
-                  <td className="r num">{pct(a.poolFeeBps)}</td>
+                  <td>{chainName(a.chainId)}</td>
+                  <td><CopyAddr value={a.tokenAddress} /></td>
                   <td className="r num">{a.maxM}×</td>
                   <td className="r num">{pct(a.liqMarginBps)}</td>
+                  <td>
+                    <span className={'deploy-pill ' + a.deployStatus}>{STATUS[a.deployStatus]}</span>
+                    {a.deployStatus !== 'deployed' && <button className="btn-mini" onClick={() => setDeploying(a)}>{a.deployStatus === 'proposed' ? 'Continue' : 'Deploy contracts'}</button>}
+                    {a.deployed && <CopyAddr value={a.deployed.manager} />}
+                  </td>
                   <td>
                     <button className={'status-pill ' + (a.enabled ? 'on' : 'off')} onClick={() => toggle(a)} aria-label={`${a.enabled ? 'Disable' : 'Enable'} ${a.symbol}`}>
                       <span aria-hidden="true">{a.enabled ? '●' : '○'}</span> {a.enabled ? 'Enabled' : 'Disabled'}
@@ -124,7 +144,7 @@ function Assets() {
                   </td>
                   <td className="r admin-actions">
                     <button className="btn-mini" onClick={() => setEditing(a)}>Edit</button>
-                    <button className="btn-mini danger" onClick={() => setDeleting(a)}>Delete</button>
+                    {a.deployStatus === 'draft' && <button className="btn-mini danger" onClick={() => setDeleting(a)}>Delete</button>}
                   </td>
                 </tr>
               ))}
@@ -138,28 +158,39 @@ function Assets() {
         {audit.length === 0 ? <p className="muted">Nothing yet.</p> : (
           <ul className="audit-list">
             {audit.slice(0, 12).map((r, i) => (
-              <li key={i}><span className="num muted">{when(r.at)}</span> <b>{r.action.replace('asset.', '')}</b> {r.target?.split(' ')[0]} <span className="muted num">by {short(r.admin)}</span></li>
+              <li key={i}><span className="num muted">{when(r.at)}</span> <b>{r.action.replace('asset.', '').replace('_', ' ')}</b> {r.target?.split(' ')[0]} <span className="muted num">by {short(r.admin)}</span></li>
             ))}
           </ul>
         )}
       </section>
 
-      {editing && <AssetForm initial={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+      {editing && <AssetForm chains={chains} initial={editing === 'new' ? null : editing} onClose={() => setEditing(null)}
+        onSaved={(saved, deploy) => { setEditing(null); load(); if (deploy) setDeploying(saved); }} />}
       {deleting && <DeleteAsset asset={deleting} onClose={() => setDeleting(null)} onDone={() => { setDeleting(null); load(); }} />}
+      {deploying && <Deploy asset={deploying} chain={chains.find((c) => c.id === deploying.chainId)} onClose={() => { setDeploying(null); load(); }} />}
     </>
   );
 }
 
 interface FormState {
-  symbol: string; name: string; tokenAddress: string; decimals: string; poolAddress: string; oracleAddress: string;
-  poolFeeBps: number; maxM: number; liqMargin: string; logoUrl: string; enabled: boolean; notes: string;
+  chainId: number; symbol: string; name: string; tokenAddress: string; decimals: string; poolAddress: string; oracleAddress: string;
+  adapterAddress: string; poolFeeBps: number; maxM: number; liqMargin: string; maxPositionUsd: string; maxOpenUsd: string;
+  logoUrl: string; enabled: boolean; notes: string;
 }
 
-const toForm = (a: Asset | null): FormState => ({
-  symbol: a?.symbol ?? '', name: a?.name ?? '', tokenAddress: a?.tokenAddress ?? '', decimals: String(a?.decimals ?? 18),
-  poolAddress: a?.poolAddress ?? '', oracleAddress: a?.oracleAddress ?? '', poolFeeBps: a?.poolFeeBps ?? 30,
-  maxM: a?.maxM ?? 5, liqMargin: a ? String(a.liqMarginBps / 100) : '1', logoUrl: a?.logoUrl ?? '', enabled: a?.enabled ?? false,
-  notes: a?.notes ?? '',
+const toForm = (a: Asset | null, chainId = 4663): FormState => ({
+  chainId: a?.chainId ?? chainId, symbol: a?.symbol ?? '', name: a?.name ?? '', tokenAddress: a?.tokenAddress ?? '',
+  decimals: String(a?.decimals ?? 18), poolAddress: a?.poolAddress ?? '', oracleAddress: a?.oracleAddress ?? '',
+  adapterAddress: a?.adapterAddress ?? '', poolFeeBps: a?.poolFeeBps ?? 30, maxM: a?.maxM ?? 5,
+  liqMargin: a ? String(a.liqMarginBps / 100) : '1', maxPositionUsd: String(a?.maxPositionUsd ?? 50_000),
+  maxOpenUsd: String(a?.maxOpenUsd ?? 2_000_000), logoUrl: a?.logoUrl ?? '', enabled: a?.enabled ?? false, notes: a?.notes ?? '',
+});
+
+const toBody = (f: FormState) => ({
+  chainId: f.chainId, symbol: f.symbol.trim(), name: f.name.trim(), tokenAddress: f.tokenAddress.trim(), decimals: Number(f.decimals),
+  poolAddress: f.poolAddress.trim(), oracleAddress: f.oracleAddress.trim(), adapterAddress: f.adapterAddress.trim(),
+  poolFeeBps: f.poolFeeBps, maxM: f.maxM, liqMarginBps: Math.round(Number(f.liqMargin) * 100),
+  maxPositionUsd: Number(f.maxPositionUsd), maxOpenUsd: Number(f.maxOpenUsd), logoUrl: f.logoUrl.trim(), enabled: f.enabled, notes: f.notes.trim(),
 });
 
 /** Same rules as server/src/admin.js; the server checks again and its answer wins. */
@@ -170,10 +201,14 @@ function check(f: FormState): Record<string, string> {
   if (!ADDR.test(f.tokenAddress.trim())) e.tokenAddress = 'A 0x address (42 characters)';
   const d = Number(f.decimals);
   if (!Number.isInteger(d) || d < 0 || d > 36) e.decimals = '0–36';
-  if (f.poolAddress.trim() && !ADDR.test(f.poolAddress.trim())) e.poolAddress = 'A 0x address, or leave empty';
-  if (f.oracleAddress.trim() && !ADDR.test(f.oracleAddress.trim())) e.oracleAddress = 'A 0x address, or leave empty';
+  for (const k of ['poolAddress', 'oracleAddress', 'adapterAddress'] as const) {
+    if (f[k].trim() && !ADDR.test(f[k].trim())) e[k] = 'A 0x address, or leave empty';
+  }
   const mg = Number(f.liqMargin);
   if (!Number.isFinite(mg) || mg < 0 || mg > 5) e.liqMarginBps = '0–5 %';
+  const mp = Number(f.maxPositionUsd), mo = Number(f.maxOpenUsd);
+  if (!Number.isInteger(mp) || mp < 100 || mp > 10_000_000) e.maxPositionUsd = '$100 – $10M';
+  if (!Number.isInteger(mo) || mo < 1_000 || mo > 1_000_000_000 || mo < mp) e.maxOpenUsd = 'At least the max position, up to $1B';
   if (f.logoUrl.trim() && !/^https:\/\//.test(f.logoUrl.trim())) e.logoUrl = 'An https:// link, or leave empty';
   if (f.notes.length > 500) e.notes = 'Max 500 characters';
   return e;
@@ -189,13 +224,20 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
   );
 }
 
-function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClose: () => void; onSaved: () => void }) {
+function AssetForm({ chains, initial, onClose, onSaved }: {
+  chains: Chain[]; initial: Asset | null; onClose: () => void; onSaved: (a: Asset, deploy: boolean) => void;
+}) {
   const id = useId();
-  const [f, setF] = useState<FormState>(() => toForm(initial));
+  const [f, setF] = useState<FormState>(() => toForm(initial, chains[0]?.id));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [hits, setHits] = useState<TokenHit[] | null>(null);
+  const [verified, setVerified] = useState<string | null>(null);
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((x) => ({ ...x, [k]: v }));
+  const locked = !!initial && initial.deployStatus !== 'draft'; // contracts exist (or are being made) for this token
+  const chain = chains.find((c) => c.id === f.chainId);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -203,26 +245,50 @@ function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClo
     return () => removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  // Token search on the chosen chain (LI.FI list via the server): BTC → cbBTC / WBTC, SOL → Wormhole SOL, …
+  useEffect(() => {
+    if (q.trim().length < 2) { setHits(null); return; }
+    let live = true;
+    const t = setTimeout(() => {
+      api<{ items: TokenHit[] }>(`/api/admin/tokens?chainId=${f.chainId}&q=${encodeURIComponent(q.trim())}`)
+        .then((r) => live && setHits(r.items)).catch(() => live && setHits([]));
+    }, 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [q, f.chainId]);
+
+  const pick = (t: TokenHit) => {
+    setF((x) => ({ ...x, symbol: t.symbol.toUpperCase().replace(/[^A-Z0-9$._-]/g, '').slice(0, 16), name: t.name, tokenAddress: t.address, decimals: String(t.decimals) }));
+    setQ(''); setHits(null); setVerified(null);
+  };
+
+  const verify = async () => {
+    setVerified(null);
+    if (!ADDR.test(f.tokenAddress.trim())) { setErrors((e) => ({ ...e, tokenAddress: 'A 0x address (42 characters)' })); return; }
+    try {
+      const r = await api<{ name: string; symbol: string; decimals: number }>('/api/admin/assets/verify', json({ chainId: f.chainId, tokenAddress: f.tokenAddress.trim() }));
+      setF((x) => ({ ...x, decimals: String(r.decimals), name: x.name || r.name, symbol: x.symbol || r.symbol.toUpperCase().slice(0, 16) }));
+      setVerified(`On ${chain?.name}: ${r.symbol} · ${r.name} · ${r.decimals} decimals`);
+      setErrors((e) => ({ ...e, tokenAddress: '' }));
+    } catch {
+      setErrors((e) => ({ ...e, tokenAddress: `Not a token on ${chain?.name ?? 'this chain'}` }));
+    }
+  };
+
+  const save = async (deploy: boolean) => {
     const local = check(f);
     setErrors(local);
     if (Object.keys(local).length) return;
     setBusy(true); setFail(null);
-    const body = {
-      chainId: ROBINHOOD, symbol: f.symbol.trim(), name: f.name.trim(), tokenAddress: f.tokenAddress.trim(), decimals: Number(f.decimals),
-      poolAddress: f.poolAddress.trim(), oracleAddress: f.oracleAddress.trim(), poolFeeBps: f.poolFeeBps, maxM: f.maxM,
-      liqMarginBps: Math.round(Number(f.liqMargin) * 100), logoUrl: f.logoUrl.trim(), enabled: f.enabled, notes: f.notes.trim(),
-    };
     try {
-      const r = await fetchJson(initial ? `/api/admin/assets/${initial.id}` : '/api/admin/assets', body);
-      if (r.fields) { setErrors(r.fields); setBusy(false); return; }
-      onSaved();
-    } catch {
-      setFail('Not saved. Check your connection and that you are still signed in.');
+      const saved = await api<Asset>(initial ? `/api/admin/assets/${initial.id}` : '/api/admin/assets', json(toBody(f)));
+      onSaved(saved, deploy);
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 400 || e.status === 409)) setErrors((e.body.fields as Record<string, string>) ?? {});
+      else setFail('Not saved. Check your connection and that you are still signed in.');
       setBusy(false);
     }
   };
+  const submit = (e: FormEvent) => { e.preventDefault(); save(false); };
 
   const inp = (k: keyof FormState, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <div className="input-wrap">
@@ -242,13 +308,47 @@ function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClo
         </div>
 
         <fieldset className="form-section">
+          <legend>Chain</legend>
+          <div className="chain-pick" role="radiogroup" aria-label="Chain">
+            {chains.map((c) => (
+              <button type="button" key={c.id} role="radio" aria-checked={f.chainId === c.id} disabled={locked && f.chainId !== c.id}
+                className={'chip-btn' + (f.chainId === c.id ? ' on' : '')} onClick={() => { set('chainId', c.id); setVerified(null); }}>
+                {c.name}{!c.factory && <small className="muted"> · no factory</small>}
+              </button>
+            ))}
+          </div>
+          <span className="hint">
+            Bitcoin, Solana, Cardano, XRP, Dogecoin and other non-EVM coins: pick an EVM chain and search their wrapped token
+            (cbBTC, WBTC, Wormhole SOL, Binance-Peg ADA …). Reserve currency here: {chain?.stable ? chain.stable.symbol : 'not set yet (owner decides)'}.
+          </span>
+        </fieldset>
+
+        <fieldset className="form-section">
           <legend>Token</legend>
+          {!locked && (
+            <div className="field token-search">
+              <label className="label" htmlFor={id + 'q'}>Find token on {chain?.name}</label>
+              <div className="input-wrap"><input id={id + 'q'} placeholder="Symbol or name, e.g. PEPE, cbBTC" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} /></div>
+              {hits && (
+                <ul className="token-hits" role="listbox" aria-label="Tokens">
+                  {hits.length === 0 && <li className="muted">No match on {chain?.name}.</li>}
+                  {hits.map((t) => (
+                    <li key={t.address}><button type="button" onClick={() => pick(t)}><b>{t.symbol}</b> <span className="muted">{t.name}</span> <span className="num muted">{short(t.address)}</span></button></li>
+                  ))}
+                </ul>
+              )}
+              {chain && <button type="button" className="btn-mini" onClick={() => pick({ ...chain.wrappedNative, name: `Wrapped ${chain.wrappedNative.symbol.slice(1)} (native coin)` })}>Use {chain.name}'s native coin ({chain.wrappedNative.symbol})</button>}
+            </div>
+          )}
           <div className="form-grid">
             <Field id={id + 'symbol'} label="Symbol" error={errors.symbol}>{inp('symbol', { placeholder: 'PONS', maxLength: 16, className: 'upper' })}</Field>
             <Field id={id + 'name'} label="Name" error={errors.name}>{inp('name', { placeholder: 'Pons Token', maxLength: 64 })}</Field>
           </div>
-          <Field id={id + 'tokenAddress'} label="Token contract" hint="On Robinhood Chain (4663)." error={errors.tokenAddress}>
-            {inp('tokenAddress', { placeholder: '0x…', className: 'num', maxLength: 42 })}
+          <Field id={id + 'tokenAddress'} label="Token contract" error={errors.tokenAddress} hint={verified ?? undefined}>
+            <div className="input-row">
+              {inp('tokenAddress', { placeholder: '0x…', className: 'num', maxLength: 42, readOnly: locked })}
+              <button type="button" className="btn btn-ghost btn-sm" onClick={verify}>Check on chain</button>
+            </div>
           </Field>
           <div className="form-grid">
             <Field id={id + 'decimals'} label="Decimals" error={errors.decimals}>{inp('decimals', { inputMode: 'numeric', className: 'num', maxLength: 2 })}</Field>
@@ -257,12 +357,15 @@ function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClo
         </fieldset>
 
         <fieldset className="form-section">
-          <legend>Pool and price</legend>
-          <Field id={id + 'poolAddress'} label="Pool contract" hint="PCS Infinity / Uniswap v4 pool the swap adapter uses." error={errors.poolAddress}>
-            {inp('poolAddress', { placeholder: '0x… (optional)', className: 'num', maxLength: 42 })}
+          <legend>Pool and price (needed to deploy)</legend>
+          <Field id={id + 'adapterAddress'} label="Swap adapter" hint="backx adapter contract that routes this coin's swaps." error={errors.adapterAddress}>
+            {inp('adapterAddress', { placeholder: '0x…', className: 'num', maxLength: 42 })}
           </Field>
           <Field id={id + 'oracleAddress'} label="TWAP oracle" hint="Price source for liquidations and limits." error={errors.oracleAddress}>
-            {inp('oracleAddress', { placeholder: '0x… (optional)', className: 'num', maxLength: 42 })}
+            {inp('oracleAddress', { placeholder: '0x…', className: 'num', maxLength: 42 })}
+          </Field>
+          <Field id={id + 'poolAddress'} label="Pool (for reference)" error={errors.poolAddress}>
+            {inp('poolAddress', { placeholder: '0x… (optional)', className: 'num', maxLength: 42 })}
           </Field>
           <div className="field">
             <span className="label" id={id + 'fee'}>Pool fee</span>
@@ -271,7 +374,6 @@ function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClo
                 <button type="button" key={b} role="radio" aria-checked={f.poolFeeBps === b} className={'chip-btn' + (f.poolFeeBps === b ? ' on' : '')} onClick={() => set('poolFeeBps', b)}>{pct(b)}</button>
               ))}
             </div>
-            {errors.poolFeeBps && <span className="field-err">{errors.poolFeeBps}</span>}
           </div>
         </fieldset>
 
@@ -280,10 +382,18 @@ function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClo
           <div className="field">
             <div className="field-head"><label className="label" htmlFor={id + 'maxM'}>Max multiplication</label><span className="num m-value">{f.maxM}×</span></div>
             <input id={id + 'maxM'} type="range" min={1} max={20} value={f.maxM} onChange={(e) => set('maxM', Number(e.target.value))} className="range" />
-            <span className="hint">Guide (sim5): Major 20×, Large 5×, Mid 3×, Small 2×.</span>
+            <span className="hint">The standard cap. What a trader gets is also limited by the USDC issuers have free. Guide (sim5): Major 20×, Large 5×, Mid 3×, Small 2×.</span>
           </div>
-          <Field id={id + 'liqMargin'} label="Liquidation margin (%)" hint="Guide: Major/Large 1 %, Mid 1.5 %, Small 2 %." error={errors.liqMarginBps}>
-            {inp('liqMargin', { inputMode: 'decimal', className: 'num', maxLength: 4 })}
+          <div className="form-grid">
+            <Field id={id + 'liqMargin'} label="Liquidation margin (%)" hint="Major/Large 1 %, Mid 1.5 %, Small 2 %." error={errors.liqMarginBps}>
+              {inp('liqMargin', { inputMode: 'decimal', className: 'num', maxLength: 4 })}
+            </Field>
+            <Field id={id + 'maxPositionUsd'} label="Max position (USD)" hint="≈ 0.5 % of pool depth." error={errors.maxPositionUsd}>
+              {inp('maxPositionUsd', { inputMode: 'numeric', className: 'num', maxLength: 8 })}
+            </Field>
+          </div>
+          <Field id={id + 'maxOpenUsd'} label="Max open hedges, all traders (USD)" error={errors.maxOpenUsd}>
+            {inp('maxOpenUsd', { inputMode: 'numeric', className: 'num', maxLength: 10 })}
           </Field>
         </fieldset>
 
@@ -294,30 +404,89 @@ function AssetForm({ initial, onClose, onSaved }: { initial: Asset | null; onClo
         <label className="switch-row">
           <input type="checkbox" checked={f.enabled} onChange={(e) => set('enabled', e.target.checked)} />
           <span className="switch" aria-hidden="true" />
-          <span><b>Enabled</b><small className="muted"> Show it in the app once the contracts list it.</small></span>
+          <span><b>Enabled</b><small className="muted"> Show it in the app once its contracts are live.</small></span>
         </label>
 
         {fail && <p className="field-err" role="alert">{fail}</p>}
         <div className="form-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-gold" disabled={busy}>{busy ? 'Saving…' : initial ? 'Save changes' : 'Add asset'}</button>
+          <button type="submit" className="btn btn-ghost" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+          {(!initial || initial.deployStatus !== 'deployed') && (
+            <button type="button" className="btn btn-gold" disabled={busy} onClick={() => save(true)}>Save and deploy contracts</button>
+          )}
         </div>
       </form>
     </div>
   );
 }
 
-/** POST that returns the server's field errors (400/409) instead of throwing them. */
-async function fetchJson(path: string, body: unknown): Promise<{ fields?: Record<string, string> }> {
-  try {
-    await api(path, json(body));
-    return {};
-  } catch (e) {
-    if (e instanceof ApiError && (e.status === 400 || e.status === 409)) {
-      return { fields: (e.body.fields as Record<string, string>) ?? { symbol: 'Rejected by the server' } };
-    }
-    throw e;
-  }
+/** Prepares factory.createMarket for the Safe, then watches the factory until the contracts exist. */
+function Deploy({ asset, chain, onClose }: { asset: Asset; chain?: Chain; onClose: () => void }) {
+  const [state, setState] = useState<{ batch?: unknown; safeUrl?: string; missing?: string[]; err?: string; done?: Asset }>({});
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    api<{ batch: unknown; safeUrl: string }>(`/api/admin/assets/${asset.id}/deploy`, json({}))
+      .then((r) => setState(r))
+      .catch((e) => setState(e instanceof ApiError && e.code === 'not_ready'
+        ? { missing: e.body.missing as string[] }
+        : { err: e instanceof ApiError && e.code === 'already_deployed' ? 'Already live.' : 'Could not prepare the transaction.' }));
+  }, [asset.id]);
+
+  const download = () => {
+    const blob = new Blob([JSON.stringify(state.batch, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backx-deploy-${asset.symbol}-${asset.chainId}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  const check = async () => {
+    setChecking(true);
+    try {
+      const r = await api<Asset>(`/api/admin/assets/${asset.id}/check`, json({}));
+      if (r.deployStatus === 'deployed') setState((s) => ({ ...s, done: r }));
+      else setState((s) => ({ ...s, err: 'Not on-chain yet. Sign and execute in the Safe, then check again.' }));
+    } catch { setState((s) => ({ ...s, err: 'Could not read the chain right now.' })); }
+    setChecking(false);
+  };
+
+  return (
+    <div className="sheet-scrim center" onClick={onClose}>
+      <div className="modal admin-form" role="dialog" aria-modal="true" aria-label={`Deploy ${asset.symbol}`} onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="icon-btn modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="modal-title"><CoinIcon symbol={asset.symbol} src={asset.logoUrl ?? undefined} size={32} /><div><p className="eyebrow gold">Deploy contracts</p><h2>{asset.symbol} on {chain?.name}</h2></div></div>
+        {state.done ? (
+          <>
+            <p className="ok">Live. {asset.symbol} has its own contracts on {chain?.name}.</p>
+            <dl className="kv">
+              <div><dt>Trading contract</dt><dd><CopyAddr value={state.done.deployed!.manager} /></dd></div>
+              <div><dt>Issue Reserve (USDC)</dt><dd><CopyAddr value={state.done.deployed!.usdVault} /></dd></div>
+              <div><dt>Reserve Security Fund</dt><dd><CopyAddr value={state.done.deployed!.hedgeFund} /></dd></div>
+            </dl>
+          </>
+        ) : state.missing ? (
+          <>
+            <p>Not ready to deploy yet. Missing:</p>
+            <ul className="missing-list">{state.missing.map((m) => <li key={m}>{m}</li>)}</ul>
+          </>
+        ) : !state.batch && !state.err ? (
+          <p className="muted" aria-busy="true"><span className="sk sk-w60" /></p>
+        ) : (
+          <ol className="deploy-steps">
+            <li><b>Download the transaction</b> (one call: <span className="num">factory.createMarket</span> for {asset.symbol}).
+              <div><button className="btn btn-gold btn-sm" onClick={download} disabled={!state.batch}>Download for Safe</button></div></li>
+            <li><b>Open the Safe</b> → Transaction Builder → drag the file in → sign and execute.
+              <div><a className="btn btn-ghost btn-sm" href={state.safeUrl} target="_blank" rel="noopener">Open Safe ↗</a></div></li>
+            <li><b>Check</b>: the portal reads the factory and saves the new addresses.
+              <div><button className="btn btn-ghost btn-sm" onClick={check} disabled={checking}>{checking ? 'Checking…' : 'Check deployment'}</button></div></li>
+          </ol>
+        )}
+        {state.err && <p className="field-err" role="alert">{state.err}</p>}
+        <p className="hint">Each coin gets its own Issue Reserve, Reserve Security Fund and trading contract, all owned by the Safe and upgradeable through the factory's beacons without redeploying.</p>
+      </div>
+    </div>
+  );
 }
 
 function DeleteAsset({ asset, onClose, onDone }: { asset: Asset; onClose: () => void; onDone: () => void }) {
@@ -329,7 +498,7 @@ function DeleteAsset({ asset, onClose, onDone }: { asset: Asset; onClose: () => 
     <div className="sheet-scrim center" onClick={onClose}>
       <div className="modal" role="alertdialog" aria-modal="true" aria-label={`Delete ${asset.symbol}`} onClick={(e) => e.stopPropagation()}>
         <h2>Delete {asset.symbol}?</h2>
-        <p className="muted">It is removed from the list. The change is logged. Type <b>{asset.symbol}</b> to confirm.</p>
+        <p className="muted">Only drafts can be deleted (live contracts are disabled instead). The change is logged. Type <b>{asset.symbol}</b> to confirm.</p>
         <div className="input-wrap"><input aria-label="Type the symbol" value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus /></div>
         {fail && <p className="field-err" role="alert">Not deleted. Try again.</p>}
         <div className="form-actions">

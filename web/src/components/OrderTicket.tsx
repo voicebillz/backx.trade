@@ -1,12 +1,15 @@
 import { useEffect, useId, useState } from 'react';
 import type { Market } from '../lib/markets';
 import { price, usd, usdCompact } from '../lib/format';
-import { LIMIT_SLIP, maxNotional, type Quote } from '../lib/hedge';
+import { FEES, KEEPER_GAS, LIMIT_SLIP, maxNotional, type Quote } from '../lib/hedge';
+import type { usdcOf } from '../lib/useBalances';
 import { MultiplierSlider } from './MultiplierSlider';
 import { CoinIcon } from './CoinIcon';
 
 interface Props {
   market: Market;
+  /** The user's USDC (null when signed out). Stakes are paid in USDC. */
+  usdc: ReturnType<typeof usdcOf> | null;
   /** Highest multiplication right now: the coin's cap, limited by the issuers' free USDC (contract maxHedgeMFor). */
   maxM: number;
   /** USDC the issuers' reserve can still lend. */
@@ -18,6 +21,8 @@ interface Props {
   q: Quote;
 }
 
+/** Where markets live today. Per-market chains come from the listed assets once contracts are live. */
+const MARKET_CHAIN = 'Robinhood Chain';
 const signed = (n: number) => (n >= 0 ? '+' : '−') + usd(Math.abs(n));
 const pct = (f: number) => (f >= 0 ? '+' : '−') + Math.abs(f * 100).toFixed(1) + '%';
 /** Quick take-profit targets above today's price. */
@@ -26,12 +31,17 @@ const STEPS = [0.1, 0.25, 0.5, 1];
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
 
 /** Hedge = price up, backed by the coin's USD reserve. Short is off in the product for now (owner 2026-10-19). */
-export function OrderTicket({ market, maxM, available, stake, onStake, m, onM, q }: Props) {
+export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, onM, q }: Props) {
   const id = useId();
   const max = maxM;
   const byReserve = max < market.maxM && Math.floor(available / Math.max(parseFloat(stake) || 0, 1)) + 1 <= max;
   const maxStake = Math.floor(maxNotional(market.depth) / Math.max(m, 1));
   const tooBig = (parseFloat(stake) || 0) > maxStake;
+  // Stake + every fee must come out of the user's USDC. Max = the largest stake whose total fits, rounded down.
+  const feeRate = FEES.holders + FEES.rsfStake + (Math.max(m, 1) - 1) * (FEES.borrow + FEES.rsfLent);
+  const maxByUsdc = usdc ? Math.max(0, Math.floor(((usdc.total - KEEPER_GAS) / (1 + feeRate)) * 100) / 100) : 0;
+  const lacking = usdc != null && (parseFloat(stake) || 0) > 0 && q.paid > usdc.total + 1e-9;
+  const elsewhere = usdc?.parts.filter((p) => p.chainName !== MARKET_CHAIN) ?? [];
 
   // Take-profit (limit): sells above today's price. Cleared on a new coin.
   const [limit, setLimit] = useState('');
@@ -55,14 +65,19 @@ export function OrderTicket({ market, maxM, available, stake, onStake, m, onM, q
       <div className="field">
         <div className="field-head">
           <label htmlFor={id + 'stake'} className="label">Stake (USDC)</label>
-          <span className="label">Balance <span className="num">—</span></span>
+          <span className="label">USDC <span className="num">{usdc ? usd(usdc.total) : '—'}</span></span>
         </div>
         <div className="input-wrap">
           <span className="prefix">$</span>
           <input id={id + 'stake'} inputMode="decimal" value={stake} onChange={(e) => onStake(e.target.value.replace(/[^0-9.]/g, ''))} className="num" />
-          <button className="max-btn" disabled title="Sign in to use your balance">Max</button>
+          <button className="max-btn" disabled={!usdc || maxByUsdc <= 0} title={usdc ? 'Largest stake your USDC covers, fees included' : 'Sign in to use your USDC'}
+            onClick={() => onStake(String(Math.min(maxByUsdc, maxStake)))}>Max</button>
         </div>
         <span className={tooBig ? 'field-err' : 'hint'}>Max {usd(maxStake, 0)} at {m}× (keeps price impact under 0.5%).</span>
+        {lacking && <span className="field-err">Not enough USDC: this needs {usd(q.paid)}, you have {usd(usdc!.total)}. Deposit USDC, or swap to USDC in the Swap portal.</span>}
+        {!lacking && usdc && elsewhere.length > 0 && (
+          <span className="hint">Paid in USDC. Your USDC on {elsewhere.map((p) => p.chainName).join(', ')} moves to {MARKET_CHAIN} automatically when you open (one extra signature, about 1–3 min).</span>
+        )}
       </div>
 
       <div className="field">

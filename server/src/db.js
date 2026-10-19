@@ -66,6 +66,12 @@ export async function migrate() {
       updated_by      text not null,
       unique (chain_id, token_address)
     );
+    -- Multi-chain + deploy from the portal (owner 2026-10-19).
+    alter table listed_assets add column if not exists adapter_address  text;
+    alter table listed_assets add column if not exists max_position_usd integer not null default 50000;
+    alter table listed_assets add column if not exists max_open_usd     integer not null default 2000000;
+    alter table listed_assets add column if not exists deploy_status    text not null default 'draft';
+    alter table listed_assets add column if not exists deployed         jsonb;
     -- Every admin write is logged: who, what, when. Never deleted by the app.
     create table if not exists admin_audit (
       id      bigserial primary key,

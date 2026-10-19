@@ -1,14 +1,14 @@
 import express from 'express';
 import { db } from './db.js';
 import { config } from './config.js';
+import { CHAINS, SAFE, factoryOf, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
 // portal's existence is not revealed. Own rate limit, strict validation, every write logged in admin_audit.
 // CSRF: the global Origin guard + SameSite=Lax cookie, and writes only accept JSON bodies.
 export const adminRouter = express.Router();
 
-const ROBINHOOD_CHAIN_ID = 4663;
-const CHAINS = new Set([ROBINHOOD_CHAIN_ID]);
+const CHAIN_IDS = new Set(Object.keys(CHAINS).map(Number));
 const MAX_M = 20;              // contract caps per market are set by the Safe; the portal never goes above 20×
 const POOL_FEES = new Set([1, 5, 25, 30, 100]); // bps: 0.01 / 0.05 / 0.25 / 0.3 / 1 %
 // Same hosts as img-src in web/vercel.json: a logo from anywhere else would not load.
@@ -42,7 +42,7 @@ function validateAsset(b) {
   const e = {};
   const a = {};
   a.chain_id = b.chainId;
-  if (!CHAINS.has(a.chain_id)) e.chainId = 'Robinhood Chain (4663) only';
+  if (!CHAIN_IDS.has(a.chain_id)) e.chainId = 'Pick a supported chain';
   a.symbol = typeof b.symbol === 'string' ? b.symbol.trim().toUpperCase() : '';
   if (!/^[A-Z0-9$._-]{1,16}$/.test(a.symbol)) e.symbol = '1–16 letters, digits or $ . _ -';
   a.name = typeof b.name === 'string' ? b.name.trim() : '';
@@ -52,7 +52,7 @@ function validateAsset(b) {
   a.token_address = a.token_address.toLowerCase();
   a.decimals = b.decimals;
   if (!int(a.decimals, 0, 36)) e.decimals = '0–36';
-  for (const [k, col] of [['poolAddress', 'pool_address'], ['oracleAddress', 'oracle_address']]) {
+  for (const [k, col] of [['poolAddress', 'pool_address'], ['oracleAddress', 'oracle_address'], ['adapterAddress', 'adapter_address']]) {
     const v = typeof b[k] === 'string' ? b[k].trim() : '';
     if (v && !ADDR.test(v)) e[k] = 'A 0x address, or leave empty';
     a[col] = v ? v.toLowerCase() : null;
@@ -71,6 +71,10 @@ function validateAsset(b) {
   }
   a.logo_url ||= null;
   a.enabled = b.enabled === true;
+  a.max_position_usd = b.maxPositionUsd;
+  if (!int(a.max_position_usd, 100, 10_000_000)) e.maxPositionUsd = '$100 – $10M';
+  a.max_open_usd = b.maxOpenUsd;
+  if (!int(a.max_open_usd, 1_000, 1_000_000_000) || a.max_open_usd < a.max_position_usd) e.maxOpenUsd = 'At least the max position, up to $1B';
   a.notes = typeof b.notes === 'string' ? b.notes.trim() : '';
   if (!text(a.notes, 500)) e.notes = 'Max 500 characters';
   a.notes ||= null;
@@ -81,11 +85,13 @@ const assetOut = (r) => ({
   id: r.id, chainId: r.chain_id, symbol: r.symbol, name: r.name, tokenAddress: r.token_address, decimals: r.decimals,
   poolAddress: r.pool_address, oracleAddress: r.oracle_address, poolFeeBps: r.pool_fee_bps, maxM: r.max_m,
   liqMarginBps: r.liq_margin_bps, logoUrl: r.logo_url, enabled: r.enabled, notes: r.notes,
+  adapterAddress: r.adapter_address, maxPositionUsd: r.max_position_usd, maxOpenUsd: r.max_open_usd,
+  deployStatus: r.deploy_status, deployed: r.deployed,
   createdAt: r.created_at, updatedAt: r.updated_at, updatedBy: r.updated_by,
 });
 
 const COLS = ['chain_id', 'symbol', 'name', 'token_address', 'decimals', 'pool_address', 'oracle_address', 'pool_fee_bps',
-  'max_m', 'liq_margin_bps', 'logo_url', 'enabled', 'notes'];
+  'max_m', 'liq_margin_bps', 'logo_url', 'enabled', 'notes', 'adapter_address', 'max_position_usd', 'max_open_usd'];
 
 // ---- listed assets ----------------------------------------------------------------------------
 
@@ -114,10 +120,16 @@ adminRouter.post('/assets', async (req, res, next) => {
 
 adminRouter.post('/assets/:id', async (req, res, next) => {
   const id = Number(req.params.id);
-  if (!int(id, 1, 2 ** 31 - 1)) return res.status(404).json({ error: 'not_found' });
+  if (!int(id, 1, 2 ** 31 - 1)) return next(); // e.g. /assets/verify, registered further down
   const v = validateAsset(req.body || {});
   if (v.errors) return res.status(400).json({ error: 'invalid', fields: v.errors });
   try {
+    const cur = await db.query('select chain_id, token_address, deploy_status from listed_assets where id = $1', [id]);
+    if (!cur.rows[0]) return res.status(404).json({ error: 'not_found' });
+    if (cur.rows[0].deploy_status !== 'draft'
+      && (cur.rows[0].chain_id !== v.asset.chain_id || cur.rows[0].token_address !== v.asset.token_address)) {
+      return res.status(409).json({ error: 'deployed', fields: { tokenAddress: 'Contracts exist for this token: chain and token cannot change' } });
+    }
     const vals = COLS.map((c) => v.asset[c]);
     const { rows } = await db.query(
       `update listed_assets set ${COLS.map((c, i) => `${c} = $${i + 1}`).join(', ')}, updated_at = now(), updated_by = $${COLS.length + 1}
@@ -135,7 +147,11 @@ adminRouter.delete('/assets/:id', async (req, res, next) => {
   const id = Number(req.params.id);
   if (!int(id, 1, 2 ** 31 - 1)) return res.status(404).json({ error: 'not_found' });
   try {
-    const { rows } = await db.query('delete from listed_assets where id = $1 returning *', [id]);
+    const { rows } = await db.query(`delete from listed_assets where id = $1 and deploy_status = 'draft' returning *`, [id]);
+    if (!rows[0]) {
+      const ex = await db.query('select 1 from listed_assets where id = $1', [id]);
+      if (ex.rowCount) return res.status(409).json({ error: 'deployed' }); // contracts exist: disable instead
+    }
     if (!rows[0]) return res.status(404).json({ error: 'not_found' });
     await audit(req, 'asset.delete', `${rows[0].symbol} ${rows[0].token_address}`, assetOut(rows[0]));
     res.json({ ok: true });
@@ -189,5 +205,129 @@ adminRouter.get('/audit', async (_req, res, next) => {
   try {
     const { rows } = await db.query('select at, admin, action, target from admin_audit order by id desc limit 50');
     res.json({ items: rows });
+  } catch (e) { next(e); }
+});
+
+// ---- chains, token search, on-chain check ------------------------------------------------------
+
+adminRouter.get('/chains', (_req, res) => {
+  res.json({
+    safe: SAFE,
+    items: Object.entries(CHAINS).map(([id, c]) => ({
+      id: Number(id), key: c.key, name: c.name, explorer: c.explorer, stable: c.stable, wrappedNative: c.wrappedNative,
+      factory: factoryOf(id),
+    })),
+  });
+});
+
+/** Token search on a chain (LI.FI's list, cached 6 h): BTC → cbBTC/WBTC, SOL → Wormhole SOL, ADA → Binance-Peg … */
+adminRouter.get('/tokens', async (req, res, next) => {
+  const chainId = Number(req.query.chainId);
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+  if (!CHAIN_IDS.has(chainId) || !/^[a-z0-9 .$_-]{1,32}$/i.test(q)) return res.status(400).json({ error: 'invalid' });
+  try {
+    const key = `lifi:tokens:${chainId}`;
+    let list = JSON.parse((await req.app.locals.redis.get(key)) || 'null');
+    if (!list) {
+      const r = await fetch(`https://li.quest/v1/tokens?chains=${chainId}`, { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) return res.status(502).json({ error: 'upstream' });
+      list = ((await r.json()).tokens?.[chainId] || [])
+        .filter((t) => /^0x[0-9a-fA-F]{40}$/.test(t.address) && !/^0x0{40}$/.test(t.address))
+        .map((t) => ({ symbol: String(t.symbol).slice(0, 16), name: String(t.name).slice(0, 64), address: t.address.toLowerCase(), decimals: t.decimals }));
+      await req.app.locals.redis.set(key, JSON.stringify(list), 'EX', 6 * 3600);
+    }
+    const hits = list.filter((t) => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q))
+      .sort((a, b) => (a.symbol.toLowerCase() === q ? -1 : 0) - (b.symbol.toLowerCase() === q ? -1 : 0))
+      .slice(0, 20);
+    res.json({ items: hits });
+  } catch (e) { next(e); }
+});
+
+/** Reads name/symbol/decimals from the token contract itself (read-only RPC): proves the address is a token. */
+adminRouter.post('/assets/verify', async (req, res) => {
+  const chainId = req.body?.chainId;
+  const token = typeof req.body?.tokenAddress === 'string' ? req.body.tokenAddress.trim().toLowerCase() : '';
+  if (!CHAIN_IDS.has(chainId) || !ADDR.test(token)) return res.status(400).json({ error: 'invalid' });
+  try {
+    const [n, s, d] = await Promise.all([ethCall(chainId, token, '0x06fdde03'), ethCall(chainId, token, '0x95d89b41'), ethCall(chainId, token, '0x313ce567')]);
+    // An address without code answers "0x": that is a wallet, not a token.
+    const raw = decodeUint(d);
+    const symbol = decodeString(s);
+    if (raw == null || raw > 36n || !symbol) throw new Error('not a token');
+    const decimals = Number(raw);
+    res.json({ name: (decodeString(n) || '').slice(0, 64), symbol: symbol.slice(0, 16), decimals });
+  } catch {
+    res.status(422).json({ error: 'not_a_token' });
+  }
+});
+
+// ---- deploy: the portal prepares, the Safe signs ----------------------------------------------------------
+
+const CREATE_MARKET = '0x085bd065'; // createMarket((address,address,address,uint8,uint8,uint128,uint128,uint128,uint16,uint16,uint16))
+const SET_OF = '0x637a31db';        // setOf(address)
+
+/**
+ * Builds factory.createMarket for this asset as a Safe Transaction Builder batch. Nothing is signed or sent here:
+ * the server never holds keys. The owner opens it in the Safe app, signs, and the factory deploys the coin's
+ * reserve, security fund and position manager in that one transaction.
+ */
+adminRouter.post('/assets/:id/deploy', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!int(id, 1, 2 ** 31 - 1)) return res.status(404).json({ error: 'not_found' });
+  try {
+    const { rows } = await db.query('select * from listed_assets where id = $1', [id]);
+    const a = rows[0];
+    if (!a) return res.status(404).json({ error: 'not_found' });
+    const chain = CHAINS[a.chain_id];
+    const factory = factoryOf(a.chain_id);
+    const missing = [];
+    if (!factory) missing.push(`the factory on ${chain.name} (one-time Deploy.s.sol, then FACTORY_${a.chain_id} on Railway)`);
+    if (!chain.stable) missing.push(`the reserve stablecoin on ${chain.name} (RESERVE_STABLE_${a.chain_id})`);
+    if (!a.adapter_address) missing.push('the swap adapter address');
+    if (!a.oracle_address) missing.push('the TWAP oracle address');
+    if (missing.length) return res.status(409).json({ error: 'not_ready', missing });
+    if (a.deploy_status === 'deployed') return res.status(409).json({ error: 'already_deployed' });
+
+    const unit = 10n ** BigInt(chain.stable.decimals);
+    const data = CREATE_MARKET + padAddr(a.token_address) + padAddr(a.adapter_address) + padAddr(a.oracle_address)
+      + pad(a.max_m) + pad(0) + pad(BigInt(a.max_position_usd) * unit) + pad(BigInt(a.max_open_usd) * unit) + pad(0)
+      + pad(3000) + pad(3000) + pad(a.liq_margin_bps);
+    const batch = {
+      version: '1.0', chainId: String(a.chain_id), createdAt: Date.now(),
+      meta: { name: `backx: list ${a.symbol} on ${chain.name}`, description: `Deploys the ${a.symbol} reserve, security fund and position manager (BackxMarketFactory.createMarket).`, createdFromSafeAddress: SAFE },
+      transactions: [{ to: factory, value: '0', data, contractMethod: null, contractInputsValues: null }],
+    };
+    await db.query(`update listed_assets set deploy_status = 'proposed', updated_at = now(), updated_by = $2 where id = $1`, [id, req.user.address]);
+    await audit(req, 'asset.deploy_prepared', `${a.symbol} ${a.token_address}`, { chainId: a.chain_id, factory });
+    res.json({
+      batch,
+      safeUrl: chain.safePrefix
+        ? `https://app.safe.global/apps/open?safe=${chain.safePrefix}:${SAFE}&appUrl=${encodeURIComponent('https://apps-portal.safe.global/tx-builder')}`
+        : 'https://app.safe.global/',
+    });
+  } catch (e) { next(e); }
+});
+
+/** Reads the factory registry (read-only). Once the Safe has executed, stores the new contract addresses. */
+adminRouter.post('/assets/:id/check', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!int(id, 1, 2 ** 31 - 1)) return res.status(404).json({ error: 'not_found' });
+  try {
+    const { rows } = await db.query('select * from listed_assets where id = $1', [id]);
+    const a = rows[0];
+    if (!a) return res.status(404).json({ error: 'not_found' });
+    const factory = factoryOf(a.chain_id);
+    if (!factory) return res.status(409).json({ error: 'no_factory' });
+    let out;
+    try { out = await ethCall(a.chain_id, factory, SET_OF + padAddr(a.token_address)); } catch { return res.status(502).json({ error: 'rpc' }); }
+    // Five addresses back (manager, usdVault, hedgeFund, tokenVault, shortFund); anything else = no factory code there.
+    if (typeof out !== 'string' || !/^0x[0-9a-fA-F]{320}$/.test(out)) return res.json(assetOut(a));
+    const [manager, usdVault, hedgeFund] = decodeAddresses(out, 3);
+    if (/^0x0{40}$/.test(manager)) return res.json(assetOut(a));
+    const deployed = { manager, usdVault, hedgeFund, factory, checkedAt: new Date().toISOString() };
+    const upd = await db.query(`update listed_assets set deploy_status = 'deployed', deployed = $2, updated_at = now(), updated_by = $3 where id = $1 returning *`,
+      [id, JSON.stringify(deployed), req.user.address]);
+    await audit(req, 'asset.deployed', `${a.symbol} ${a.token_address}`, deployed);
+    res.json(assetOut(upd.rows[0]));
   } catch (e) { next(e); }
 });

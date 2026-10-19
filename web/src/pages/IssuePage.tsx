@@ -3,12 +3,15 @@ import type { Market } from '../lib/markets';
 import { usd, usdCompact } from '../lib/format';
 import { CoinIcon } from '../components/CoinIcon';
 import { demoReserves } from '../lib/reserves';
+import type { usdcOf } from '../lib/useBalances';
+
+type Usdc = ReturnType<typeof usdcOf> | null;
 
 function Util({ v }: { v: number }) {
   return <span className="util"><span className="util-bar"><i style={{ width: `${v * 100}%` }} /></span><span className="num">{Math.round(v * 100)}%</span></span>;
 }
 
-export function IssuePage({ markets }: { markets: Market[] }) {
+export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) {
   const [sort, setSort] = useState<'usd' | 'apr'>('usd');
   const [issuing, setIssuing] = useState<Market | null>(null);
   const rows = useMemo(() => markets.slice(0, 100).map((m) => ({ m, v: demoReserves(m) }))
@@ -65,12 +68,12 @@ export function IssuePage({ markets }: { markets: Market[] }) {
       </div>
       <p className="hint">Est. APR is a demo estimate from utilization, not a promise. Live reserves will show realized earnings for the last 7 days.</p>
 
-      {issuing && <IssueModal market={issuing} onClose={() => setIssuing(null)} />}
+      {issuing && <IssueModal market={issuing} usdc={usdc} onClose={() => setIssuing(null)} />}
     </main>
   );
 }
 
-function IssueModal({ market, onClose }: { market: Market; onClose: () => void }) {
+function IssueModal({ market, usdc, onClose }: { market: Market; usdc: Usdc; onClose: () => void }) {
   const [amt, setAmt] = useState('');
   const v = demoReserves(market);
   return (
@@ -80,12 +83,16 @@ function IssueModal({ market, onClose }: { market: Market; onClose: () => void }
         <div className="modal-title"><CoinIcon symbol={market.symbol} src={market.image} size={32} /><div><p className="eyebrow gold">Issue Reserve</p><h2>{market.symbol}</h2></div></div>
 
         <div className="field">
-          <div className="field-head"><label htmlFor="issue-amt" className="label">Amount</label><span className="label">Balance <span className="num">—</span></span></div>
+          <div className="field-head"><label htmlFor="issue-amt" className="label">Amount</label><span className="label">USDC <span className="num">{usdc ? usd(usdc.total) : '—'}</span></span></div>
           <div className="input-wrap">
             <span className="prefix">$</span>
             <input id="issue-amt" inputMode="decimal" placeholder="0.00" className="num" value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ''))} />
             <span className="prefix unit"><CoinIcon symbol="USDC" size={16} /> USDC</span>
+            <button className="max-btn" disabled={!usdc || usdc.total <= 0} onClick={() => usdc && setAmt(String(Math.floor(usdc.total * 100) / 100))}>Max</button>
           </div>
+          {usdc && (parseFloat(amt) || 0) > usdc.total + 1e-9
+            ? <span className="field-err">Not enough USDC: you have {usd(usdc.total)}. Deposit USDC, or swap to USDC in the Swap portal.</span>
+            : <span className="hint">Issued in USDC. USDC on another chain moves to the reserve's chain automatically when you issue.</span>}
         </div>
 
         <dl className="kv">
