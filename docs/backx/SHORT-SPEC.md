@@ -1,5 +1,9 @@
 # backx.trade: Short & Token-reserve, spesifikasjon (utkast 2026-10-18)
 
+> **PAUSET 2026-10-19 (eier):** Short er tatt ut av produktet inntil videre. Bare Hedge. Nettsiden viser ikke Short
+> eller token-reserve, serveren gir `shortMaxM = 0`, og kontraktene skal settes opp med `maxShortM = 0` og ingen
+> token-vault per marked. Koden og testene ligger igjen, så Short kan slås på senere uten ny design.
+
 > Status: **designet og simulert, IKKE bygget, IKKE auditert.** Speilbildet av Hedge
 > (`HEDGE-ISSUER-SPEC.md`). Tallene kommer fra `sim/short_sim.py` på de samme ekte
 > minuttprisene som `sim2.py` (30 dager BTC/DOGE/PEPE/WIF fra Binance + 77 dager GAZZ fra

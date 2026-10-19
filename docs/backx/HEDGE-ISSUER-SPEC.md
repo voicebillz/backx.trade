@@ -1,5 +1,7 @@
 # backx.trade: Hedge & Issuer, spesifikasjon (utkast 2026-10-18)
 
+> **2026-10-19:** Bare Hedge er i produktet. Short er pauset (`SHORT-SPEC.md`).
+
 > Status: **designet og simulert, IKKE bygget, IKKE auditert.** Tallene under
 > kommer fra simuleringene 2026-10-15 på ekte minuttpriser (skriptene ligger i
 > `docs/backx/sim/`). Punkter merket **ÅPEN** må eieren avgjøre før kontraktene

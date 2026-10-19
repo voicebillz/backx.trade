@@ -75,8 +75,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Withdrawals are signed by the user's own Privy wallet with Privy's confirm screen (EVM: ETH/Base/BNB, native + USDC).
   Amounts are parsed to base units and rounded down. Solana withdrawals not built yet.
 - Multiplication 1× is allowed for Hedge: nothing is borrowed, no liquidation, issuers get 0 % (owner 2026-10-18).
-- Two sides per coin (owner 2026-10-18): Hedge (price up) is backed by the coin's USD reserve (USDC); Short
-  (price down) is backed by its token reserve (the coin itself, lent and sold, bought back first on close).
-  Math and caps: `docs/backx/SHORT-SPEC.md` (short notional m·X, 1 % liquidation buffer, lower max m on thin
-  pools). The ticket has Hedge | Short; issuing only happens on the Issue Reserve page.
+- Hedge only (owner 2026-10-19): Short is OFF in the product. No Short tab, no token reserve on Issue Reserve, server
+  shortMaxM = 0. The contracts keep the Short code (tested) but every market is configured with maxShortM = 0 and no
+  token vault until the owner turns it back on. Design kept in `docs/backx/SHORT-SPEC.md` for later.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.

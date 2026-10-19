@@ -8,7 +8,8 @@ const CACHE_SEC = 90;
 // From sim/sim3.py (v3, docs/backx/FEES-AND-MARGINS.md §4): deep pools 0 gaps to 30× both sides,
 // $1M meme pools 0 gaps to 10×, thin pools: hedge 2×, shorts off (0).
 const HEDGE_CAP = { Major: 30, Large: 10, Mid: 5, Small: 2 };
-const SHORT_CAP = { Major: 30, Large: 10, Mid: 5, Small: 0 };
+// Short is off in the product for now (owner 2026-10-19): 0 everywhere. Earlier caps: Major 30, Large 10, Mid 5.
+const SHORT_CAP = { Major: 0, Large: 0, Mid: 0, Small: 0 };
 
 // shortMaxM: shorts lose on up-spikes, which gap harder than drops (docs/backx/SHORT-SPEC.md).
 function tier(mcap) {
@@ -19,7 +20,7 @@ function tier(mcap) {
 }
 
 export async function universe(redis) {
-  const cached = await redis.get('markets:v3');
+  const cached = await redis.get('markets:v4');
   if (cached) return JSON.parse(cached);
   const all = [];
   for (let page = 1; page <= PAGES; page++) {
@@ -51,7 +52,7 @@ export async function universe(redis) {
       };
     })
     .sort((a, b) => b.change24h - a.change24h);
-  await redis.set('markets:v3', JSON.stringify(list), 'EX', CACHE_SEC);
+  await redis.set('markets:v4', JSON.stringify(list), 'EX', CACHE_SEC);
   return list;
 }
 

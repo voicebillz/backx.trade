@@ -9,7 +9,7 @@ import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
-import { quote, shortQuote, type Side } from './lib/hedge';
+import { quote } from './lib/hedge';
 import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
 import { useRoute, navigate } from './lib/router';
@@ -59,13 +59,12 @@ interface TradeProps {
 }
 
 function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
-  const [side, setSide] = useState<Side>('hedge');
   const [stake, setStake] = useState('100');
   const [m, setM] = useState(5);
   const [sheet, setSheet] = useState(false);
   const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
-  const maxM = market ? (side === 'short' ? market.shortMaxM : market.maxM) : 30; // no clamp before a market loads
+  const maxM = market ? market.maxM : 30; // no clamp before a market loads
   useEffect(() => { setM((x) => Math.max(1, Math.min(x, maxM))); }, [maxM]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheet(false); };
@@ -74,12 +73,12 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   }, []);
 
   const q = useMemo(
-    () => market && (side === 'short' ? shortQuote : quote)(Math.max(parseFloat(stake) || 0, 0), Math.min(m, maxM), market.price, market.poolFee, market.depth),
-    [stake, m, market, side, maxM],
+    () => market && quote(Math.max(parseFloat(stake) || 0, 0), Math.min(m, maxM), market.price, market.poolFee, market.depth),
+    [stake, m, market, maxM],
   );
 
   const ticket = market && q && (
-    <OrderTicket market={market} side={side} onSide={setSide} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
+    <OrderTicket market={market} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
   );
 
   return (
@@ -103,10 +102,9 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
         <BottomPanel />
       </main>
 
-      {/* Mobile: sticky Hedge / Issue bar opens the ticket as a bottom sheet. */}
-      <div className="mobile-bar">
-        <button className="btn btn-primary" onClick={() => { setSide('hedge'); setSheet(true); }}>Hedge</button>
-        <button className="btn btn-short" onClick={() => { setSide('short'); setSheet(true); }}>Short</button>
+      {/* Mobile: sticky Hedge button opens the ticket as a bottom sheet. */}
+      <div className="mobile-bar single">
+        <button className="btn btn-primary" onClick={() => setSheet(true)}>▲ Hedge {market?.symbol ?? ''}</button>
       </div>
       {sheet && ticket && (
         <div className="sheet-scrim" onClick={() => setSheet(false)}>

@@ -5,10 +5,10 @@ import { arrow, price, usd } from '../lib/format';
 // Demo rows for admins until positions and vaults come from the contracts.
 const POSITIONS = [
   { sym: 'ETH', side: 'Hedge', m: 5, size: 500, entry: 2391.2, mark: 2418.1, liq: 2079.3 },
-  { sym: 'SOL', side: 'Short', m: 3, size: 300, entry: 108.9, mark: 104.2, liq: 126.4 },
+  { sym: 'SOL', side: 'Hedge', m: 3, size: 300, entry: 104.2, mark: 108.9, liq: 72.3 },
   { sym: 'BTC', side: 'Hedge', m: 3, size: 300, entry: 80510, mark: 82012, liq: 62390 },
   { sym: 'DOGE', side: 'Hedge', m: 1, size: 120, entry: 0.2391, mark: 0.2471, liq: null },
-  { sym: 'BNB', side: 'Short', m: 2, size: 200, entry: 715.0, mark: 723.4, liq: 902.1 },
+  { sym: 'BNB', side: 'Hedge', m: 2, size: 200, entry: 715.0, mark: 723.4, liq: 509.1 },
 ];
 const HISTORY = [
   { t: '18 Oct 11:42', sym: 'SOL', action: 'Opened', m: 10, size: 1000, px: 106.4, pnl: null },
@@ -19,7 +19,7 @@ const HISTORY = [
 ];
 const VAULTS = [
   { sym: 'ETH', asset: 'USDC', backs: 'Hedges', deposited: '5,000 USDC', util: 0.62, earned: '+84.35 USDC', share: 0.012 },
-  { sym: 'SOL', asset: 'SOL', backs: 'Shorts', deposited: '24 SOL', util: 0.41, earned: '+0.31 SOL', share: 0.006 },
+  { sym: 'SOL', asset: 'USDC', backs: 'Hedges', deposited: '2,400 USDC', util: 0.41, earned: '+31.20 USDC', share: 0.006 },
   { sym: 'BTC', asset: 'USDC', backs: 'Hedges', deposited: '1,200 USDC', util: 0.71, earned: '+22.15 USDC', share: 0.003 },
 ];
 
@@ -53,11 +53,11 @@ export function BottomPanel() {
             <thead><tr><th>Market</th><th>Side</th><th className="r">Size</th><th className="r">Entry</th><th className="r">Mark</th><th className="r">Liq. price</th><th className="r">PnL</th><th /></tr></thead>
             <tbody>
               {POSITIONS.map((p) => {
-                const pnl = p.size * p.m * (p.mark / p.entry - 1) * (p.side === 'Short' ? -1 : 1);
+                const pnl = p.size * p.m * (p.mark / p.entry - 1);
                 return (
                   <tr key={p.sym + p.side}>
                     <td><Market sym={p.sym} m={p.m} /></td>
-                    <td><span className={'side side-' + p.side.toLowerCase()}>{p.side === 'Short' ? '▼ Short' : '▲ Hedge'}</span></td>
+                    <td><span className="side side-hedge">▲ Hedge</span></td>
                     <td className="r num">{usd(p.size)}</td>
                     <td className="r num">{price(p.entry)}</td>
                     <td className="r num">{price(p.mark)}</td>
@@ -94,7 +94,7 @@ export function BottomPanel() {
               {VAULTS.map((v) => (
                 <tr key={v.sym + v.asset}>
                   <td><span className="cell-market"><CoinIcon symbol={v.sym} size={18} /><b>{v.sym}</b><span className="m-chip num">{v.asset}</span></span></td>
-                  <td><span className={'side side-' + (v.backs === 'Shorts' ? 'short' : 'hedge')}>{v.backs === 'Shorts' ? '▼ Shorts' : '▲ Hedges'}</span></td>
+                  <td><span className="side side-hedge">▲ Hedges</span></td>
                   <td className="r num">{v.deposited}</td>
                   <td><span className="util"><span className="util-bar"><i style={{ width: `${v.util * 100}%` }} /></span><span className="num">{Math.round(v.util * 100)}%</span></span></td>
                   <td className="r num gold">{v.earned}</td>

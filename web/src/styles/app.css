@@ -648,3 +648,8 @@ tr.zero { opacity: .5; }
    Privy's own and use --privy-color-icon-muted (grey). Brand yellow instead. Privy sets its variables on
    :root from a style tag added later, so html:root wins on specificity. */
 html:root { --privy-color-icon-muted: var(--brand); }
+
+/* Hedge-only ticket (Short is off for now) */
+.ticket-title { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.ticket-title .up { color: var(--price-up); }
+@media (max-width: 899px) { .mobile-bar.single { grid-template-columns: 1fr; } }
