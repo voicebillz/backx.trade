@@ -56,6 +56,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         uint128 maxOpenShortUsd;        // all shorts together, USD value lent at open
         uint16 crashBps;                // Hedge crash cover: one-jump fall the fund must survive (e.g. 3000 = −30 %)
         uint16 pumpBps;                 // Short crash cover: one-jump rise the fund must survive (e.g. 10000 = +100 %)
+        uint16 liqMarginBps;            // execution margin on the position value: liquidate this much earlier, so a
+                                        // slow keeper, oracle/pool discrepancy or extra slippage still repays issuers
         uint128 openHedgeUsd;
         uint128 openShortUsd;
     }
@@ -176,6 +178,8 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
         if (mk.maxHedgeM > MAX_M || mk.maxShortM > MAX_M) revert BadM();
         // Crash cover may not be switched off: at least a 20 % jump each way, at most −100 % / +500 %.
         if (mk.crashBps < 2_000 || mk.crashBps > BPS || mk.pumpBps < 2_000 || mk.pumpBps > 50_000) revert BadParams();
+        // Execution margin: at most 5 % of the position (sim5: 1–2 % covers a 5-minute keeper + 0.5 % discrepancy).
+        if (mk.liqMarginBps > 500) revert BadParams();
         Market storage cur = markets[token];
         uint128 oh = cur.openHedgeUsd;
         uint128 os = cur.openShortUsd;
@@ -448,14 +452,16 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
 
     // ---- triggers -------------------------------------------------------------------------------
 
-    function _hedgeThreshold(Position memory pos) internal view returns (uint256) {
+    /// principal·(1 + buf) + e·E + margin·N, with N = E + L the position value at open.
+    function _hedgeThreshold(Position memory pos, uint16 marginBps) internal view returns (uint256) {
         Params memory pr = _params[pos.m];
-        return uint256(pos.lent) * (BPS + pr.bufHedgeBps) / BPS + uint256(pos.equity) * pr.eBps / BPS;
+        return uint256(pos.lent) * (BPS + pr.bufHedgeBps) / BPS + uint256(pos.equity) * pr.eBps / BPS
+            + (uint256(pos.equity) + pos.lent) * marginBps / BPS;
     }
 
-    /// Net exit (what selling the coins returns now) at or below principal·(1+buf) + e·E, and the TWAP agrees.
+    /// Net exit (what selling the coins returns now) at or below the threshold, and the TWAP agrees.
     function _hedgeTriggered(Position memory pos, Market storage mk) internal view returns (bool) {
-        uint256 threshold = _hedgeThreshold(pos);
+        uint256 threshold = _hedgeThreshold(pos, mk.liqMarginBps);
         uint256 netExit = mk.adapter.quoteExactIn(pos.token, address(usd), pos.amount);
         if (netExit > threshold) return false;
         uint256 twap = mk.oracle.usdValue(pos.token, pos.amount);
@@ -465,7 +471,7 @@ contract BackxPositionManager is Ownable2Step, Pausable, ReentrancyGuard {
     /// Buy-back cost·(1+buf) at or above C − e·E, and the TWAP agrees.
     function _shortTriggered(Position memory pos, Market storage mk) internal view returns (bool) {
         Params memory pr = _params[pos.m];
-        uint256 eCut = uint256(pos.equity) * pr.eBps / BPS;
+        uint256 eCut = uint256(pos.equity) * pr.eBps / BPS + uint256(pos.lentUsd) * mk.liqMarginBps / BPS;
         uint256 limit = pos.amount > eCut ? pos.amount - eCut : 0;
         uint256 cost = mk.adapter.quoteExactOut(address(usd), pos.token, pos.lent);
         if (cost * (BPS + pr.bufShortBps) < limit * BPS) return false;

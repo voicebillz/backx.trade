@@ -23,7 +23,6 @@ const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 
 
 /** Hedge = price up, backed by the coin's USD reserve. Short is off in the product for now (owner 2026-10-19). */
 export function OrderTicket({ market, stake, onStake, m, onM, q }: Props) {
-  const [feesOpen, setFeesOpen] = useState(false);
   const id = useId();
   const max = market.maxM;
   const maxStake = Math.floor(maxNotional(market.depth) / Math.max(m, 1));
@@ -107,7 +106,7 @@ export function OrderTicket({ market, stake, onStake, m, onM, q }: Props) {
           </>
         )}
         <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
-        <div><dt>You pay (stake + fees)</dt><dd className="num">{usd(q.paid)}</dd></div>
+        <div><dt>You pay (all fees included)</dt><dd className="num">{usd(q.paid)}</dd></div>
       </dl>
 
       <div className="waterfall">
@@ -134,21 +133,6 @@ export function OrderTicket({ market, stake, onStake, m, onM, q }: Props) {
         )}
       </div>
 
-      <div className="fees">
-        <button className="fees-toggle" aria-expanded={feesOpen} onClick={() => setFeesOpen((o) => !o)}>
-          <span>Fees</span>
-          <span className="num">{usd(q.fees.total)} <span aria-hidden="true">{feesOpen ? '▴' : '▾'}</span></span>
-        </button>
-        {feesOpen && (
-          <dl className="kv small">
-            <div><dt>Holders (2% of stake)</dt><dd className="num">{usd(q.fees.holders)}</dd></div>
-            <div><dt>Borrow (0.25% of loan, to issuers)</dt><dd className="num">{usd(q.fees.borrow)}</dd></div>
-            <div><dt>Reserve Security Fund</dt><dd className="num">{usd(q.fees.rsf)}</dd></div>
-            <div><dt>Swap + impact, both ways (est.)</dt><dd className="num">{usd(q.fees.swap)}</dd></div>
-          </dl>
-        )}
-        <p className="hint">Paid once at open, on top of your stake. No funding fees.</p>
-      </div>
 
       <button className="btn btn-block btn-primary" disabled>
         Hedge {market.symbol} {Math.min(m, max)}×{preview ? ` · limit ${price(limitNum)}` : ''}

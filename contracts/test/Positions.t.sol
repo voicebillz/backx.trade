@@ -408,3 +408,41 @@ contract CrashCoverTest is Base {
         pm.setStressCover(0); // off again
     }
 }
+
+/// Execution margin: liquidation comes earlier so a slow keeper and a price discrepancy still repay issuers.
+contract LiqMarginTest is Base {
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+        BackxPositionManager.Market memory mk = _market(20, 0);
+        mk.liqMarginBps = 100; // 1 % of the position, as the server's Major tier
+        vm.prank(safe);
+        pm.setMarket(address(coin), mk);
+    }
+
+    /// 20× deep with 1 % margin: web/src/lib/hedge.ts and sim5 say −2.7 %.
+    function test_trigger_matches_sim() public {
+        assertApproxEqAbs(_triggerBps(_hedge(100 * USD, 20), false), -270, 6);
+    }
+
+    /// The keeper is late: price is 1.5 % past the trigger when the sale fills. Issuers are still whole and the
+    /// fund is not touched.
+    function test_slowKeeper_issuersWhole() public {
+        uint256 assetsBefore = usdVault.totalAssets();
+        uint256 id = _hedge(100 * USD, 20);
+        _move(-270 - 150);
+        uint256 fundBefore = hedgeFund.balance();
+        vm.prank(keeper);
+        pm.liquidate(id);
+        assertEq(usdVault.lent(), 0);
+        assertGe(usdVault.totalAssets(), assetsBefore, "issuers whole");
+        assertEq(hedgeFund.balance(), fundBefore, "fund untouched");
+    }
+
+    function test_marginBounded() public {
+        BackxPositionManager.Market memory mk = _market(20, 0);
+        mk.liqMarginBps = 600;
+        vm.prank(safe);
+        vm.expectRevert(BackxPositionManager.BadParams.selector);
+        pm.setMarket(address(coin), mk);
+    }
+}

@@ -87,6 +87,7 @@ abstract contract Base is Test {
             maxOpenShortUsd: uint128(2_000_000 * USD),
             crashBps: 3_000,
             pumpBps: 3_000,
+            liqMarginBps: 0,
             openHedgeUsd: 0,
             openShortUsd: 0
         });

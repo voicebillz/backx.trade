@@ -5,22 +5,24 @@ import express from 'express';
 const PAGES = 2;              // 2 × 250 = 500 coins
 const PAGE_SIZE = 100;        // what the client gets per scroll page
 const CACHE_SEC = 90;
-// From sim/sim3.py (v3, docs/backx/FEES-AND-MARGINS.md §4): deep pools 0 gaps to 30× both sides,
-// $1M meme pools 0 gaps to 10×, thin pools: hedge 2×, shorts off (0).
-const HEDGE_CAP = { Major: 30, Large: 10, Mid: 5, Small: 2 };
+// From sim/sim5.py (docs/backx/FEES-AND-MARGINS.md §2b): with a slow keeper (worst price within 5 minutes)
+// and a 0.5 % price discrepancy, these caps + execution margins repay the issuers in every simulated case.
+const HEDGE_CAP = { Major: 20, Large: 5, Mid: 3, Small: 2 };
+/** Liquidate this share of the position value earlier (contract: Market.liqMarginBps). */
+const LIQ_MARGIN = { Major: 0.01, Large: 0.01, Mid: 0.015, Small: 0.02 };
 // Short is off in the product for now (owner 2026-10-19): 0 everywhere. Earlier caps: Major 30, Large 10, Mid 5.
 const SHORT_CAP = { Major: 0, Large: 0, Mid: 0, Small: 0 };
 
 // shortMaxM: shorts lose on up-spikes, which gap harder than drops (docs/backx/SHORT-SPEC.md).
 function tier(mcap) {
-  if (mcap >= 10e9) return { maxM: HEDGE_CAP.Major, shortMaxM: SHORT_CAP.Major, poolFee: 0.0005, kind: 'Major' };
-  if (mcap >= 1e9) return { maxM: HEDGE_CAP.Large, shortMaxM: SHORT_CAP.Large, poolFee: 0.003, kind: 'Large' };
-  if (mcap >= 100e6) return { maxM: HEDGE_CAP.Mid, shortMaxM: SHORT_CAP.Mid, poolFee: 0.003, kind: 'Mid' };
-  return { maxM: HEDGE_CAP.Small, shortMaxM: SHORT_CAP.Small, poolFee: 0.003, kind: 'Small' };
+  if (mcap >= 10e9) return { maxM: HEDGE_CAP.Major, liqMargin: LIQ_MARGIN.Major, shortMaxM: SHORT_CAP.Major, poolFee: 0.0005, kind: 'Major' };
+  if (mcap >= 1e9) return { maxM: HEDGE_CAP.Large, liqMargin: LIQ_MARGIN.Large, shortMaxM: SHORT_CAP.Large, poolFee: 0.003, kind: 'Large' };
+  if (mcap >= 100e6) return { maxM: HEDGE_CAP.Mid, liqMargin: LIQ_MARGIN.Mid, shortMaxM: SHORT_CAP.Mid, poolFee: 0.003, kind: 'Mid' };
+  return { maxM: HEDGE_CAP.Small, liqMargin: LIQ_MARGIN.Small, shortMaxM: SHORT_CAP.Small, poolFee: 0.003, kind: 'Small' };
 }
 
 export async function universe(redis) {
-  const cached = await redis.get('markets:v4');
+  const cached = await redis.get('markets:v5');
   if (cached) return JSON.parse(cached);
   const all = [];
   for (let page = 1; page <= PAGES; page++) {
@@ -52,7 +54,7 @@ export async function universe(redis) {
       };
     })
     .sort((a, b) => b.change24h - a.change24h);
-  await redis.set('markets:v4', JSON.stringify(list), 'EX', CACHE_SEC);
+  await redis.set('markets:v5', JSON.stringify(list), 'EX', CACHE_SEC);
   return list;
 }
 

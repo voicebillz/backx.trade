@@ -58,7 +58,8 @@ const oneWay = (usd: number, poolFee: number, depthUsd: number) => poolFee + usd
  * Hedge (price up). The USD vault lends L = (m−1)·X; X + L buys the token.
  * Issuer gets L back first, then p of the gain or s of the rest at liquidation.
  */
-export function quote(stake: number, m: number, entry: number, poolFee: number, depthUsd: number): Quote {
+/** liqMargin: the market's execution margin (Market.liqMarginBps / 1e4); it moves liquidation earlier for the issuers' safety. */
+export function quote(stake: number, m: number, entry: number, poolFee: number, depthUsd: number, liqMargin = 0): Quote {
   const mm = Math.max(1, Math.round(m));
   const { e, s, p } = params(mm);
   const holders = stake * FEES.holders;
@@ -73,8 +74,8 @@ export function quote(stake: number, m: number, entry: number, poolFee: number, 
   const coins = notional * (1 - cost);
   // 1×: nothing is borrowed, so no liquidation and issuers get 0 %.
   const noLiquidation = mm === 1;
-  // Net exit ≤ L·(1+buf) + e·E  (spec §4), on what the coins sell for after fee and impact.
-  const liqRatio = noLiquidation ? 0 : (loan * (1 + buffer('hedge', mm)) + e * equity) / (coins * (1 - cost));
+  // Net exit ≤ L·(1+buf) + e·E + margin·N (contract _hedgeThreshold), on what the coins sell for after fee and impact.
+  const liqRatio = noLiquidation ? 0 : (loan * (1 + buffer('hedge', mm)) + e * equity + liqMargin * notional) / (coins * (1 - cost));
   const at = (x: number): Outcome => {
     if (!noLiquidation && x <= liqRatio) {
       const r = coins * liqRatio * (1 - cost) - loan;

@@ -17,6 +17,7 @@ export interface Market {
   depth: number;       // demo pool depth, USD
   poolFee: number;     // per swap
   maxM: number;        // Hedge
+  liqMargin: number;   // execution margin: liquidate this share of the position earlier (contract liqMarginBps)
   shortMaxM: number;   // Short: lower, up-spikes gap harder (docs/backx/SHORT-SPEC.md)
 }
 

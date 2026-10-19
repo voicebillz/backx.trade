@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { Mark } from './Logo';
-import { params } from '../lib/hedge';
+import { quote } from '../lib/hedge';
 import { OverlayAccount } from './Account';
 
 const STEPS = [
@@ -9,7 +9,7 @@ const STEPS = [
   { n: '03', title: 'Your wallet' },
 ];
 const STEP_MS = 2600;
-const MIN = 1, MAX = 30;
+const MIN = 1, MAX = 20; // Major coins cap at 20× (server HEDGE_CAP, sim5)
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -93,7 +93,8 @@ function MultiplierBar() {
 
   const m = Math.round(Math.min(Math.max(value, MIN), MAX));
   const t = (Math.min(Math.max(value, MIN), MAX) - MIN) / (MAX - MIN);
-  const liq = m > 1 ? ((1 - params(m).e) / m) * 100 : null; // 1× borrows nothing: no liquidation
+  // Major-coin example (deep pool, 1 % execution margin), same math as the ticket. 1× borrows nothing: no liquidation.
+  const liq = m > 1 ? quote(100, m, 1, 0.0005, 10_000_000, 0.01).liqMove * 100 : null;
 
   return (
     <div className="mbar">

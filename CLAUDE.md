@@ -46,6 +46,9 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
   Limit (take-profit) orders fill via keeper on the TWAP, at most 1 % worse than the limit.
+- Liquidation margin (owner 2026-10-19): each market has liqMarginBps (server LIQ_MARGIN: Major 1 %, Large 1 %, Mid 1.5 %,
+  Small 2 %) and Hedge caps Major 20×, Large 5×, Mid 3×, Small 2× (sim5: no gap with a 5-minute keeper + 0.5 %
+  discrepancy). The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
 
 ## API (server/) — closed by default

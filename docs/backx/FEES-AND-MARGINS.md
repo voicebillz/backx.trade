@@ -5,7 +5,7 @@
 > - Holders (gazz.fun) 2 % av innsatsen, uendret. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
 >   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
 > - Issuers' andel av en gevinst **p = 10 %** flatt (før 15–30 %). Hedge 1× låner ingenting: 0 %.
-> - e, s og buffere er uendret (v3), og likvideringen kommer litt senere enn før: dyp 30× Hedge −2,10 %, Short +1,75 %.
+> - e, s og buffere er uendret (v3). I tillegg har hver coin en likvideringsmargin og lavere maks m (§2b, 2026-10-19).
 > - Fondet stopper **ikke** nye posisjoner (§3b). Issuers' reserver brukes fullt ut, og fondet er siste utvei.
 >
 > Hvorfor: på ekte priser (sim4, begge retninger) kommer issuers' forventede inntekt fra lånegebyret og
@@ -75,6 +75,45 @@ Resultat (gap-rate = andel posisjoner der issuers ville tapt uten fondet):
 | Meme 10× begge sider | gap 0 % | **gap 0 %** |
 
 Prisen for marginen: likvideringen kommer litt tidligere for traderen på høy m.
+
+## 2b. Likvideringsmargin mot treg keeper og prisavvik (2026-10-19)
+
+Spørsmålet: får issuers alltid pengene tilbake hvis salget går tregt, eller prisen i poolen avviker fra oraklet?
+`sim/sim5.py` (Hedge, v4) tester det **pessimistisk**: når likvideringen utløses, selges posisjonen til den
+**verste** prisen i løpet av de neste D minuttene, og deretter **0,5 % lavere** (avvik mellom orakel og pool,
+ekstra slippage). «Gap» betyr at salget ikke dekker det issuers lånte ut.
+
+Andel posisjoner med gap (uten fondet), ved margin på posisjonsverdien:
+
+| Pool | m | Forsinkelse | 0 % | 0,5 % | **1 %** | 1,5 % | 2 % |
+|---|---|---|---|---|---|---|---|
+| Dyp (BTC) | 10× | 5 min | 0 | 0 | **0** | 0 | 0 |
+| Dyp (BTC) | 20× | 5 min | 0,45 % | 0,40 % | **0** | 0 | 0 |
+| Dyp (BTC) | 30× | 3–5 min | 1,9–2,1 % | 0,4–0,65 % | 0,12 % | 0 | 0 |
+| Meme (DOGE/PEPE/WIF) | 5× | 5 min | 0 | 0 | **0** | 0 | 0 |
+| Meme | 10× | 3 min | 0,5–2,1 % | 0,3–1,2 % | 0,07–0,85 % | 0–0,6 % | 0–0,2 % |
+| Meme | 10× | 5 min | 0,5–3,4 % | | 0,07–1,6 % | | 0,05–0,7 % |
+
+Konklusjon (bygget inn):
+- Hver coin har en **likvideringsmargin** (`Market.liqMarginBps`): likvideringen kommer så mye tidligere,
+  målt på posisjonens verdi. Grensen er at netto salgsverdi ≤ lånt·(1+buffer) + e·innsats + **margin·posisjon**.
+- **Maks multiplikator senkes**, fordi 30× og meme-10× ikke kan beskyttes uten at likvideringen kommer nesten
+  med en gang:
+
+| Coin-type | Maks (før) | **Maks nå** | Margin | Likvideres ved (eksempel) |
+|---|---|---|---|---|
+| Major (BTC/ETH, dyp pool) | 30× | **20×** | 1 % | 20×: −2,7 %, 10×: −6,6 % |
+| Large (meme-type, 0,3 %) | 10× | **5×** | 1 % | 5×: −12,2 % |
+| Mid | 5× | **3×** | 1,5 % | 3×: −19,4 % |
+| Small (GAZZ-type) | 2× | 2× | 2 % | 2×: −26,9 % |
+
+Med disse nivåene var det **ingen gap** i noen simulert situasjon, også med 5 minutters forsinkelse og 0,5 % avvik.
+Fondet skal da bare brukes ved ekte flash-krasj (prisen hopper mer enn margin + e på sekunder).
+Safe kan endre margin (maks 5 %) og maks m per coin. Kontrakttest: 20× med 1 % margin og en keeper som er
+1,5 % for sen, gir issuers alt tilbake uten at fondet brukes.
+
+Gebyrene vises ikke lenger som egen seksjon i billetten. De er bakt inn i tallene: «You pay (all fees included)»,
+likvideringsprisen (pool-gebyr og impact er med i salgsverdien) og resultatet ved +10 % / ved limit.
 
 ## 3. Reserve Security Fund
 

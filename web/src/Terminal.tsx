@@ -73,7 +73,7 @@ function Trade({ market, moving, onSelect, theme, priceColors }: TradeProps) {
   }, []);
 
   const q = useMemo(
-    () => market && quote(Math.max(parseFloat(stake) || 0, 0), Math.min(m, maxM), market.price, market.poolFee, market.depth),
+    () => market && quote(Math.max(parseFloat(stake) || 0, 0), Math.min(m, maxM), market.price, market.poolFee, market.depth, market.liqMargin ?? 0),
     [stake, m, market, maxM],
   );
 
