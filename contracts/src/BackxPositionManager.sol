@@ -162,6 +162,7 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
     error BadLimit();
     error LimitNotReached();
     error FundTooSmall();
+    error NothingLeft();
 
     /// @notice Everything a new market needs, set in the same transaction as the proxy is created (no window in
     /// which someone else could initialise it).
@@ -311,10 +312,11 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
 
     // ---- open ------------------------------------------------------------------------------------
 
-    /// @param stake margin X; the trader pays X + fees (holders, RSF, borrow) on top.
+    /// @param amount what the trader pays, everything included (owner 2026-10-19: "$100 in = $100 paid"). Fees and
+    /// keeper gas come out of it; the rest is the margin X and the position is m · X. Never pulls more than `amount`.
     /// @param minCoinsOut slippage guard for buying the coin (from the UI quote).
     /// @param limitPrice take-profit in USD base units per 1e18 coin base units, above today's price. 0 = none.
-    function openHedge(address token, uint256 stake, uint8 m, uint256 minCoinsOut, uint256 limitPrice)
+    function openHedge(address token, uint256 amount, uint8 m, uint256 minCoinsOut, uint256 limitPrice)
         external
         nonReentrant
         whenNotPaused
@@ -325,6 +327,7 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         if (m == 0 || m > mk.maxHedgeM) revert BadM();
         Fees memory f = fees;
 
+        uint256 stake = _stakeFor(amount, uint256(m) - 1, f);
         uint256 lentUsd = (uint256(m) - 1) * stake;
         uint256 holders = stake * f.holdersBps / BPS;
         uint256 rsf = stake * f.rsfStakeBps / BPS + lentUsd * f.rsfLentBps / BPS;
@@ -365,10 +368,10 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         emit Opened(id, msg.sender, token, false, m, stake, lentUsd, coins);
     }
 
-    /// @param stake margin X; the trader pays X + fees (holders, RSF, borrow) on top.
+    /// @param amount what the trader pays, everything included; the margin X is what is left after fees and gas.
     /// @param minUsdOut slippage guard for selling the borrowed coins.
     /// @param limitPrice take-profit in USD base units per 1e18 coin base units, below today's price. 0 = none.
-    function openShort(address token, uint256 stake, uint8 m, uint256 minUsdOut, uint256 limitPrice)
+    function openShort(address token, uint256 amount, uint8 m, uint256 minUsdOut, uint256 limitPrice)
         external
         nonReentrant
         whenNotPaused
@@ -379,6 +382,7 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         if (m == 0 || m > mk.maxShortM) revert BadM();
         Fees memory f = fees;
 
+        uint256 stake = _stakeFor(amount, m, f);
         uint256 notional = uint256(m) * stake;
         if (notional > mk.maxNotionalUsd) revert TooLarge();
         if (mk.openShortUsd + notional > mk.maxOpenShortUsd) revert OpenInterestFull();
@@ -507,20 +511,31 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
             : mk.oracle.usdValue(pos.token, pos.amount) >= pos.limitValue;
     }
 
-    /// @notice Highest multiplication a hedge of `stake` can open with right now: the market's cap, limited by the
-    /// USDC the issuers can lend (reserve, utilisation cap), the max position size and the open-interest cap.
-    function maxHedgeMFor(address token, uint256 stake) external view returns (uint8) {
+    /// @notice Highest multiplication a hedge paying `amount` (everything included) can open with right now: the
+    /// market's cap, limited by the USDC the issuers can lend (reserve, utilisation cap), the max position size and
+    /// the open-interest cap. 0 = not even 1× fits.
+    function maxHedgeMFor(address token, uint256 amount) external view returns (uint8) {
         Market storage mk = markets[token];
-        if (!mk.enabled || stake == 0) return 0;
-        uint256 m = mk.maxHedgeM;
-        uint256 byReserve = mk.usdVault.availableToLend() / stake + 1; // (m − 1)·stake ≤ available
-        uint256 bySize = mk.maxNotionalUsd / stake;                     // m·stake ≤ max position
+        if (!mk.enabled || amount == 0) return 0;
+        Fees memory f = fees;
+        uint256 avail = mk.usdVault.availableToLend();
         uint256 oiRoom = mk.maxOpenHedgeUsd > mk.openHedgeUsd ? mk.maxOpenHedgeUsd - mk.openHedgeUsd : 0;
-        uint256 byOi = oiRoom / stake + 1;
-        if (byReserve < m) m = byReserve;
-        if (bySize < m) m = bySize;
-        if (byOi < m) m = byOi;
-        return uint8(m);
+        for (uint256 m = mk.maxHedgeM; m >= 1; m--) {
+            uint256 stake = _stakeFor(amount, m - 1, f);
+            uint256 lent = (m - 1) * stake;
+            if (stake > 0 && lent <= avail && lent <= oiRoom && m * stake <= mk.maxNotionalUsd) return uint8(m);
+        }
+        return 0;
+    }
+
+    /// Margin X left from `amount` once every fee and the keeper gas are paid:
+    /// amount = X + X·(holders + rsfStake) + lentMult·X·(borrow + rsfLent) + gas, rounded down.
+    function _stakeFor(uint256 amount, uint256 lentMult, Fees memory f) internal view returns (uint256) {
+        uint256 gas = keeperWallet == address(0) ? 0 : keeperGasUsd;
+        if (amount <= gas) revert NothingLeft();
+        uint256 x = (amount - gas) * BPS / (BPS + f.holdersBps + f.rsfStakeBps + lentMult * (f.borrowBps + f.rsfLentBps));
+        if (x == 0) revert NothingLeft();
+        return x;
     }
 
     function isLiquidatable(uint256 id) external view returns (bool) {

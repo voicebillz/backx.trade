@@ -35,12 +35,13 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
   const id = useId();
   const max = maxM;
   const byReserve = max < market.maxM && Math.floor(available / Math.max(parseFloat(stake) || 0, 1)) + 1 <= max;
-  const maxStake = Math.floor(maxNotional(market.depth) / Math.max(m, 1));
-  const tooBig = (parseFloat(stake) || 0) > maxStake;
-  // Stake + every fee must come out of the user's USDC. Max = the largest stake whose total fits, rounded down.
+  // The amount typed is what the user pays; the position is m × (amount − fees). Max position → max amount.
   const feeRate = FEES.holders + FEES.rsfStake + (Math.max(m, 1) - 1) * (FEES.borrow + FEES.rsfLent);
-  const maxByUsdc = usdc ? Math.max(0, Math.floor(((usdc.total - KEEPER_GAS) / (1 + feeRate)) * 100) / 100) : 0;
-  const lacking = usdc != null && (parseFloat(stake) || 0) > 0 && q.paid > usdc.total + 1e-9;
+  const maxStake = Math.floor((maxNotional(market.depth) / Math.max(m, 1)) * (1 + feeRate) + KEEPER_GAS);
+  const tooBig = (parseFloat(stake) || 0) > maxStake;
+  // The amount is paid in USDC: Max = all of it (rounded down to the cent).
+  const maxByUsdc = usdc ? Math.floor(usdc.total * 100) / 100 : 0;
+  const lacking = usdc != null && (parseFloat(stake) || 0) > usdc.total + 1e-9;
   const elsewhere = usdc?.parts.filter((p) => p.chainName !== MARKET_CHAIN) ?? [];
 
   // Take-profit (limit): sells above today's price. Cleared on a new coin.
@@ -64,7 +65,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
 
       <div className="field">
         <div className="field-head">
-          <label htmlFor={id + 'stake'} className="label">Stake (USDC)</label>
+          <label htmlFor={id + 'stake'} className="label">Amount (USDC)</label>
           <span className="label">USDC <span className="num">{usdc ? usd(usdc.total) : '—'}</span></span>
         </div>
         <div className="input-wrap">
@@ -74,7 +75,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
             onClick={() => onStake(String(Math.min(maxByUsdc, maxStake)))}>Max</button>
         </div>
         <span className={tooBig ? 'field-err' : 'hint'}>Max {usd(maxStake, 0)} at {m}× (keeps price impact under 0.5%).</span>
-        {lacking && <span className="field-err">Not enough USDC: this needs {usd(q.paid)}, you have {usd(usdc!.total)}. Deposit USDC, or swap to USDC in the Swap portal.</span>}
+        {lacking && <span className="field-err">Not enough USDC: you have {usd(usdc!.total)}. Deposit USDC, or swap to USDC in the Swap portal.</span>}
         {!lacking && usdc && elsewhere.length > 0 && (
           <span className="hint">Paid in USDC. Your USDC on {elsewhere.map((p) => p.chainName).join(', ')} moves to {MARKET_CHAIN} automatically when you open (one extra signature, about 1–3 min).</span>
         )}
@@ -134,7 +135,6 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
         )}
         <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
         <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas)}</dd></div>
-        <div><dt>You pay</dt><dd className="num">{usd(q.paid)}</dd></div>
       </dl>
 
       <div className="waterfall">

@@ -51,10 +51,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).
 - Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
-- Fee model v4 (owner 2026-10-18): exposure is exactly m × stake, fees are paid ON TOP of the stake (holders 2 % of
-  stake to gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % + 0.03 % of lent), issuers' share of a gain p = 10 %.
+- Fee model v4 (owner 2026-10-18/19): the amount the trader types IS what they pay; fees and keeper gas come out of it
+  (contract `_stakeFor`, web `marginFor`), the rest is the margin X and the position is m × X (holders 2 % of X to
+  gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % of X + 0.03 % of lent), issuers' share of a gain p = 10 %.
   Keeper gas: flat keeperGasUsd per position (default $0.10, max $5, ≈ 2× one close) paid at open straight to the
-  keeper wallet. The ticket shows only "Gas" and "You pay" (other fees baked in).
+  keeper wallet. The ticket shows the amount, the position size and "Gas" (other fees baked in).
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
   Limit (take-profit) orders fill via keeper on the TWAP, at most 1 % worse than the limit.
@@ -84,7 +85,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Read-only data routes: `/api/wallet/balances` (user's own EVM + Solana wallets via RPC, CoinGecko prices) and
   `/api/markets` (demo universe from CoinGecko until Robinhood Chain markets list). Both need a session, cached in Redis.
 - Investing (Hedge stake, Issue Reserve) is paid in USDC (owner 2026-10-19): the ticket and Issue modal show the user's
-  USDC, Max fills the largest amount that covers stake + fees, and USDC on another chain is moved to the market's chain
+  USDC, Max fills all of it (fees come out of the amount), and USDC on another chain is moved to the market's chain
   with `/api/swap/move-usdc` (LI.FI bridge, user signs, own address only, Diamond-only, exact approval, ≤ 3 % loss).
 - Swap page (`/swap`, `/api/swap/*`): same-chain swaps on Ethereum, Base, BNB Chain routed by LI.FI (bridging only via move-usdc above).
   The server builds every quote for the signed-in user's own address and rejects any route whose tx or approval

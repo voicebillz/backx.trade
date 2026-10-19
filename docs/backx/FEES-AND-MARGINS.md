@@ -1,7 +1,8 @@
 # backx.trade: gebyrer, issuer-margin og Reserve Security Fund (2026-10-18)
 
 > **Gjeldende modell: v4** (eier 2026-10-18, `sim/sim4.py`, kontraktene, `web/src/lib/hedge.ts`):
-> - Posisjonen er **nøyaktig m × innsats** (5× på $100 = $500), og gebyrene **betales i tillegg** til innsatsen.
+> - **Beløpet du skriver inn er det du betaler** (oppdatert 2026-10-19). Gebyrer og keeper-gas trekkes fra det, resten
+>   er marginen, og posisjonen er **m × margin** ($100 på 5× = $96,41 margin, $482 posisjon).
 > - Holders (gazz.fun) 2 % av innsatsen, uendret. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
 >   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
 > - **Keeper-gas** (2026-10-19): et fast beløp per posisjon (standard $0,10, `keeperGasUsd`, maks $5) betales ved åpning

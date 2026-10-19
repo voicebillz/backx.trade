@@ -1,7 +1,7 @@
 """$100 scenarios for Hedge, Short and issuers (v4 = web/src/lib/hedge.ts = contracts).
 
-v4: exposure is exactly m × stake and the fees are paid ON TOP of the stake; p is a flat 10 %.
-Trader numbers are net of everything paid (stake + fees).
+v4: exposure is exactly m × margin; the amount typed is what is paid (owner 2026-10-19): fees and keeper gas come
+out of it and the rest is the margin. p is a flat 10 %. Trader numbers are net of the amount paid.
 
 Deterministic: one price move, no path. Liquidation is assumed to happen exactly at the trigger
 (normal keeper). The gap row shows a jump past the trigger before the keeper acts.
@@ -10,6 +10,11 @@ Deterministic: one price move, no path. Liquidation is assumed to happen exactly
 """
 
 FEES = dict(holders=0.02, borrow=0.0025, rsf_stake=0.005, rsf_lent=0.0003)
+GAS = 0.10
+
+
+def margin(amount, lent_mult):
+    return (amount - GAS) / (1 + FEES['holders'] + FEES['rsf_stake'] + lent_mult * (FEES['borrow'] + FEES['rsf_lent']))
 E = [0, 4000, 4000, 3500, 3250, 3000, 2750, 2500, 2375, 2250, 2000, 1920, 1840, 1760, 1680, 1600, 1560,
      1520, 1480, 1440, 1400, 1380, 1360, 1340, 1320, 1300, 1280, 1260, 1240, 1220, 1200]
 S = [0, 5000, 5000, 6000, 6500, 7000, 7500, 8000, 8167, 8333, 8500] + [8600, 8700, 8800, 8900] + [9000] * 16
@@ -27,13 +32,14 @@ def prm(m):
     return E[m] / 1e4, S[m] / 1e4, P[m] / 1e4
 
 
-def hedge(X, m, fee, depth):
+def hedge(amount, m, fee, depth):
     """Returns setup + settle(x, gap) -> (trader_payout, issuer_earn, liquidated, fund_paid)."""
     e, s_, p = prm(m)
+    X = margin(amount, m - 1)
     L = (m - 1) * X
     borrow = L * FEES["borrow"]
     rsf = X * FEES["rsf_stake"] + L * FEES["rsf_lent"]
-    paid = X + X * FEES["holders"] + rsf + borrow
+    paid = amount
     eq = X
     N = m * X
     c = fee + N / depth
@@ -53,12 +59,13 @@ def hedge(X, m, fee, depth):
     return dict(eq=eq, loan=L, N=N, rsf=rsf, borrow=borrow, paid=paid, liq=None if xl is None else xl - 1), settle
 
 
-def short(X, m, fee, depth):
+def short(amount, m, fee, depth):
     e, s_, p = prm(m)
+    X = margin(amount, m)
     N = m * X
     borrow = N * FEES["borrow"]
     rsf = X * FEES["rsf_stake"] + N * FEES["rsf_lent"]
-    paid = X + X * FEES["holders"] + rsf + borrow
+    paid = amount
     eq = X
     c = fee + N / depth
     C = eq + N * (1 - c)

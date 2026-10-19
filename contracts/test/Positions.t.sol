@@ -12,15 +12,17 @@ contract HedgeTest is Base {
 
     function test_hedge_5x_up10_issuersFirstThenShare() public {
         uint256 assetsBefore = usdVault.totalAssets();
-        uint256 id = _hedge(100 * USD, 5);
+        uint256 id = _hedge(100 * USD, 5); // $100 paid, everything included
         (,,,,,, uint128 equity, uint128 lent, uint128 coins,,,,) = pm.positions(id);
-        assertEq(lent, 400 * USD, "L = (m-1)X");
-        assertEq(usdVault.lent(), 400 * USD);
-        // v4: fees on top (holders 2 %, RSF 0.5 % + 0.03 % of L, borrow 0.25 % of L); equity = the full stake.
-        assertEq(usd.balanceOf(feeCollector), 2 * USD);
-        assertEq(equity, 100 * USD);
-        assertEq(1_000_000 * USD - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000 + 120_000 + 1_000_000 + 100_000, "paid stake + fees + gas");
-        assertEq(usd.balanceOf(keeper), 100_000, "gas straight to the keeper wallet");
+        // Owner 2026-10-19: the amount typed is the amount paid. Margin X = (100 − gas) / (1 + 2.5 % + 4 · 0.28 %).
+        assertEq(equity, (100 * USD - 100_000) * 10_000 / 10_362, "margin after fees");
+        assertEq(lent, 4 * uint256(equity), "L = (m-1)X");
+        assertEq(usdVault.lent(), lent);
+        uint256 paid = 1_000_000 * USD - usd.balanceOf(trader);
+        assertLe(paid, 100 * USD, "never more than the amount typed");
+        assertGe(paid, 100 * USD - 5, "the whole amount, minus rounding dust");
+        assertEq(usd.balanceOf(feeCollector), uint256(equity) * 200 / 10_000);
+        uint256 borrow = uint256(lent) * 25 / 10_000;
 
         _move(1_000); // +10 %
         uint256 before = usd.balanceOf(trader);
@@ -31,12 +33,12 @@ contract HedgeTest is Base {
         assertEq(usdVault.lent(), 0, "principal back");
         uint256 out = uint256(coins) * 2_200 * USD / 1e18;
         out = out * (10_000 - 5 - out * 10_000 / (10_000_000 * USD)) / 10_000;
-        uint256 rest = out - 400 * USD;
-        uint256 issuerShare = (rest - 100 * USD) * 1_000 / 10_000; // p = 10 % (v4)
+        uint256 rest = out - lent;
+        uint256 issuerShare = (rest - equity) * 1_000 / 10_000; // p = 10 % (v4)
         assertEq(got, rest - issuerShare, "trader gets rest minus p");
         vm.warp(block.timestamp + 1 days); // rewards vest into the share price over 24 h
-        assertEq(usdVault.totalAssets(), assetsBefore + 1_000_000 + issuerShare, "issuers: borrow fee + p");
-        assertGt(got, 100 * USD + 49 * USD - 10 * USD, "5x, +10 %: about +$45 before the fees paid on top");
+        assertEq(usdVault.totalAssets(), assetsBefore + borrow + issuerShare, "issuers: borrow fee + p");
+        assertGt(got, 135 * USD, "$100 in at 5x, +10 %: about +$39 net");
     }
 
     function test_hedge_1x_noLoan_noLiquidation_issuersZero() public {
@@ -358,11 +360,11 @@ contract CrashCoverTest is Base {
     function test_fundLimitsOpenPositions_whenSwitchedOn() public {
         vm.prank(safe);
         pm.setStressCover(10_000);
-        // Hedge 30× $100, −30 % in one jump: L·c − E·(1 − c) = 2,900·0.3 − 100·0.7 = $800 per position.
+        // Hedge 30×, $100 paid → margin ≈ $90.31: −30 % in one jump: L·c − E·(1 − c) ≈ 2,619·0.3 − 90.3·0.7 ≈ $722.
         uint256 id = _hedge(100 * USD, 30);
         (,,,,,,,,,,,, uint128 stress) = pm.positions(id);
-        assertApproxEqAbs(stress, 800 * USD, 1 * USD);
-        // $100k fund: about 125 such positions, then it stops.
+        assertApproxEqAbs(stress, 722 * USD, 2 * USD);
+        // $100k fund: about 138 such positions, then it stops.
         uint256 n = 1;
         vm.startPrank(trader);
         while (true) {
@@ -372,7 +374,7 @@ contract CrashCoverTest is Base {
             }
         }
         vm.stopPrank();
-        assertApproxEqAbs(n, 125, 3);
+        assertApproxEqAbs(n, 138, 3);
         assertLe(pm.hedgeStressUsd(), hedgeFund.balance());
         // 1× borrows nothing: no crash risk, always allowed.
         _hedge(100 * USD, 1);
@@ -473,7 +475,8 @@ contract KeeperGasTest is Base {
         pm.setKeeperGas(address(0), 100_000); // no wallet: no gas fee
         uint256 before = usd.balanceOf(trader);
         _hedge(100 * USD, 1);
-        assertEq(before - usd.balanceOf(trader), 100 * USD + 2 * USD + 500_000, "stake + holders + RSF only");
+        assertLe(before - usd.balanceOf(trader), 100 * USD, "the amount typed, nothing on top");
+        assertGe(before - usd.balanceOf(trader), 100 * USD - 5);
     }
 }
 

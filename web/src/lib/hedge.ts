@@ -2,7 +2,8 @@
 // Short: docs/backx/SHORT-SPEC.md. Preview only: the contracts decide.
 
 // Same numbers as contracts/src/BackxPositionManager.sol and docs/backx/FEES-AND-MARGINS.md (v4).
-// v4: exposure is exactly m × stake and the fees are paid ON TOP of the stake.
+// v4: exposure is exactly m × margin. The amount the trader types is what they pay (owner 2026-10-19): fees and
+// keeper gas come out of it, the rest is the margin. Same as the contract's _stakeFor.
 /** holders + Reserve Security Fund on the stake; borrow + RSF on the amount lent. */
 export const FEES = { holders: 0.02, borrow: 0.0025, rsfStake: 0.005, rsfLent: 0.0003 } as const;
 /** Keeper gas per position (contract keeperGasUsd, flat USD): ≈ 2× one close/liquidation; half pays it, half builds
@@ -28,10 +29,13 @@ export type Side = 'hedge' | 'short';
 
 export interface Quote {
   side: Side;
+  /** What the trader typed and pays, everything included. */
+  amount: number;
+  /** Margin X: the amount after fees and gas (contract _stakeFor). */
   stake: number;
   m: number;
-  equity: number;         // E: the stake (fees are paid on top)
-  /** What leaves the wallet: stake + holders + borrow + RSF + keeper gas. Trader results below are net of it. */
+  equity: number;         // E: the margin
+  /** What leaves the wallet: margin + every fee + keeper gas (≤ amount). Trader results below are net of it. */
   paid: number;
   /** Hedge: USD lent by the USD vault, (m−1)·X. Short: USD value of the tokens lent by the token vault, m·E. */
   loan: number;
@@ -62,9 +66,15 @@ const oneWay = (usd: number, poolFee: number, depthUsd: number) => poolFee + usd
  * Issuer gets L back first, then p of the gain or s of the rest at liquidation.
  */
 /** liqMargin: the market's execution margin (Market.liqMarginBps / 1e4); it moves liquidation earlier for the issuers' safety. */
-export function quote(stake: number, m: number, entry: number, poolFee: number, depthUsd: number, liqMargin = 0): Quote {
+/** Margin left from `amount` once fees and gas are paid; lentMult = m − 1 for a Hedge, m for a Short. */
+export function marginFor(amount: number, lentMult: number): number {
+  return Math.max(0, (amount - KEEPER_GAS) / (1 + FEES.holders + FEES.rsfStake + lentMult * (FEES.borrow + FEES.rsfLent)));
+}
+
+export function quote(amount: number, m: number, entry: number, poolFee: number, depthUsd: number, liqMargin = 0): Quote {
   const mm = Math.max(1, Math.round(m));
   const { e, s, p } = params(mm);
+  const stake = marginFor(amount, mm - 1);
   const holders = stake * FEES.holders;
   const loan = (mm - 1) * stake;
   const borrow = loan * FEES.borrow;
@@ -92,7 +102,7 @@ export function quote(stake: number, m: number, entry: number, poolFee: number, 
   const win = at(1.1);
   const rest = e * equity;
   return {
-    side: 'hedge', stake, m: mm, equity, paid, loan, notional, noLiquidation,
+    side: 'hedge', amount, stake, m: mm, equity, paid, loan, notional, noLiquidation,
     fees: { holders, borrow, rsf, gas, swap, total: holders + borrow + rsf + gas + swap },
     liqMove: noLiquidation ? 1 : Math.max(1 - liqRatio, 0), liqPrice: entry * liqRatio,
     ifWin10: { trader: win.trader, issuers: win.issuers },
@@ -106,9 +116,10 @@ export function quote(stake: number, m: number, entry: number, poolFee: number, 
  * Closing buys q back and returns them to the issuer first; then p of the gain or s of the rest.
  * Liquidation when the buy-back cost (with fee, impact, buffer) leaves only e·E.
  */
-export function shortQuote(stake: number, m: number, entry: number, poolFee: number, depthUsd: number): Quote {
+export function shortQuote(amount: number, m: number, entry: number, poolFee: number, depthUsd: number): Quote {
   const mm = Math.max(1, Math.round(m));
   const { e, s, p } = params(mm);
+  const stake = marginFor(amount, mm);
   const holders = stake * FEES.holders;
   const notional = mm * stake;
   const borrow = notional * FEES.borrow;
@@ -132,7 +143,7 @@ export function shortQuote(stake: number, m: number, entry: number, poolFee: num
   const win = at(0.9);
   const rest = e * equity;
   return {
-    side: 'short', stake, m: mm, equity, paid, loan: notional, notional, noLiquidation: false,
+    side: 'short', amount, stake, m: mm, equity, paid, loan: notional, notional, noLiquidation: false,
     fees: { holders, borrow, rsf, gas, swap: notional * 2 * cost, total: holders + borrow + rsf + gas + notional * 2 * cost },
     liqMove: Math.max(liqRatio - 1, 0), liqPrice: entry * liqRatio,
     ifWin10: { trader: win.trader, issuers: win.issuers },

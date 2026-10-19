@@ -1,4 +1,5 @@
 import type { Market } from './markets';
+import { marginFor } from './hedge';
 
 // Every coin has a USD reserve (USDC) that lends dollars to Hedges (price up).
 // The token reserve for Shorts is off in the product for now (owner 2026-10-19; contracts keep it disabled).
@@ -25,12 +26,15 @@ export function availableToLend(m: Market): number {
 }
 
 /**
- * Highest multiplication for this stake right now (BackxPositionManager.maxHedgeMFor): the coin's cap, limited
- * by what issuers can lend ((m − 1) · stake ≤ available) and by the max position size.
+ * Highest multiplication for an amount paid (fees included) right now (BackxPositionManager.maxHedgeMFor): the coin's
+ * cap, limited by what issuers can lend ((m − 1) · margin ≤ available) and by the max position size.
  */
-export function maxHedgeMFor(m: Market, stake: number, maxNotionalUsd: number): number {
-  if (!(stake > 0)) return m.maxM;
-  const byReserve = Math.floor(availableToLend(m) / stake) + 1;
-  const bySize = Math.max(1, Math.floor(maxNotionalUsd / stake));
-  return Math.max(1, Math.min(m.maxM, byReserve, bySize));
+export function maxHedgeMFor(m: Market, amount: number, maxNotionalUsd: number): number {
+  if (!(amount > 0)) return m.maxM;
+  const avail = availableToLend(m);
+  for (let k = m.maxM; k > 1; k--) {
+    const x = marginFor(amount, k - 1);
+    if ((k - 1) * x <= avail && k * x <= maxNotionalUsd) return k;
+  }
+  return 1;
 }

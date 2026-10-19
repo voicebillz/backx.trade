@@ -80,11 +80,11 @@
             { "@type": "Question", "name": "What is backx.trade?",
               "acceptedAnswer": { "@type": "Answer", "text": "backx.trade is a hedge and issuer trading platform on Robinhood Chain, built by GAZZFUN LLC. Traders hedge a coin (profit when its price rises) with multiplication. Issuers supply USDC that backs those hedges." } },
             { "@type": "Question", "name": "What is a hedge with multiplication?",
-              "acceptedAnswer": { "@type": "Answer", "text": "A hedge buys real tokens worth your stake times the multiplication. At 5× a $100 stake becomes a $500 position; the extra $400 is lent by issuers. If the price falls to the liquidation price the position is closed and issuers are repaid first. You can never lose more than you paid." } },
+              "acceptedAnswer": { "@type": "Answer", "text": "A hedge buys real tokens worth your margin times the multiplication. You pay exactly the amount you enter; fees come out of it. At 5×, $100 opens a position of about $482; issuers lend the rest. If the price falls to the liquidation price the position is closed and issuers are repaid first. You can never lose more than you paid." } },
             { "@type": "Question", "name": "What does an issuer do?",
               "acceptedAnswer": { "@type": "Answer", "text": "An issuer supplies USDC to a coin's USD reserve on the Issue Reserve page. That USDC is lent to hedges and comes back first when they close. Issuers earn a borrow fee, a share of gains and a share of what is left after a liquidation. Earnings are not guaranteed." } },
             { "@type": "Question", "name": "What does it cost?",
-              "acceptedAnswer": { "@type": "Answer", "text": "Fees are paid once when a position opens and are shown as one total before you confirm, plus a small gas amount for the keeper that closes positions. There are no funding fees." } },
+              "acceptedAnswer": { "@type": "Answer", "text": "You pay exactly the amount you enter. Fees, including a small gas amount for the keeper that closes positions, are taken out of it once when the position opens. There are no funding fees." } },
             { "@type": "Question", "name": "Is backx.trade self-custodial?",
               "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every user gets their own embedded wallet. Deposits go straight to it and withdrawals go to an address the user types in." } },
             { "@type": "Question", "name": "Which blockchain does backx.trade use?",
@@ -110,7 +110,7 @@
           Self-custodial embedded wallets. No funding fees. Built by GAZZFUN LLC.</p>
         <h2>How it works</h2>
         <ul>
-          <li><strong>Hedge:</strong> profit when a coin rises. Up to 20× multiplication on major coins; a $100 stake at 5× is a $500 position. You never lose more than you paid.</li>
+          <li><strong>Hedge:</strong> profit when a coin rises. Up to 20× multiplication on major coins; $100 at 5× opens a position of about $482 (fees included). You never lose more than you paid.</li>
           <li><strong>Issue Reserve:</strong> supply USDC to a coin's reserve. It is lent to hedges and comes back first when they close.</li>
           <li><strong>Swap portal:</strong> same-chain swaps on Ethereum, Base and BNB Chain from your own wallet.</li>
         </ul>
