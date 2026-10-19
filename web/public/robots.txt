@@ -1,0 +1,24 @@
+# backx.trade: Hedge & Issuer Trading on Robinhood Chain.
+# Search engines and AI assistants are welcome on the public pages.
+User-agent: *
+Allow: /
+Disallow: /profile
+Disallow: /admin
+
+# AI search and assistants (explicitly allowed)
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bingbot
+Allow: /
+Disallow: /profile
+Disallow: /admin
+
+Sitemap: https://backx.trade/sitemap.xml

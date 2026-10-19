@@ -43,7 +43,10 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
           <h1>Your account {me.isAdmin && <span className="chip chip-admin">Admin</span>}</h1>
           <p className="page-sub num">{me.address.slice(0, 6)}…{me.address.slice(-4)} · member since {new Date(me.memberSince).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
         </div>
-        <button className="btn btn-ghost hero-out" onClick={signOut}>Sign out</button>
+        <div className="hero-actions">
+          {me.isAdmin && <a className="btn btn-gold" href={href('admin')} onClick={go('admin')}>Admin portal</a>}
+          <button className="btn btn-ghost hero-out" onClick={signOut}>Sign out</button>
+        </div>
       </header>
       <div className="profile-grid">
         <nav className="profile-tabs" aria-label="Account sections">

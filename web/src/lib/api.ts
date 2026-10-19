@@ -2,13 +2,13 @@
 const BASE = import.meta.env.VITE_API_URL || 'https://api.backx.trade';
 
 export class ApiError extends Error {
-  constructor(public status: number, public code: string) { super(code); }
+  constructor(public status: number, public code: string, public body: Record<string, unknown> = {}) { super(code); }
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   // Never hang the UI on a slow or down API.
   const r = await fetch(BASE + path, { ...init, credentials: 'include', signal: init.signal ?? AbortSignal.timeout(8000) });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new ApiError(r.status, body.error || 'error');
+  if (!r.ok) throw new ApiError(r.status, body.error || 'error', body);
   return body as T;
 }

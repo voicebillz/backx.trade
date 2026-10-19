@@ -1,0 +1,37 @@
+# backx.trade
+
+> backx.trade is a Hedge & Issuer trading platform on Robinhood Chain, built by GAZZFUN LLC. Traders hedge a coin
+> (profit when its price rises) with multiplication backed by real tokens. Issuers supply USDC that backs those hedges.
+> Status: coming soon (private beta).
+
+## Product
+- **Hedge**: buys real tokens worth stake × multiplication. Up to 20× on major coins (BTC/ETH-type pools), 5× on large
+  coins, 3× on mid caps, 2× on small caps. At 5× a $100 stake is a $500 position; issuers lend the other $400.
+- **Liquidation**: if the price falls to the liquidation price, a keeper sells the position and the issuers are repaid
+  first. The trader keeps part of what is left. A trader can never lose more than they paid.
+- **1× hedge**: borrows nothing, has no liquidation, issuers get nothing from it.
+- **Limit (take profit)**: a sell price above today's price; a keeper closes the position when the time-weighted price
+  reaches it, at most 1 % worse than the limit.
+- **Issue Reserve**: users issue USDC to a coin's USD reserve. It is lent to hedges and returned first. Issuers earn a
+  borrow fee, 10 % of a hedge's gain, and most of what is left after a liquidation. Earnings are not guaranteed.
+- **Reserve Security Fund**: funded by every position; covers the rare case where a crash moves faster than a
+  liquidation can execute, before any issuer loses.
+- **Fees**: paid once at open and shown as one total ("You pay"), plus a small flat gas amount for the keeper.
+  No funding fees.
+- **Wallets**: every user gets a self-custodial embedded wallet (Privy). Login with email, SMS, Google, X, Discord,
+  Twitch, Telegram, Farcaster or passkey. No external wallet connection.
+- **Swap portal**: same-chain swaps on Ethereum, Base and BNB Chain, routed by LI.FI, with MEV protection.
+- Short (price down) is not offered at this time.
+
+## Terminology
+- "Multiplication" is the platform's word for the position size relative to the stake.
+
+## Links
+- Website: https://backx.trade/
+- Terms of Service: https://backx.trade/terms
+- Privacy Policy: https://backx.trade/privacy
+- Operator: GAZZFUN LLC (https://gazz.fun)
+- Support: support@gazz.fun · Legal: terms@gazz.fun
+
+## Not for
+- Investment advice. Nothing on backx.trade promises returns.

@@ -44,6 +44,38 @@ export async function migrate() {
     alter table users add column if not exists avatar_mime text;
     alter table users add column if not exists avatar_data bytea;
 
+    -- Admin portal: coins listed for trading on Robinhood Chain (owner 2026-10-19). Config only: the contracts
+    -- are configured by the Safe; this is the list the team prepares and the app will read.
+    create table if not exists listed_assets (
+      id              serial primary key,
+      chain_id        integer not null,
+      symbol          text not null,
+      name            text not null,
+      token_address   text not null,
+      decimals        smallint not null,
+      pool_address    text,
+      oracle_address  text,
+      pool_fee_bps    integer not null,
+      max_m           smallint not null,
+      liq_margin_bps  integer not null,
+      logo_url        text,
+      enabled         boolean not null default false,
+      notes           text,
+      created_at      timestamptz not null default now(),
+      updated_at      timestamptz not null default now(),
+      updated_by      text not null,
+      unique (chain_id, token_address)
+    );
+    -- Every admin write is logged: who, what, when. Never deleted by the app.
+    create table if not exists admin_audit (
+      id      bigserial primary key,
+      at      timestamptz not null default now(),
+      admin   text not null,
+      action  text not null,
+      target  text,
+      detail  jsonb
+    );
+
     -- Accounts created before sign-up methods were recorded: best known value is the latest login.
     update users set signup_method = last_login_method where signup_method is null and last_login_method is not null;
   `);

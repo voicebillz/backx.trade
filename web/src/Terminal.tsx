@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Topbar } from './components/Topbar';
 import { MarketList } from './components/MarketList';
 import { CoinHeader } from './components/CoinHeader';
@@ -16,6 +16,26 @@ import { useRoute, navigate } from './lib/router';
 import { useAuth } from './lib/auth';
 import { useBalances } from './lib/useBalances';
 
+// Admin portal: own chunk, only fetched when an admin opens it. The server guards every /api/admin call.
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+
+const TITLES: Record<string, string> = {
+  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue Reserve · backx.trade', swap: 'Swap portal · backx.trade',
+  profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
+  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users',
+};
+const PRIVATE = new Set(['profile', 'security', 'wallet', 'documents', 'admin', 'adminUsers']);
+
+/** Per-page title, and noindex on private pages (vercel.json also sends X-Robots-Tag there). */
+function usePageMeta(route: string) {
+  useEffect(() => {
+    document.title = TITLES[route] ?? TITLES.trade;
+    let tag = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (!tag) { tag = document.createElement('meta'); tag.name = 'robots'; document.head.appendChild(tag); }
+    tag.content = PRIVATE.has(route) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1';
+  }, [route]);
+}
+
 /** The app shell after sign-in. Loaded as its own chunk, only once the visitor may see it (see App.tsx). */
 export default function Terminal() {
   const { theme, setTheme } = useTheme();
@@ -23,6 +43,7 @@ export default function Terminal() {
   const route = useRoute();
   const { me } = useAuth();
   const balances = useBalances(!!me);
+  usePageMeta(route);
   const moving = useMovingMarkets();
   const [market, setMarket] = useState<Market | null>(null);
 
@@ -46,6 +67,9 @@ export default function Terminal() {
       {route === 'issue' && <IssuePage markets={moving.items} />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
+      {(route === 'admin' || route === 'adminUsers') && (me?.isAdmin
+        ? <Suspense fallback={<main id="main" className="page" aria-busy="true"><div className="card"><span className="sk sk-w60" /></div></main>}><AdminPage route={route} /></Suspense>
+        : <main id="main" className="page"><h1>Page not found</h1><p className="muted"><a href="/">Back to trading</a></p></main>)}
     </div>
   );
 }

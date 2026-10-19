@@ -3,22 +3,121 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>backx.trade · Hedge & Issuer Trading</title>
-    <meta name="description" content="Hedge with multiplication. Issue and earn on every hedge. Real tokens behind every position." />
+    <title>backx.trade · Hedge & Issuer Trading on Robinhood Chain</title>
+    <meta name="description" content="backx.trade is a hedge and issuer trading platform on Robinhood Chain. Hedge a coin with up to 20× multiplication backed by real tokens, or issue USDC to back hedges and earn borrow fees. Self-custodial wallets, no funding fees." />
+    <link rel="canonical" href="https://backx.trade/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="application-name" content="backx.trade" />
+    <meta name="author" content="GAZZFUN LLC" />
     <meta name="theme-color" content="#0A0F1A" />
+    <meta name="color-scheme" content="dark light" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta property="og:title" content="backx.trade" />
-    <meta property="og:description" content="Hedge & Issuer Trading. Coming soon." />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="alternate" type="text/markdown" title="backx.trade for AI assistants" href="/llms.txt" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="backx.trade" />
+    <meta property="og:url" content="https://backx.trade/" />
+    <meta property="og:title" content="backx.trade · Hedge & Issuer Trading on Robinhood Chain" />
+    <meta property="og:description" content="Hedge a coin with multiplication backed by real tokens, or issue USDC to back hedges. Built by GAZZFUN LLC." />
     <meta property="og:image" content="https://backx.trade/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="backx.trade · Hedge & Issuer Trading" />
+    <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="backx.trade · Hedge & Issuer Trading" />
+    <meta name="twitter:description" content="Hedge with multiplication on Robinhood Chain, or issue USDC to back hedges." />
+    <meta name="twitter:image" content="https://backx.trade/og.png" />
+    <meta name="twitter:image:alt" content="backx.trade · Hedge & Issuer Trading" />
+
+    <!-- Structured data for search engines and AI answers. A data block: it is never executed (CSP script-src does not apply). -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://backx.trade/#org",
+          "name": "backx.trade",
+          "legalName": "GAZZFUN LLC",
+          "url": "https://backx.trade/",
+          "logo": "https://backx.trade/icon-512.png",
+          "email": "support@gazz.fun",
+          "sameAs": ["https://gazz.fun"],
+          "contactPoint": [
+            { "@type": "ContactPoint", "contactType": "customer support", "email": "support@gazz.fun" },
+            { "@type": "ContactPoint", "contactType": "legal", "email": "terms@gazz.fun" }
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://backx.trade/#website",
+          "url": "https://backx.trade/",
+          "name": "backx.trade",
+          "description": "Hedge & Issuer trading on Robinhood Chain.",
+          "publisher": { "@id": "https://backx.trade/#org" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://backx.trade/#app",
+          "name": "backx.trade",
+          "url": "https://backx.trade/",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "Web",
+          "description": "A trading terminal for hedges with multiplication (up to 20× on major coins) backed by real tokens, and an Issue Reserve where users issue USDC to back hedges and earn borrow fees. Runs on Robinhood Chain with self-custodial embedded wallets.",
+          "publisher": { "@id": "https://backx.trade/#org" },
+          "isAccessibleForFree": true
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://backx.trade/#faq",
+          "mainEntity": [
+            { "@type": "Question", "name": "What is backx.trade?",
+              "acceptedAnswer": { "@type": "Answer", "text": "backx.trade is a hedge and issuer trading platform on Robinhood Chain, built by GAZZFUN LLC. Traders hedge a coin (profit when its price rises) with multiplication. Issuers supply USDC that backs those hedges." } },
+            { "@type": "Question", "name": "What is a hedge with multiplication?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A hedge buys real tokens worth your stake times the multiplication. At 5× a $100 stake becomes a $500 position; the extra $400 is lent by issuers. If the price falls to the liquidation price the position is closed and issuers are repaid first. You can never lose more than you paid." } },
+            { "@type": "Question", "name": "What does an issuer do?",
+              "acceptedAnswer": { "@type": "Answer", "text": "An issuer supplies USDC to a coin's USD reserve on the Issue Reserve page. That USDC is lent to hedges and comes back first when they close. Issuers earn a borrow fee, a share of gains and a share of what is left after a liquidation. Earnings are not guaranteed." } },
+            { "@type": "Question", "name": "What does it cost?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Fees are paid once when a position opens and are shown as one total before you confirm, plus a small gas amount for the keeper that closes positions. There are no funding fees." } },
+            { "@type": "Question", "name": "Is backx.trade self-custodial?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every user gets their own embedded wallet. Deposits go straight to it and withdrawals go to an address the user types in." } },
+            { "@type": "Question", "name": "Which blockchain does backx.trade use?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Robinhood Chain. The swap portal also routes same-chain swaps on Ethereum, Base and BNB Chain." } }
+          ]
+        }
+      ]
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" />
     <script src="/theme-boot.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Readable without JavaScript (search engines, AI crawlers). React replaces it on start; it only shows
+         if the app has not loaded after a moment. -->
+    <div id="root"><div class="seo-static">
+      <main>
+        <p class="seo-brand"><img src="/icon-512.png" alt="" width="40" height="40" /> backx.trade</p>
+        <h1>Hedge &amp; Issuer Trading on Robinhood Chain</h1>
+        <p>Hedge a coin with multiplication backed by real tokens, or issue USDC to back hedges and earn borrow fees.
+          Self-custodial embedded wallets. No funding fees. Built by GAZZFUN LLC.</p>
+        <h2>How it works</h2>
+        <ul>
+          <li><strong>Hedge:</strong> profit when a coin rises. Up to 20× multiplication on major coins; a $100 stake at 5× is a $500 position. You never lose more than you paid.</li>
+          <li><strong>Issue Reserve:</strong> supply USDC to a coin's reserve. It is lent to hedges and comes back first when they close.</li>
+          <li><strong>Swap portal:</strong> same-chain swaps on Ethereum, Base and BNB Chain from your own wallet.</li>
+        </ul>
+        <p>Status: coming soon. Contact <a href="mailto:support@gazz.fun">support@gazz.fun</a>.
+          <a href="/terms">Terms of Service</a> · <a href="/privacy">Privacy Policy</a> · <a href="https://gazz.fun">gazz.fun</a></p>
+      </main>
+    </div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
