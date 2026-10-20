@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from './db.js';
 import { config } from './config.js';
+import { listingReport, RULES, TIERS } from './listing.js';
 import { CHAINS, SAFE, factoryOf, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
@@ -285,8 +286,20 @@ adminRouter.post('/assets/:id/deploy', async (req, res, next) => {
     if (!chain.stable) missing.push(`the reserve stablecoin on ${chain.name} (RESERVE_STABLE_${a.chain_id})`);
     if (!a.adapter_address) missing.push('the swap adapter address');
     if (!a.oracle_address) missing.push('the TWAP oracle address');
-    if (missing.length) return res.status(409).json({ error: 'not_ready', missing });
     if (a.deploy_status === 'deployed') return res.status(409).json({ error: 'already_deployed' });
+    // Listing requirements, checked live (owner 2026-10-20). A coin that fails is rejected: no transaction is built.
+    let report;
+    try { report = await listingReport(req.app.locals.redis, a.chain_id, a.token_address); } catch { return res.status(502).json({ error: 'checks_unavailable' }); }
+    if (!report.pass) {
+      const failed = report.items.filter((i) => i.required && !i.ok).map((i) => i.label);
+      if (!report.tier) failed.push('Market cap and liquidity below the Small tier');
+      return res.status(409).json({ error: 'listing_rejected', missing: failed, report });
+    }
+    if (a.max_m > report.maxM) missing.push(`max multiplication ${a.max_m}× is above the ${report.tier} tier cap (${report.maxM}×)`);
+    if (a.liq_margin_bps < report.minMarginBps) missing.push(`liquidation margin must be at least ${report.minMarginBps / 100} % for the ${report.tier} tier`);
+    if (a.max_position_usd > report.maxPositionUsd) missing.push(`max position must be at most $${report.maxPositionUsd.toLocaleString('en-US')} (0.5 % of DEX liquidity)`);
+    if (a.max_open_usd > report.maxOpenUsd) missing.push(`max open hedges must be at most $${report.maxOpenUsd.toLocaleString('en-US')} (10 % of DEX liquidity, so a crash can be sold fast)`);
+    if (missing.length) return res.status(409).json({ error: 'not_ready', missing });
 
     const unit = 10n ** BigInt(chain.stable.decimals);
     const data = CREATE_MARKET + padAddr(a.token_address) + padAddr(a.adapter_address) + padAddr(a.oracle_address)
@@ -330,4 +343,20 @@ adminRouter.post('/assets/:id/check', async (req, res, next) => {
     await audit(req, 'asset.deployed', `${a.symbol} ${a.token_address}`, deployed);
     res.json(assetOut(upd.rows[0]));
   } catch (e) { next(e); }
+});
+
+// ---- listing requirements -----------------------------------------------------------------------
+
+adminRouter.get('/listing-rules', (_req, res) => res.json({ rules: RULES, tiers: TIERS }));
+
+/** Live listing checks for one token (market data + automated on-chain audit). Read-only. */
+adminRouter.get('/listing-check', async (req, res) => {
+  const chainId = Number(req.query.chainId);
+  const token = String(req.query.token || '').toLowerCase();
+  if (!CHAIN_IDS.has(chainId) || !ADDR.test(token)) return res.status(400).json({ error: 'invalid' });
+  try {
+    res.json(await listingReport(req.app.locals.redis, chainId, token));
+  } catch {
+    res.status(502).json({ error: 'checks_unavailable' });
+  }
 });

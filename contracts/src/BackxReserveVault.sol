@@ -38,6 +38,23 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     uint40 public lastReward;
     uint32 public vestPeriod;
 
+    // ---- withdrawal queue (owner 2026-10-20) --------------------------------------------------------------------
+    // An issuer can ask to take out more than is idle right now. The shares are parked in the vault; the USDC owed
+    // to the queue is RESERVED: it can never be lent out again, and every time money comes back (a position repays,
+    // someone deposits) the queue is paid first, in order, straight to the wallet that asked. Partial fills are paid
+    // as they come. Until paid, a request keeps its share of gains and losses like any other share.
+    struct Request {
+        address owner;
+        uint128 shares;   // still waiting
+    }
+
+    mapping(uint256 => Request) public requests;
+    uint64 public queueHead;          // next request to pay
+    uint64 public queueTail;          // next free slot
+    uint256 public queuedShares;      // all shares still waiting
+    /// @notice How many requests a settlement pays on its own (bounded gas); anyone can call processQueue for more.
+    uint8 public constant AUTO_PROCESS = 3;
+
     event ManagerSet(address manager);
     event MaxUtilSet(uint16 bps);
     event Lent(uint256 amount);
@@ -45,10 +62,14 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     event Earned(uint256 amount);
     event WrittenOff(uint256 principal);
     event VestPeriodSet(uint32 secs);
+    event WithdrawRequested(uint256 indexed id, address indexed owner, uint256 shares);
+    event WithdrawPaid(uint256 indexed id, address indexed owner, uint256 assets, uint256 shares, bool complete);
+    event WithdrawCancelled(uint256 indexed id, address indexed owner, uint256 shares);
 
     error NotManager();
     error OverUtilised();
     error BadValue();
+    error NotYours();
 
     modifier onlyManager() {
         if (msg.sender != manager) revert NotManager();
@@ -112,13 +133,25 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         return idle() + lent - lockedNow();
     }
 
-    /// @notice What can be lent right now: idle assets, capped so utilisation stays under maxUtilBps.
+    /// @notice USDC owed to the withdrawal queue at today's share price. Reserved: never lent, never withdrawn by others.
+    function reservedForQueue() public view returns (uint256) {
+        return queuedShares == 0 ? 0 : _convertToAssets(queuedShares, Math.Rounding.Ceil);
+    }
+
+    /// @notice Idle assets not reserved for the queue.
+    function freeIdle() public view returns (uint256) {
+        uint256 i = idle();
+        uint256 r = reservedForQueue();
+        return i > r ? i - r : 0;
+    }
+
+    /// @notice What can be lent right now: free idle assets, capped so utilisation stays under maxUtilBps.
     function availableToLend() public view returns (uint256) {
         uint256 cap = totalAssets() * maxUtilBps / 10_000;
         if (cap <= lent) return 0;
         uint256 a = cap - lent;
-        uint256 i = idle();
-        return a < i ? a : i;
+        uint256 f = freeIdle();
+        return a < f ? a : f;
     }
 
     /// @dev Virtual shares/assets offset against the first-depositor inflation attack.
@@ -126,12 +159,80 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         return 6;
     }
 
+    /// Instant withdrawals only from FREE idle assets: nobody can jump the queue.
     function maxWithdraw(address owner_) public view override returns (uint256) {
-        return Math.min(super.maxWithdraw(owner_), idle());
+        return Math.min(super.maxWithdraw(owner_), freeIdle());
     }
 
     function maxRedeem(address owner_) public view override returns (uint256) {
-        return Math.min(super.maxRedeem(owner_), _convertToShares(idle(), Math.Rounding.Floor));
+        return Math.min(super.maxRedeem(owner_), _convertToShares(freeIdle(), Math.Rounding.Floor));
+    }
+
+    // ---- withdrawal queue -----------------------------------------------------------------------
+
+    /// @notice Take out `shares` (all or part). Whatever is free now is paid at once; the rest is reserved and paid
+    /// to msg.sender automatically as money comes back. Returns the request id (0 if it was paid in full at once).
+    function requestRedeem(uint256 shares) external returns (uint256 id) {
+        if (shares == 0) revert BadValue();
+        _transfer(msg.sender, address(this), shares); // parked: cannot be sold or used twice
+        id = queueTail++;
+        requests[id] = Request(msg.sender, SafeCast.toUint128(shares));
+        queuedShares += shares;
+        emit WithdrawRequested(id, msg.sender, shares);
+        _processQueue(AUTO_PROCESS);
+    }
+
+    /// @notice Give back the part of a request that has not been paid yet.
+    function cancelRequest(uint256 id) external {
+        Request memory r = requests[id];
+        if (r.owner != msg.sender) revert NotYours();
+        if (r.shares == 0) revert BadValue();
+        requests[id].shares = 0;
+        queuedShares -= r.shares;
+        _transfer(address(this), msg.sender, r.shares);
+        emit WithdrawCancelled(id, msg.sender, r.shares);
+        _skipEmpty();
+    }
+
+    /// @notice Pay up to `maxItems` waiting requests from idle money. Anyone (the keeper) can call it.
+    function processQueue(uint256 maxItems) external returns (uint256 paid) {
+        return _processQueue(maxItems);
+    }
+
+    function _processQueue(uint256 maxItems) internal returns (uint256 done) {
+        _skipEmpty();
+        while (done < maxItems && queueHead < queueTail) {
+            uint256 id = queueHead;
+            Request memory r = requests[id];
+            uint256 i = idle();
+            if (i == 0) break;
+            uint256 owed = _convertToAssets(r.shares, Math.Rounding.Floor);
+            uint256 pay = owed < i ? owed : i;
+            uint256 burn = pay == owed ? r.shares : _convertToShares(pay, Math.Rounding.Ceil);
+            if (burn > r.shares) burn = r.shares;
+            if (pay == 0) break;
+            requests[id].shares = r.shares - uint128(burn);
+            queuedShares -= burn;
+            _burn(address(this), burn);
+            IERC20(asset()).safeTransfer(r.owner, pay); // straight to the wallet that asked
+            bool complete = burn == r.shares;
+            emit WithdrawPaid(id, r.owner, pay, burn, complete);
+            emit Withdraw(address(this), r.owner, r.owner, pay, burn);
+            unchecked { ++done; }
+            if (!complete) break; // out of idle money: the rest waits for the next settlement
+            queueHead++;
+            _skipEmpty();
+        }
+    }
+
+    function _skipEmpty() internal {
+        while (queueHead < queueTail && requests[queueHead].shares == 0) queueHead++;
+    }
+
+    /// New deposits are a settlement point too: they pay the queue first.
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+        super._deposit(caller, receiver, assets, shares);
+        _processQueue(AUTO_PROCESS);
     }
 
     // ---- manager --------------------------------------------------------------------------------
@@ -150,6 +251,7 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), principal + earnings);
         _lock(earnings);
         emit Repaid(principal, earnings);
+        _processQueue(AUTO_PROCESS); // a settlement point: money that came back pays the queue first
     }
 
     /// @notice Fees and shares paid to issuers (raise the share price).

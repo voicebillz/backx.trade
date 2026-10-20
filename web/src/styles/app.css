@@ -731,3 +731,15 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .deploy-steps li div { margin-top: 6px; }
 .deploy-steps .btn { text-decoration: none; }
 .missing-list { margin: 0; padding-left: 20px; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
+.recipe { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; background: var(--raised); font-size: 13px; }
+.recipe summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; gap: 6px; }
+.recipe ol { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); line-height: 1.45; }
+.check-report { border-radius: var(--radius); padding: 10px 12px; border: 1px solid var(--line); margin-top: 8px; font-size: 13px; }
+.check-report.pass { border-color: color-mix(in srgb, var(--up) 50%, transparent); background: var(--up-bg); }
+.check-report.fail { border-color: color-mix(in srgb, var(--down) 50%, transparent); background: var(--down-bg); }
+.check-head { margin: 0 0 4px; }
+.check-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.check-list li.ok span { color: var(--up); }
+.check-list li.bad span { color: var(--down); }
+.check-list li.warn span { color: var(--warning); }
+@media (max-width: 899px) { .check-list { grid-template-columns: 1fr; } }

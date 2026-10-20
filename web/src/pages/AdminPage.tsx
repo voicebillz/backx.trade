@@ -19,6 +19,45 @@ interface Chain {
   wrappedNative: { symbol: string; address: string; decimals: number };
 }
 interface TokenHit { symbol: string; name: string; address: string; decimals: number }
+interface CheckItem { key: string; label: string; ok: boolean; value: number | string | null; required: boolean }
+interface Report {
+  pass: boolean; checkedAt: string; tier: string | null; maxM: number; minMarginBps: number; maxPositionUsd: number; maxOpenUsd: number;
+  market: { marketCap: number | null; liquidity: number | null; volume: number | null; ageDays: number | null; logo: string | null };
+  items: CheckItem[];
+}
+const usdShort = (n: number | null) => n == null ? '—' : n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}k` : `$${n.toFixed(0)}`;
+
+/** The listing recipe: the same rules the server enforces before it builds a deploy transaction. */
+function Requirements() {
+  return (
+    <details className="recipe" open>
+      <summary><b>Listing requirements</b> <span className="muted">· checked live, a coin that fails is rejected</span></summary>
+      <ol>
+        <li>Market cap at least <b>$10M</b> and DEX liquidity on the chosen chain at least <b>$1M</b>.</li>
+        <li>24 h volume at least <b>$500k</b>, trading for at least <b>30 days</b>.</li>
+        <li>Automated on-chain audit (GoPlus) passes: verified source, not a honeypot, <b>no buy/sell/transfer tax</b>, no hidden minting or owner, transfers cannot be paused or blacklisted, no self-destruct.</li>
+        <li>A <b>swap adapter</b> and a <b>TWAP oracle</b> (1–5 min window) for the coin's pool, reviewed in the audit.</li>
+        <li>Tier sets the limits: <b>Major</b> (≥ $10B cap, ≥ $20M liquidity) 20× / margin ≥ 1.5 % · <b>Large</b> (≥ $1B, ≥ $5M) 5× / 2 % · <b>Mid</b> (≥ $100M, ≥ $2M) 3× / 3 % · <b>Small</b> 2× / 4 %.</li>
+        <li>Max position at most <b>0.5 % of DEX liquidity</b>, and all open hedges together at most <b>10 %</b> (5 % recommended), so even a crash that liquidates everyone can be sold fast with little price impact.</li>
+      </ol>
+    </details>
+  );
+}
+
+function ReportView({ r }: { r: Report }) {
+  return (
+    <div className={'check-report ' + (r.pass ? 'pass' : 'fail')} role="status">
+      <p className="check-head">
+        <b>{r.pass ? '✓ Passes the listing requirements' : '✕ Rejected: does not meet the requirements'}</b>
+        {r.tier && <span className="muted"> · tier {r.tier}: up to {r.maxM}×, margin ≥ {r.minMarginBps / 100} %, max position {usdShort(r.maxPositionUsd)}</span>}
+      </p>
+      <p className="muted num">Cap {usdShort(r.market.marketCap)} · liquidity {usdShort(r.market.liquidity)} · 24 h volume {usdShort(r.market.volume)} · {r.market.ageDays ?? '—'} days</p>
+      <ul className="check-list">
+        {r.items.map((i) => <li key={i.key} className={i.ok ? 'ok' : i.required ? 'bad' : 'warn'}><span aria-hidden="true">{i.ok ? '✓' : i.required ? '✕' : '!'}</span> {i.label}{!i.required && !i.ok ? ' (check by hand)' : ''}</li>)}
+      </ul>
+    </div>
+  );
+}
 interface AuditRow { at: string; admin: string; action: string; target: string | null }
 interface UserRow {
   address: string; solanaAddress: string | null; signupMethod: string | null; lastLoginMethod: string | null;
@@ -235,6 +274,26 @@ function AssetForm({ chains, initial, onClose, onSaved }: {
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<TokenHit[] | null>(null);
   const [verified, setVerified] = useState<string | null>(null);
+  const [report, setReport] = useState<Report | null>(null);
+  const [checking, setChecking] = useState(false);
+  const runChecks = async () => {
+    if (!ADDR.test(f.tokenAddress.trim())) { setErrors((e) => ({ ...e, tokenAddress: 'A 0x address (42 characters)' })); return; }
+    setChecking(true); setReport(null);
+    try {
+      const r = await api<Report>(`/api/admin/listing-check?chainId=${f.chainId}&token=${f.tokenAddress.trim().toLowerCase()}`);
+      setReport(r);
+      // Apply the tier's limits so the form can only ask for what the server will accept.
+      if (r.tier) setF((x) => ({
+        ...x,
+        maxM: Math.min(x.maxM, r.maxM),
+        liqMargin: String(Math.max(Number(x.liqMargin) || 0, r.minMarginBps / 100)),
+        maxPositionUsd: String(Math.min(Number(x.maxPositionUsd) || r.maxPositionUsd, r.maxPositionUsd)),
+        maxOpenUsd: String(Math.min(Number(x.maxOpenUsd) || r.maxOpenUsd, Math.floor(r.maxOpenUsd / 2))), // 5 % recommended
+        logoUrl: x.logoUrl || r.market.logo || '',
+      }));
+    } catch { setFail('Listing checks are unavailable right now. Try again in a minute.'); }
+    setChecking(false);
+  };
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((x) => ({ ...x, [k]: v }));
   const locked = !!initial && initial.deployStatus !== 'draft'; // contracts exist (or are being made) for this token
   const chain = chains.find((c) => c.id === f.chainId);
@@ -307,6 +366,8 @@ function AssetForm({ chains, initial, onClose, onSaved }: {
           <div><p className="eyebrow gold">{initial ? 'Edit asset' : 'New asset'}</p><h2>{f.symbol.toUpperCase() || 'Listed asset'}</h2></div>
         </div>
 
+        <Requirements />
+
         <fieldset className="form-section">
           <legend>Chain</legend>
           <div className="chain-pick" role="radiogroup" aria-label="Chain">
@@ -350,6 +411,10 @@ function AssetForm({ chains, initial, onClose, onSaved }: {
               <button type="button" className="btn btn-ghost btn-sm" onClick={verify}>Check on chain</button>
             </div>
           </Field>
+          <div className="field">
+            <button type="button" className="btn btn-gold btn-sm" onClick={runChecks} disabled={checking}>{checking ? 'Checking…' : 'Run listing checks'}</button>
+            {report && <ReportView r={report} />}
+          </div>
           <div className="form-grid">
             <Field id={id + 'decimals'} label="Decimals" error={errors.decimals}>{inp('decimals', { inputMode: 'numeric', className: 'num', maxLength: 2 })}</Field>
             <Field id={id + 'logoUrl'} label="Logo URL" hint="CoinGecko or backx.trade image." error={errors.logoUrl}>{inp('logoUrl', { placeholder: 'https://coin-images.coingecko.com/…' })}</Field>
@@ -381,7 +446,7 @@ function AssetForm({ chains, initial, onClose, onSaved }: {
           <legend>Risk</legend>
           <div className="field">
             <div className="field-head"><label className="label" htmlFor={id + 'maxM'}>Max multiplication</label><span className="num m-value">{f.maxM}×</span></div>
-            <input id={id + 'maxM'} type="range" min={1} max={20} value={f.maxM} onChange={(e) => set('maxM', Number(e.target.value))} className="range" />
+            <input id={id + 'maxM'} type="range" min={1} max={report?.tier ? report.maxM : 20} value={f.maxM} onChange={(e) => set('maxM', Number(e.target.value))} className="range" />
             <span className="hint">The standard cap. What a trader gets is also limited by the USDC issuers have free. Guide (sim5): Major 20×, Large 5×, Mid 3×, Small 2×.</span>
           </div>
           <div className="form-grid">
@@ -412,7 +477,8 @@ function AssetForm({ chains, initial, onClose, onSaved }: {
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-ghost" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
           {(!initial || initial.deployStatus !== 'deployed') && (
-            <button type="button" className="btn btn-gold" disabled={busy} onClick={() => save(true)}>Save and deploy contracts</button>
+            <button type="button" className="btn btn-gold" disabled={busy || (report != null && !report.pass)} onClick={() => save(true)}
+              title={report && !report.pass ? 'This coin does not meet the listing requirements' : undefined}>Save and deploy contracts</button>
           )}
         </div>
       </form>
@@ -428,7 +494,7 @@ function Deploy({ asset, chain, onClose }: { asset: Asset; chain?: Chain; onClos
   useEffect(() => {
     api<{ batch: unknown; safeUrl: string }>(`/api/admin/assets/${asset.id}/deploy`, json({}))
       .then((r) => setState(r))
-      .catch((e) => setState(e instanceof ApiError && e.code === 'not_ready'
+      .catch((e) => setState(e instanceof ApiError && (e.code === 'not_ready' || e.code === 'listing_rejected')
         ? { missing: e.body.missing as string[] }
         : { err: e instanceof ApiError && e.code === 'already_deployed' ? 'Already live.' : 'Could not prepare the transaction.' }));
   }, [asset.id]);
@@ -467,7 +533,7 @@ function Deploy({ asset, chain, onClose }: { asset: Asset; chain?: Chain; onClos
           </>
         ) : state.missing ? (
           <>
-            <p>Not ready to deploy yet. Missing:</p>
+            <p>Not ready to deploy. {state.missing.length ? 'Fix these first:' : ''}</p>
             <ul className="missing-list">{state.missing.map((m) => <li key={m}>{m}</li>)}</ul>
           </>
         ) : !state.batch && !state.err ? (

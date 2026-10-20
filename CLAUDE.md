@@ -70,6 +70,15 @@ The owner is not a developer: explain briefly, in Norwegian.
   and while the TWAP shows the coins cover the principal + 2 %, it must return the FULL principal (sandwiches revert).
   Swaps are booked from balance deltas, never from the adapter's return value. See `docs/backx/SECURITY-REVIEW.md`. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
+- Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
+  `requestRedeem(shares)`, the shares are parked in the vault and reserved, and every settlement point (`repay`, a new
+  deposit, `processQueue`) pays the queue first, FIFO, part-payments, straight to the wallet that asked. Reserved money
+  is never lent again. `cancelRequest` returns unpaid shares.
+- Listing rules (owner 2026-10-20, `server/src/listing.js`): live GeckoTerminal data + GoPlus token audit. Min market cap
+  $10M, liquidity $1M on that chain, 24 h volume $500k, 30 days trading; no honeypot/tax/hidden mint/owner/pause/blacklist.
+  Tier (stricter of cap and liquidity) sets max multiplication + min margin; max position 0.5 % and max open 10 % of
+  liquidity. A failing coin is rejected (deploy 409, button disabled); the admin listing window shows the recipe.
+  Liquidation setup and revenue per $30M volume: `docs/backx/LIQUIDATION.md`. Treasury share is OPEN (all 2 % → feeCollector).
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.
