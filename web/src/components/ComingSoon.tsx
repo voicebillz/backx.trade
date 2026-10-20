@@ -133,8 +133,8 @@ function BuyGazz() {
         <img src="/gazz-logo.svg" alt="" width="20" height="20" />Buy $GAZZ
       </a>
       <button className="gazz-ca" onClick={copy} aria-label={`Copy $GAZZ contract address ${GAZZ_CA}`}>
-        <span className="gazz-ca-label">$GAZZ CA:</span> <span className="gazz-ca-addr">{GAZZ_CA}</span>
-        <span className="gazz-ca-copy" aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
+        {/* Tap the address to copy it; the label confirms. */}
+        <span className="gazz-ca-label" aria-live="polite">{copied ? 'Copied ✓' : '$GAZZ CA:'}</span> <span className="gazz-ca-addr">{GAZZ_CA}</span>
       </button>
     </div>
   );

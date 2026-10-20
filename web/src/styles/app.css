@@ -214,11 +214,10 @@ th { text-align: left; font-weight: 500; color: var(--ink-3); height: 32px; padd
 .gazz-btn img { border-radius: 5px; }
 .gazz-btn:hover { border-color: var(--brand); background: rgba(255,209,0,.06); }
 .gazz-btn:active { transform: scale(.97); }
-.gazz-ca { display: block; width: 100%; min-height: 44px; padding: 6px 4px; font-family: var(--mono); font-size: 11px; line-height: 1.5; color: #8A8A8A; text-align: center; border-radius: var(--radius); }
+.gazz-ca { display: block; cursor: copy; width: 100%; min-height: 44px; padding: 6px 4px; font-family: var(--mono); font-size: 11px; line-height: 1.5; color: #8A8A8A; text-align: center; border-radius: var(--radius); }
 .gazz-ca:hover .gazz-ca-addr { color: #F2F2F2; }
 .gazz-ca-label { color: var(--brand); }
 .gazz-ca-addr { color: #B4B4B4; word-break: break-all; }
-.gazz-ca-copy { display: inline-block; margin-left: 6px; color: #6A6A6A; text-decoration: underline; white-space: nowrap; word-break: normal; }
 
 /* "Join the venture!": the vault shakes on a loop; its bar fills halfway, then crashes to zero (4 s cycle).
    Reduced motion: everything still, bar at 50 %. */
