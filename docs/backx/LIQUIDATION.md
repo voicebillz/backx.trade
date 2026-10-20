@@ -92,6 +92,28 @@ backx treasury yet. Suggestion: `feeCollector` = a splitter contract (owned by t
 gazz.fun holders and 0.5 % to the backx treasury, or make `holdersFeeBps` + a new `treasuryFeeBps` separate
 fields (storage append-only). Owner decides the split.
 
+## 5b. Proposal v5: one pot, split by shares (owner 2026-10-20, NOT built yet)
+
+Everything earned from a position goes into one pot: the open fee (same rates as v4, so the trader pays exactly
+the same), the keeper gas, the 10 % share of a gain and the share of what is left after a liquidation. The pot is
+split by fixed shares with issuers always the largest; the keeper never gets less than the real gas.
+`docs/backx/sim/sim6.py`, real 1-minute paths, both directions, pessimistic fills. $30M position volume:
+
+| Coin, multiplication | Pot | v4 issuers (now) | B: issuers 50 % | holders 20 % | fund 15 % | treasury 10 % | keeper 5 % |
+|---|---|---|---|---|---|---|---|
+| BTC 3× | $321k | $61k | $161k | $64k | $48k | $32k | $16k |
+| BTC 5× | $231k | $71k | $115k | $46k | $35k | $23k | $12k |
+| BTC 10× | $177k | $92k | $88k | $35k | $27k | $18k | $9k |
+| BTC 20× | $199k | $152k | $100k | $40k | $30k | $20k | $10k |
+| DOGE 3× | $336k | $76k | $168k | $67k | $50k | $34k | $17k |
+| PEPE 3× | $386k | $126k | $193k | $77k | $58k | $39k | $19k |
+| WIF 2× | $477k | $91k | $238k | $95k | $72k | $48k | $24k |
+
+On $10M issued that is 0.9–2.4 % for issuers per $30M volume (v4: 0.6–1.5 %). No gap needed the fund in the
+sample. Alternatives in the sim: A 45/20/15/15/5, C 40/25/15/15/5. Holders get far less than v4's flat 2 %
+(which was 50–68 % of the pot at 2–5×). At 10–20× v4 already gave issuers more (liquidation shares).
+Figures are per $30M of volume, not per year; no yield is promised.
+
 ## 6. Issuer withdrawal queue (built)
 
 Issuers can always withdraw what is free (`freeIdle`). For the rest:
