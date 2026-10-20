@@ -7,6 +7,7 @@ import { walletRouter } from './wallet.js';
 import { marketsRouter } from './markets.js';
 import { swapRouter } from './swap.js';
 import { adminRouter } from './admin.js';
+import { ventureRouter } from './venture.js';
 
 // family: 0 lets ioredis resolve Railway's IPv6 private network.
 const redis = new Redis(config.redisUrl, { family: 0, maxRetriesPerRequest: 2, lazyConnect: false });
@@ -100,6 +101,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/markets', marketsRouter);
 app.use('/api/swap', swapRouter);
+app.use('/api/venture', ventureRouter);
 app.use('/api/admin', adminRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }));

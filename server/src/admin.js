@@ -200,6 +200,38 @@ adminRouter.get('/users', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---- venture participants ("Join the venture!", owner 2026-10-20) ---------------------------------
+
+adminRouter.get('/participants', async (req, res, next) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+  const page = Math.max(0, Math.min(Number.parseInt(String(req.query.page ?? '0'), 10) || 0, 10_000));
+  if (q && !/^(0x)?[0-9a-f]{1,40}$/.test(q)) return res.status(400).json({ error: 'invalid' });
+  try {
+    const where = q ? 'where p.wallet_address like $1' : '';
+    const args = q ? [`%${q}%`] : [];
+    const [{ rows }, totals] = await Promise.all([
+      db.query(
+        `select p.wallet_address, p.joined_at, u.signup_method, u.beta_signup_at
+           from venture_participants p join users u on u.privy_did = p.privy_did ${where}
+          order by p.joined_at desc
+          limit ${PAGE + 1} offset ${page * PAGE}`, args),
+      db.query(
+        `select (select count(*) from venture_participants)::int as total,
+                (select count(*) from venture_participants where joined_at > now() - interval '1 day')::int as day,
+                (select count(*) from venture_participants where joined_at > now() - interval '7 days')::int as week,
+                (select count(*) from users)::int as users`),
+    ]);
+    res.json({
+      items: rows.slice(0, PAGE).map((r) => ({
+        address: r.wallet_address, joinedAt: r.joined_at, signupMethod: r.signup_method, signedUpAt: r.beta_signup_at,
+      })),
+      hasMore: rows.length > PAGE,
+      page,
+      stats: totals.rows[0],
+    });
+  } catch (e) { next(e); }
+});
+
 // ---- audit ------------------------------------------------------------------------------------
 
 adminRouter.get('/audit', async (_req, res, next) => {

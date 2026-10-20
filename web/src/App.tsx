@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { ComingSoon } from './components/ComingSoon';
+import { Venture } from './components/Venture';
 import { useAuth } from './lib/auth';
 
 const COMING_SOON = import.meta.env.VITE_COMING_SOON !== 'false';
@@ -14,7 +15,8 @@ export function App() {
     return (
       <>
         <div className="soon-backdrop" aria-hidden="true" />
-        <ComingSoon />
+        {/* Signed in: the coming-soon overlay closes and "Join the venture!" takes its place (no way past it yet). */}
+        {me ? <Venture /> : <ComingSoon />}
       </>
     );
   }

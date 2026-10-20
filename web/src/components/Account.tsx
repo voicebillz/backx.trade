@@ -34,7 +34,7 @@ export function OverlayAccount() {
   return (
     <div className="soon-account" aria-live="polite">
       <button className="soon-signin" onClick={signIn} disabled={connecting || !canSignIn} aria-busy={connecting}>
-        {connecting ? 'Setting up your wallet…' : 'Sign up for beta'}
+        {connecting ? 'Setting up your wallet…' : 'Login For Beta'}
       </button>
       {status === 'error' && <p className="soon-account-note err">Sign-in did not complete. Try again.</p>}
     </div>

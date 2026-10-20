@@ -114,7 +114,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   shortMaxM = 0. The contracts keep the Short code (tested) but every market is configured with maxShortM = 0 and no
   token vault until the owner turns it back on. Design kept in `docs/backx/SHORT-SPEC.md` for later.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.
-- Admin portal (owner 2026-10-19): `/admin` (Listed assets) and `/admin/users`, button on the profile page for admins.
+- Beta gate (owner 2026-10-20): the coming-soon overlay's button is "Login For Beta". Signed-in non-admins then get a
+  second overlay instead ("Join the venture!", shaking vault whose bar fills to 50 % and crashes, button "Participate");
+  nobody but ADMIN_WALLETS passes it. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
+  limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
+- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users` and `/admin/participants`, button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:
   session + ADMIN_WALLETS or 404, own Redis rate limit (GET 120/min, writes 30/min), POST must be JSON, strict
   validation (Robinhood Chain 4663, addresses, fee tiers, max 20×, margin ≤ 5 %, logo only from CSP image hosts),

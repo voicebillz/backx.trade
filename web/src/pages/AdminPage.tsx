@@ -91,7 +91,7 @@ export default function AdminPage({ route }: { route: Route }) {
       <header className="page-head">
         <div>
           <p className="eyebrow gold">Admin portal</p>
-          <h1>{route === 'adminUsers' ? 'Users' : 'Listed assets'}</h1>
+          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : 'Listed assets'}</h1>
           <p className="page-sub">Only wallets in ADMIN_WALLETS can open this. Every change is logged.</p>
         </div>
       </header>
@@ -99,9 +99,10 @@ export default function AdminPage({ route }: { route: Route }) {
         <nav className="profile-tabs" aria-label="Admin sections">
           <a href={href('admin')} onClick={go('admin')} className={route === 'admin' ? 'active' : ''} aria-current={route === 'admin' ? 'page' : undefined}>Listed assets</a>
           <a href={href('adminUsers')} onClick={go('adminUsers')} className={route === 'adminUsers' ? 'active' : ''} aria-current={route === 'adminUsers' ? 'page' : undefined}>Users</a>
+          <a href={href('adminParticipants')} onClick={go('adminParticipants')} className={route === 'adminParticipants' ? 'active' : ''} aria-current={route === 'adminParticipants' ? 'page' : undefined}>Participants</a>
           <a href={href('profile')} onClick={go('profile')}>← Back to profile</a>
         </nav>
-        <div className="admin-body">{route === 'adminUsers' ? <Users /> : <Assets />}</div>
+        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : <Assets />}</div>
       </div>
     </main>
   );
@@ -640,6 +641,79 @@ function Users() {
                   <td className="num">{when(u.signedUpAt)}</td>
                   <td className="num">{when(u.lastLoginAt)}</td>
                   <td className="r num">{u.activeSessions}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="row-between pager">
+          <button className="btn btn-ghost btn-sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>← Newer</button>
+          <span className="muted num">Page {page + 1}</span>
+          <button className="btn btn-ghost btn-sm" disabled={!data?.hasMore} onClick={() => setPage((p) => p + 1)}>Older →</button>
+        </div>
+      </section>
+    </>
+  );
+}
+
+// ---- Venture participants ("Join the venture!") -------------------------------------------------
+
+interface ParticipantsResp {
+  items: { address: string; joinedAt: string; signupMethod: string | null; signedUpAt: string }[];
+  hasMore: boolean; page: number;
+  stats: { total: number; day: number; week: number; users: number };
+}
+
+function Participants() {
+  const [q, setQ] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [data, setData] = useState<ParticipantsResp | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => { setQuery(q.trim()); setPage(0); }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
+    let live = true;
+    setData((d) => (d ? { ...d, items: [] } : d));
+    api<ParticipantsResp>(`/api/admin/participants?page=${page}${query ? `&q=${encodeURIComponent(query)}` : ''}`)
+      .then((r) => { if (live) { setData(r); setErr(null); } })
+      .catch((e) => live && setErr(e instanceof ApiError && e.status === 400 ? 'Search by wallet address (0x… hex).' : 'Could not load participants.'));
+    return () => { live = false; };
+  }, [page, query]);
+
+  const s = data?.stats;
+  const share = s && s.users ? `${Math.floor((s.total / s.users) * 1000) / 10}%` : undefined;
+  return (
+    <>
+      <section className="admin-tiles">
+        {[['Participants', s?.total], ['New 24 h', s?.day], ['New 7 days', s?.week], ['Of all users', share]].map(([label, v]) => (
+          <div className="card tile" key={label as string}><span className="label">{label}</span><span className="num tile-value">{v ?? <span className="sk sk-w30" />}</span></div>
+        ))}
+      </section>
+      <section className="card">
+        <p className="muted small">Everyone who pressed Participate on “Join the venture!”. One per account; signed-in users only.</p>
+        <div className="field">
+          <label className="label" htmlFor="admin-part-q">Search</label>
+          <div className="input-wrap"><input id="admin-part-q" placeholder="Wallet address" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" spellCheck={false} /></div>
+        </div>
+        {err && <p className="field-err" role="alert">{err}</p>}
+        <div className="table-wrap">
+          <table className="admin-table">
+            <thead><tr><th>#</th><th>Wallet</th><th>Signed up with</th><th>Account since</th><th>Participated</th></tr></thead>
+            <tbody>
+              {!data && !err && Array.from({ length: 6 }, (_, i) => <tr key={i} aria-hidden="true"><td colSpan={5}><span className="sk sk-w60" /></td></tr>)}
+              {data?.items.length === 0 && !err && <tr><td colSpan={5} className="muted admin-empty">{query ? 'No participants match.' : 'No participants yet.'}</td></tr>}
+              {data?.items.map((p, i) => (
+                <tr key={p.address}>
+                  <td className="num muted">{(s?.total ?? 0) - page * 50 - i}</td>
+                  <td><CopyAddr value={p.address} /></td>
+                  <td>{p.signupMethod ?? <span className="muted">—</span>}</td>
+                  <td className="num">{when(p.signedUpAt)}</td>
+                  <td className="num">{when(p.joinedAt)}</td>
                 </tr>
               ))}
             </tbody>

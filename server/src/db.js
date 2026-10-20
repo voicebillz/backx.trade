@@ -82,6 +82,14 @@ export async function migrate() {
       detail  jsonb
     );
 
+    -- "Join the venture!" (owner 2026-10-20): one row per account, the primary key makes it once per user.
+    create table if not exists venture_participants (
+      privy_did      text primary key references users(privy_did) on delete cascade,
+      wallet_address text not null,
+      joined_at      timestamptz not null default now()
+    );
+    create index if not exists venture_joined on venture_participants(joined_at desc);
+
     -- Accounts created before sign-up methods were recorded: best known value is the latest login.
     update users set signup_method = last_login_method where signup_method is null and last_login_method is not null;
   `);
