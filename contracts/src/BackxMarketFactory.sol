@@ -106,7 +106,8 @@ contract BackxMarketFactory is Initializable, UUPSUpgradeable, Ownable2StepUpgra
 
     /// @notice One coin, one isolated set of contracts, one transaction (signed by the Safe).
     function createMarket(NewMarket calldata n) external onlyOwner returns (Set memory s) {
-        if (n.token == address(0) || n.adapter == address(0) || n.oracle == address(0)) revert BadValue();
+        if (n.token == address(0) || n.token == address(usd) || n.adapter == address(0) || n.oracle == address(0)) revert BadValue();
+        if (n.maxHedgeM == 0 || n.maxHedgeM > 30 || n.liqMarginBps > 500) revert BadValue();
         if (address(_sets[n.token].manager) != address(0)) revert Exists();
         address safe = owner();
         string memory sym = IERC20Metadata(n.token).symbol();

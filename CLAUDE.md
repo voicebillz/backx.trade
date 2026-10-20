@@ -63,9 +63,12 @@ The owner is not a developer: explain briefly, in Norwegian.
   only borrow what the reserve can lend ((m − 1)·stake ≤ availableToLend, 90 % util cap): `maxHedgeMFor` in the
   contract, `maxHedgeMFor` in web/src/lib/reserves.ts for the ticket. Issuer rewards go INTO the reserve (ERC-4626
   share price), shared pro rata, withdrawn with the principal, never claimed; new rewards vest over 24 h.
-- Liquidation margin (owner 2026-10-19): each market has liqMarginBps (server LIQ_MARGIN: Major 1 %, Large 1 %, Mid 1.5 %,
-  Small 2 %) and Hedge caps Major 20×, Large 5×, Mid 3×, Small 2× (sim5: no gap with a 5-minute keeper + 0.5 %
-  discrepancy). The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
+- Liquidation margin (owner 2026-10-19, raised 2026-10-20): each market has liqMarginBps (server LIQ_MARGIN: Major 1.5 %,
+  Large 2 %, Mid 3 %, Small 4 %) and Hedge caps Major 20×, Large 5×, Mid 3×, Small 2×. Issuers are never at risk unless the
+  price falls a further 2.7 % (Major 20×) / 8.2 % / 14.9 % / 24 % past the liquidation point before the sale.
+- Liquidation price guard (security review 2026-10-20): a liquidation sale fills at most liqMaxGapBps (2 %) from the TWAP,
+  and while the TWAP shows the coins cover the principal + 2 %, it must return the FULL principal (sandwiches revert).
+  Swaps are booked from balance deltas, never from the adapter's return value. See `docs/backx/SECURITY-REVIEW.md`. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
 
 ## API (server/) — closed by default

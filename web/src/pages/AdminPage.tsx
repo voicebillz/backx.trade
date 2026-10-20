@@ -182,7 +182,7 @@ const toForm = (a: Asset | null, chainId = 4663): FormState => ({
   chainId: a?.chainId ?? chainId, symbol: a?.symbol ?? '', name: a?.name ?? '', tokenAddress: a?.tokenAddress ?? '',
   decimals: String(a?.decimals ?? 18), poolAddress: a?.poolAddress ?? '', oracleAddress: a?.oracleAddress ?? '',
   adapterAddress: a?.adapterAddress ?? '', poolFeeBps: a?.poolFeeBps ?? 30, maxM: a?.maxM ?? 5,
-  liqMargin: a ? String(a.liqMarginBps / 100) : '1', maxPositionUsd: String(a?.maxPositionUsd ?? 50_000),
+  liqMargin: a ? String(a.liqMarginBps / 100) : '1.5', maxPositionUsd: String(a?.maxPositionUsd ?? 50_000),
   maxOpenUsd: String(a?.maxOpenUsd ?? 2_000_000), logoUrl: a?.logoUrl ?? '', enabled: a?.enabled ?? false, notes: a?.notes ?? '',
 });
 
@@ -385,7 +385,7 @@ function AssetForm({ chains, initial, onClose, onSaved }: {
             <span className="hint">The standard cap. What a trader gets is also limited by the USDC issuers have free. Guide (sim5): Major 20×, Large 5×, Mid 3×, Small 2×.</span>
           </div>
           <div className="form-grid">
-            <Field id={id + 'liqMargin'} label="Liquidation margin (%)" hint="Major/Large 1 %, Mid 1.5 %, Small 2 %." error={errors.liqMarginBps}>
+            <Field id={id + 'liqMargin'} label="Liquidation margin (%)" hint="Major 1.5 %, Large 2 %, Mid 3 %, Small 4 % (security review)." error={errors.liqMarginBps}>
               {inp('liqMargin', { inputMode: 'decimal', className: 'num', maxLength: 4 })}
             </Field>
             <Field id={id + 'maxPositionUsd'} label="Max position (USD)" hint="≈ 0.5 % of pool depth." error={errors.maxPositionUsd}>

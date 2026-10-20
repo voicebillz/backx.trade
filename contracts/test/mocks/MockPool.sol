@@ -33,6 +33,13 @@ contract MockPool is ISwapAdapter, IPriceOracle {
         price = p;
     }
 
+    /// Security tests: report the full amount but deliver less (buggy adapter / fee-on-transfer token).
+    uint256 public shortchangeBps;
+
+    function setShortchange(uint256 bps) external {
+        shortchangeBps = bps;
+    }
+
     function _costBps(uint256 valueUsd) internal view returns (uint256) {
         return feeBps + valueUsd * 10_000 / depthUsd;
     }
@@ -63,7 +70,7 @@ contract MockPool is ISwapAdapter, IPriceOracle {
         out = quoteExactIn(tokenIn, tokenOut, amountIn);
         require(out >= minOut, "minOut");
         MockERC20(tokenIn).burn(msg.sender, amountIn);
-        MockERC20(tokenOut).mint(to, out);
+        MockERC20(tokenOut).mint(to, out * (10_000 - shortchangeBps) / 10_000);
     }
 
     function swapExactOut(address tokenIn, address tokenOut, uint256 amountOut, uint256 maxIn, address to)

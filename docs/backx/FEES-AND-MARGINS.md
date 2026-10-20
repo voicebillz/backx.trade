@@ -107,12 +107,12 @@ Konklusjon (bygget inn):
 
 | Coin-type | Maks (før) | **Maks nå** | Margin | Likvideres ved (eksempel) |
 |---|---|---|---|---|
-| Major (BTC/ETH, dyp pool) | 30× | **20×** | 1 % | 20×: −2,7 %, 10×: −6,6 % |
-| Large (meme-type, 0,3 %) | 10× | **5×** | 1 % | 5×: −12,2 % |
-| Mid | 5× | **3×** | 1,5 % | 3×: −19,4 % |
-| Small (GAZZ-type) | 2× | 2× | 2 % | 2×: −26,9 % |
+| Major (BTC/ETH, dyp pool) | 30× | **20×** | **1,5 %** | 20×: −2,2 %, 10×: −6,1 % |
+| Large (meme-type, 0,3 %) | 10× | **5×** | **2 %** | 5×: −11,1 % |
+| Mid | 5× | **3×** | **3 %** | 3×: −17,7 % |
+| Small (GAZZ-type) | 2× | 2× | **4 %** | 2×: −24,9 % |
 
-Med disse nivåene var det **ingen gap** i noen simulert situasjon, også med 5 minutters forsinkelse og 0,5 % avvik.
+Marginene ble hevet etter sikkerhetsgjennomgangen 2026-10-20 (`SECURITY-REVIEW.md`). Med disse nivåene var det **ingen gap** i noen simulert situasjon, også med 5 minutters forsinkelse og 0,5 % avvik.
 Fondet skal da bare brukes ved ekte flash-krasj (prisen hopper mer enn margin + e på sekunder).
 Safe kan endre margin (maks 5 %) og maks m per coin. Kontrakttest: 20× med 1 % margin og en keeper som er
 1,5 % for sen, gir issuers alt tilbake uten at fondet brukes.

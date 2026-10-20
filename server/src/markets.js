@@ -9,7 +9,9 @@ const CACHE_SEC = 90;
 // and a 0.5 % price discrepancy, these caps + execution margins repay the issuers in every simulated case.
 const HEDGE_CAP = { Major: 20, Large: 5, Mid: 3, Small: 2 };
 /** Liquidate this share of the position value earlier (contract: Market.liqMarginBps). */
-const LIQ_MARGIN = { Major: 0.01, Large: 0.01, Mid: 0.015, Small: 0.02 };
+// Raised after the security review (owner 2026-10-20): issuers must not lose. Room for the price to fall PAST
+// the liquidation point before any issuer money is at risk: Major 20× 2.7 %, Large 5× 8.2 %, Mid 3× 14.9 %, Small 2× 24 %.
+const LIQ_MARGIN = { Major: 0.015, Large: 0.02, Mid: 0.03, Small: 0.04 };
 // Short is off in the product for now (owner 2026-10-19): 0 everywhere. Earlier caps: Major 30, Large 10, Mid 5.
 const SHORT_CAP = { Major: 0, Large: 0, Mid: 0, Small: 0 };
 
@@ -22,7 +24,7 @@ function tier(mcap) {
 }
 
 export async function universe(redis) {
-  const cached = await redis.get('markets:v5');
+  const cached = await redis.get('markets:v6');
   if (cached) return JSON.parse(cached);
   const all = [];
   for (let page = 1; page <= PAGES; page++) {
@@ -54,7 +56,7 @@ export async function universe(redis) {
       };
     })
     .sort((a, b) => b.change24h - a.change24h);
-  await redis.set('markets:v5', JSON.stringify(list), 'EX', CACHE_SEC);
+  await redis.set('markets:v6', JSON.stringify(list), 'EX', CACHE_SEC);
   return list;
 }
 

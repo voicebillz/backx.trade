@@ -98,8 +98,10 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
     uint256 internal _maxKeeperGas;
     Fees public fees;
     bool public permissionlessLiquidation;
-    /// @notice How far below (sell) / above (buy) the TWAP a liquidation may execute. Wide enough to settle in
-    /// a crash, narrow enough that a sandwich around the keeper cannot drain the issuers.
+    /// @notice How far below (sell) / above (buy) the TWAP a liquidation may execute. Security review 2026-10-20:
+    /// 2 % (was 15 %). At the trigger the issuers' cushion (buffer + e·E + margin·N) is larger than 2 % of the
+    /// position at every m, so a sandwich around a liquidation can never reach the issuers' principal. In a real
+    /// crash the keeper retries as the TWAP follows the price; the Safe can widen it (max 50 %) in an emergency.
     uint16 public liqMaxGapBps;
     /// @notice How close the TWAP must be to the trigger to confirm a liquidation. Must stay well under the
     /// smallest liquidation distance (≈1.5 % at 30×), or a one-block spot spike could liquidate.
@@ -192,7 +194,7 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         hedgeFund = a.hedgeFund;
         shortFund = a.shortFund;
         feeCollector = a.feeCollector;
-        liqMaxGapBps = 1_500;
+        liqMaxGapBps = 200;
         twapConfirmBps = 25;
         limitSlipBps = 100;
         nextId = 1;
@@ -228,7 +230,13 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         if (mk.crashBps < 2_000 || mk.crashBps > BPS || mk.pumpBps < 2_000 || mk.pumpBps > 50_000) revert BadParams();
         // Execution margin: at most 5 % of the position (sim5: 1–2 % covers a 5-minute keeper + 0.5 % discrepancy).
         if (mk.liqMarginBps > 500) revert BadParams();
+        if (mk.enabled && (address(mk.adapter) == address(0) || address(mk.oracle) == address(0) || address(mk.usdVault) == address(0))) {
+            revert BadParams();
+        }
         Market storage cur = markets[token];
+        // Open positions owe their principal to the reserve they borrowed from: never point them at another one.
+        if (cur.openHedgeUsd > 0 && cur.usdVault != mk.usdVault) revert BadParams();
+        if (cur.openShortUsd > 0 && cur.tokenVault != mk.tokenVault) revert BadParams();
         uint128 oh = cur.openHedgeUsd;
         uint128 os = cur.openShortUsd;
         markets[token] = mk;
@@ -265,11 +273,12 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
     }
 
     function setFeeCollector(address c) external onlyOwner {
+        if (c == address(0)) revert BadParams(); // a zero collector would make every open revert
         feeCollector = c;
     }
 
     function setLiqMaxGap(uint16 bps) external onlyOwner {
-        if (bps < 200 || bps > 5_000) revert BadParams();
+        if (bps < 50 || bps > 5_000) revert BadParams();
         liqMaxGapBps = bps;
     }
 
@@ -621,8 +630,7 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         mk.openHedgeUsd -= pos.lentUsd;
         hedgeStressUsd -= pos.stressUsd;
 
-        // A liquidation may not sell more than liqMaxGap below the TWAP (no sandwich at the trigger).
-        if (liquidated) minUsdOut = mk.oracle.usdValue(pos.token, pos.amount) * (BPS - liqMaxGapBps) / BPS;
+        if (liquidated) minUsdOut = _liqMinOut(mk.oracle.usdValue(pos.token, pos.amount), pos.lent);
         uint256 out = _swapIn(mk.adapter, pos.token, address(usd), pos.amount, minUsdOut);
         if (!liquidated && out < pos.lent) revert Underwater(); // past zero: keepers settle it
         Params memory pr = _params[pos.m];
@@ -670,10 +678,7 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         uint256 covered;
         uint256 writtenOff;
 
-        if (liquidated) {
-            // A liquidation may not buy back more than liqMaxGap above the TWAP (no sandwich at the trigger).
-            maxUsdIn = mk.oracle.usdValue(pos.token, pos.lent) * (BPS + liqMaxGapBps) / BPS;
-        }
+        if (liquidated) maxUsdIn = _liqMaxIn(mk.oracle.usdValue(pos.token, pos.lent));
         if (cost <= pos.amount) {
             if (cost > maxUsdIn) revert Underwater();
             uint256 paid = _swapOut(mk.adapter, address(usd), pos.token, pos.lent, pos.amount < maxUsdIn ? pos.amount : maxUsdIn);
@@ -726,23 +731,53 @@ contract BackxPositionManager is Initializable, Ownable2StepUpgradeable, Pausabl
         emit Closed(id, liquidated, toTrader, issuerCoins, covered, writtenOff);
     }
 
+    // ---- liquidation price guards (security review 2026-10-20) ---------------------------------
+    // The issuers' principal is protected from a manipulated pool at the moment of liquidation:
+    //   - the sale may never fill more than liqMaxGap below the TWAP, and
+    //   - while the TWAP says the coins are worth at least principal · (1 + liqMaxGap), the sale must return the
+    //     FULL principal. A sandwich then just makes the liquidation revert; the keeper retries next block.
+    // Only in a real gap (the TWAP itself is near or under the principal) may it settle below, and then the Reserve
+    // Security Fund covers the difference first.
+
+    function _liqMinOut(uint256 twapValue, uint256 principal) internal view returns (uint256 minOut) {
+        minOut = twapValue * (BPS - liqMaxGapBps) / BPS;
+        if (twapValue * BPS >= principal * (BPS + liqMaxGapBps) && minOut < principal) minOut = principal;
+    }
+
+    /// Short: the buy-back of the issuers' exact coins may cost at most liqMaxGap above the TWAP.
+    function _liqMaxIn(uint256 twapCost) internal view returns (uint256) {
+        return twapCost * (BPS + liqMaxGapBps) / BPS;
+    }
+
     // ---- swaps: exact approvals, reset to zero after -------------------------------------------
+
+    // Amounts are measured from this contract's own balances, never taken from the adapter's return value: a buggy
+    // or upgraded adapter, or a token that takes a fee on transfer, cannot make the books show more than arrived.
+    error SwapShort();
 
     function _swapIn(ISwapAdapter a, address tokenIn, address tokenOut, uint256 amountIn, uint256 minOut)
         internal
         returns (uint256 out)
     {
+        uint256 before = IERC20(tokenOut).balanceOf(address(this));
+        uint256 inBefore = IERC20(tokenIn).balanceOf(address(this));
         IERC20(tokenIn).forceApprove(address(a), amountIn);
-        out = a.swapExactIn(tokenIn, tokenOut, amountIn, minOut, address(this));
+        a.swapExactIn(tokenIn, tokenOut, amountIn, minOut, address(this));
         IERC20(tokenIn).forceApprove(address(a), 0);
+        out = IERC20(tokenOut).balanceOf(address(this)) - before;
+        if (out < minOut || inBefore - IERC20(tokenIn).balanceOf(address(this)) > amountIn) revert SwapShort();
     }
 
     function _swapOut(ISwapAdapter a, address tokenIn, address tokenOut, uint256 amountOut, uint256 maxIn)
         internal
         returns (uint256 used)
     {
+        uint256 outBefore = IERC20(tokenOut).balanceOf(address(this));
+        uint256 before = IERC20(tokenIn).balanceOf(address(this));
         IERC20(tokenIn).forceApprove(address(a), maxIn);
-        used = a.swapExactOut(tokenIn, tokenOut, amountOut, maxIn, address(this));
+        a.swapExactOut(tokenIn, tokenOut, amountOut, maxIn, address(this));
         IERC20(tokenIn).forceApprove(address(a), 0);
+        used = before - IERC20(tokenIn).balanceOf(address(this));
+        if (used > maxIn || IERC20(tokenOut).balanceOf(address(this)) - outBefore < amountOut) revert SwapShort();
     }
 }

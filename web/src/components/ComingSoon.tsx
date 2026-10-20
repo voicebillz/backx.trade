@@ -93,8 +93,8 @@ function MultiplierBar() {
 
   const m = Math.round(Math.min(Math.max(value, MIN), MAX));
   const t = (Math.min(Math.max(value, MIN), MAX) - MIN) / (MAX - MIN);
-  // Major-coin example (deep pool, 1 % execution margin), same math as the ticket. 1× borrows nothing: no liquidation.
-  const liq = m > 1 ? quote(100, m, 1, 0.0005, 10_000_000, 0.01).liqMove * 100 : null;
+  // Major-coin example (deep pool, 1.5 % execution margin), same math as the ticket. 1× borrows nothing: no liquidation.
+  const liq = m > 1 ? quote(100, m, 1, 0.0005, 10_000_000, 0.015).liqMove * 100 : null;
 
   return (
     <div className="mbar">
