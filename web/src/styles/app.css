@@ -209,6 +209,16 @@ th { text-align: left; font-weight: 500; color: var(--ink-3); height: 32px; padd
 .soon-account-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #A8A8A8; }
 .soon-account-note { margin: 0; font-size: 12px; color: #8A8A8A; }
 .soon-account-note.err { color: #F2555F; }
+.gazz-buy { margin-top: 12px; display: grid; gap: 8px; }
+.gazz-btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 44px; border-radius: var(--radius); border: 1px solid rgba(255,209,0,.45); color: #F2F2F2; font-weight: 600; font-size: 14px; text-decoration: none; transition: transform 120ms var(--ease-out), border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
+.gazz-btn img { border-radius: 5px; }
+.gazz-btn:hover { border-color: var(--brand); background: rgba(255,209,0,.06); }
+.gazz-btn:active { transform: scale(.97); }
+.gazz-ca { display: block; width: 100%; min-height: 44px; padding: 6px 4px; font-family: var(--mono); font-size: 11px; line-height: 1.5; color: #8A8A8A; text-align: center; word-break: break-all; border-radius: var(--radius); }
+.gazz-ca:hover .gazz-ca-addr { color: #F2F2F2; }
+.gazz-ca-label { color: var(--brand); }
+.gazz-ca-addr { color: #B4B4B4; }
+.gazz-ca-copy { margin-left: 6px; color: #6A6A6A; text-decoration: underline; }
 
 /* "Join the venture!": the vault shakes on a loop; its bar fills halfway, then crashes to zero (4 s cycle).
    Reduced motion: everything still, bar at 50 %. */

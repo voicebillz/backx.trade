@@ -116,7 +116,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.
 - Beta gate (owner 2026-10-20): the coming-soon overlay's button is "Login For Beta". Signed-in non-admins then get a
   second overlay instead ("Join the venture!", shaking vault whose bar fills to 50 % and crashes, button "Participate");
-  nobody but ADMIN_WALLETS passes it. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
+  nobody but ADMIN_WALLETS passes it. Under Login For Beta: "Buy $GAZZ" (Uniswap, Robinhood Chain) + copyable
+  $GAZZ CA 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
 - Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users` and `/admin/participants`, button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:

@@ -120,6 +120,26 @@ function MultiplierBar() {
   );
 }
 
+// $GAZZ on Robinhood Chain (Uniswap v4 pool GAZZ/ETH). Buying happens on Uniswap, never through backx.
+const GAZZ_CA = '0x08a5d78a4bc7754e8aff87b4509e007baeb685f3';
+const GAZZ_BUY = `https://app.uniswap.org/swap?chain=robinhood&inputCurrency=NATIVE&outputCurrency=${GAZZ_CA}`;
+
+function BuyGazz() {
+  const [copied, setCopied] = useState(false);
+  const copy = () => navigator.clipboard?.writeText(GAZZ_CA).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  return (
+    <div className="gazz-buy">
+      <a className="gazz-btn" href={GAZZ_BUY} target="_blank" rel="noopener noreferrer" aria-label="Buy $GAZZ on Uniswap (opens in a new tab)">
+        <img src="/gazz-logo.svg" alt="" width="20" height="20" />Buy $GAZZ
+      </a>
+      <button className="gazz-ca" onClick={copy} aria-label={`Copy $GAZZ contract address ${GAZZ_CA}`}>
+        <span className="gazz-ca-label">$GAZZ CA:</span> <span className="gazz-ca-addr">{GAZZ_CA}</span>
+        <span className="gazz-ca-copy" aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
+      </button>
+    </div>
+  );
+}
+
 /** Full-screen overlay shown to every visitor until launch. The app behind it is inert. */
 export function ComingSoon() {
   const ref = useRef<HTMLDivElement>(null);
@@ -139,6 +159,7 @@ export function ComingSoon() {
         <Steps />
         <MultiplierBar />
         <OverlayAccount />
+        <BuyGazz />
         <p className="soon-legal"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
       </div>
     </div>
