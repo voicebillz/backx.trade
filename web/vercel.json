@@ -14,6 +14,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/whitepaper",
+      "destination": "/index.html"
+    },
+    {
       "source": "/profile",
       "destination": "/index.html"
     },

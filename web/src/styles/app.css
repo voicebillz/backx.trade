@@ -823,3 +823,38 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .grp-dex.is-soon { opacity: 1; }
 .seg button.is-soon { opacity: .5; cursor: not-allowed; }
 .seg button.is-soon .soon-badge { opacity: 1; }
+
+/* Whitepaper (owner 2026-10-22) */
+.wp-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+.wp-toc { position: sticky; top: 72px; }
+.wp-toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: wp; }
+.wp-toc a { display: block; padding: 6px 10px; border-radius: var(--radius); color: var(--ink-2); text-decoration: none; font-size: 13px; }
+.wp-toc a:hover { color: var(--ink); background: var(--raised); }
+.wp-body { max-width: 760px; }
+.wp-body section { padding: 8px 0 24px; border-bottom: 1px solid var(--line); scroll-margin-top: 72px; }
+.wp-body section:last-child { border-bottom: 0; }
+.wp-body h2 { font-size: 22px; letter-spacing: -.02em; margin: 16px 0 8px; }
+.wp-body p, .wp-body li { color: var(--ink-2); line-height: 1.65; font-size: 15px; }
+.wp-body b { color: var(--ink); }
+.wp-body ul { padding-left: 18px; display: grid; gap: 6px; }
+.wp-callout { border-left: 3px solid var(--brand); background: var(--brand-bg); padding: 12px 14px; border-radius: 0 var(--radius) var(--radius) 0; color: var(--ink) !important; }
+.wp-ca { word-break: break-all; color: var(--ink); }
+.wp-timing { display: grid; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin: 12px 0 4px; }
+.wp-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) 90px 80px; gap: 12px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
+.wp-row.wp-head { border-top: 0; background: var(--raised); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.wp-row.ours { background: var(--brand-bg); }
+.wp-row.ours > span:first-child { font-weight: 600; color: var(--ink); }
+.wp-bar-cell { display: flex; align-items: center; gap: 8px; }
+.wp-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.wp-bar i { display: block; height: 100%; background: var(--ink-3); border-radius: 3px; }
+.wp-row.ours .wp-bar i { background: var(--brand); }
+.wp-bar i.early { background: var(--price-up); }
+@media (max-width: 899px) {
+  .wp-grid { grid-template-columns: 1fr; gap: 12px; }
+  .wp-toc { position: static; }
+  .wp-toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+  .wp-toc a { padding: 8px 10px; background: var(--raised); min-height: 36px; }
+  .wp-row { grid-template-columns: 1fr 72px 56px; }
+  .wp-row > span:nth-child(2) { grid-column: 1 / -1; order: 4; }
+  .wp-row.wp-head > span:nth-child(2) { display: none; }
+}

@@ -60,7 +60,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Issue page: "Issue" opens a choice of Hedge Pool (USDC reserve) or Liquidity Pool · DEX (PancakeSwap Infinity /
   Uniswap v4, price range). Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
   Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
-  Partner plan: `docs/backx/PARTNERS.md`.
+  Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (nav after Swap; timing table from sim/flash.py,
+  RSF note: in a 30–60 % flash crash issuers can expect a small loss).
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, OP Mainnet, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).
@@ -82,7 +83,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   price falls a further 2.7 % (Major 20×) / 8.2 % / 14.9 % / 24 % past the liquidation point before the sale.
 - Liquidation price guard (security review 2026-10-20): a liquidation sale fills at most liqMaxGapBps (2 %) from the TWAP,
   and while the TWAP shows the coins cover the principal + 2 %, it must return the FULL principal (sandwiches revert).
-  Swaps are booked from balance deltas, never from the adapter's return value. See `docs/backx/SECURITY-REVIEW.md`. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
+  Swaps are booked from balance deltas, never from the adapter's return value. See `docs/backx/SECURITY-REVIEW.md`.
+  OPEN FLAW (flash-crash sim 2026-10-22, `docs/backx/EXECUTION.md`, `sim/flash.py`): the 60 s TWAP confirm and the
+  2 % TWAP guard lag in a fast crash, so liquidations revert until the crash stops (issuer losses 10–57 % of lent in
+  the sim). Fix before audit: fast pull oracle (Pyth/Chainlink Data Streams/RedStone, ≤ 3 s stale) as trigger and
+  guard reference, keeper posts update+liquidation in one tx; TWAP only for opens/limits. Sim with it: 0 % loss. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
 - Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
   `requestRedeem(shares)`, the shares are parked in the vault and reserved, and every settlement point (`repay`, a new

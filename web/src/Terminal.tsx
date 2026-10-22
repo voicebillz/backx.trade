@@ -14,6 +14,7 @@ import { availableToLend, maxHedgeMFor } from './lib/reserves';
 import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
 import { useRoute, navigate } from './lib/router';
+import { WhitepaperPage } from './pages/WhitepaperPage';
 import { useAuth } from './lib/auth';
 import { useBalances, usdcOf } from './lib/useBalances';
 
@@ -21,7 +22,7 @@ import { useBalances, usdcOf } from './lib/useBalances';
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 const TITLES: Record<string, string> = {
-  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', swap: 'Swap portal · backx.trade',
+  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
   profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
   admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts',
 };
@@ -66,6 +67,7 @@ export default function Terminal() {
       />
       {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'issue' && <IssuePage markets={moving.items} usdc={me ? usdcOf(balances.data) : null} />}
+      {route === 'whitepaper' && <WhitepaperPage />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
       {(route === 'admin' || route === 'adminUsers' || route === 'adminParticipants' || route === 'adminContracts') && (me?.isAdmin
