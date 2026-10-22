@@ -6,7 +6,7 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#070707
 #mark{width:300px;transform-origin:50% 55%}
 #mark svg,#wmark svg{display:block;width:100%;height:auto}
 #coinWrap{position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-190px 0 0 -150px;perspective:1000px}
-#coin{width:300px;height:300px;border-radius:50%;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.08)}
+#coin{width:300px;height:300px;border-radius:50%;overflow:hidden}
 #coin img{width:100%;height:100%;display:block}
 #label{position:absolute;left:0;right:0;top:calc(50% + 145px);text-align:center;font-family:"IBM Plex Mono",monospace;font-size:34px;letter-spacing:.18em;color:#B4B4B4;text-transform:uppercase;perspective:600px}
 #label span{display:inline-block}
@@ -26,9 +26,9 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#070707
 #sub{position:absolute;bottom:130px;left:0;right:0;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:30px;letter-spacing:.32em;color:#8A8A8A}
 #bar{position:absolute;left:0;bottom:0;height:6px;background:#FFD100}
 #grid{position:absolute;left:50%;top:50%;width:1160px;height:420px;margin:-260px 0 0 -580px;display:grid;grid-template-columns:repeat(8,110px);gap:40px;justify-content:center}
-#grid div{width:110px;height:110px;border-radius:50%;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.06)}
+#grid div{width:110px;height:110px;border-radius:50%;overflow:hidden}
 #grid img{width:100%;height:100%;display:block}
-#grid .more{background:#141414;display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:600;color:#FFD100;box-shadow:0 0 0 2px #2A2A2A}
+#grid .more{background:#141414;display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:600;color:#FFD100;border:2px solid #2A2A2A;box-sizing:border-box}
 #gcap{position:absolute;left:0;right:0;top:calc(50% + 200px);text-align:center;font-weight:700;font-size:64px;letter-spacing:-.03em}
 #gcap b{color:#FFD100;font-weight:700}
 </style></head><body>
@@ -108,7 +108,7 @@ window.seek=(t)=>{
   const tx=lerp(0,window.MT.x,out), ty=lerp(0,window.MT.y,out), sc=(.4+.6*cIn)*lerp(1,window.MT.s,out);
   wrap.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`;
   coin.style.transform=`rotateY(${ang}deg)`;
-  coin.style.filter=`brightness(${1-.35*Math.abs(Math.sin(ang*Math.PI/180))})`;
+  coin.style.filter='none';
   // label: swaps with a short vertical turn on each beat
   const lab=$('labelText'); lab.textContent=CH[face][1];
   $('label').style.opacity=(IN(seg(t,S.coin0-.1,S.coin0+.2))*(1-OUT(seg(t,S.grid-.35,S.grid-.1)))).toFixed(3);

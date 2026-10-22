@@ -25,7 +25,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Copy: "multiplication", never "leverage". Never "zero risk". No yield promises.
 - Brand mark: racing yellow `#FFD100` on black.
 - Backgrounds stay clean and flat (owner 2026-10-22): no light circles, radial glows, spotlights or coloured
-  light behind content, in the app, images and videos alike.
+  light behind content, in the app, images and videos alike. No dark drop shadows behind logos or coins either.
 
 ## Login and money (locked)
 - Privy login without wallets: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
