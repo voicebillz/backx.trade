@@ -954,7 +954,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .hv-wtext small { font-size: 11px; color: var(--ink-3); }
 .hv-check { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; background: var(--price-up, #16A34A); color: #fff; opacity: 0; transform: scale(.6); transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); }
 .hv-walletcard.ready .hv-check { opacity: 1; transform: none; }
-.hv-issue { gap: 6px; justify-content: space-between; }
+.hv-issue { gap: 4px; justify-content: space-between; }
 .hv-node { display: grid; justify-items: center; gap: 6px; flex: none; }
 .hv-node small { font-size: 11px; color: var(--ink-3); }
 .hv-coin { width: 34px; height: 34px; display: block; }
@@ -964,18 +964,26 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .hv-traders i:nth-child(2) { height: 70%; animation-delay: .3s; }
 .hv-traders i:nth-child(3) { height: 100%; animation-delay: .6s; }
 @keyframes hv-bar { from { transform: scaleY(.55); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
-.hv-pipe { position: relative; flex: 1; height: 2px; background: var(--line); min-width: 24px; }
-.hv-pipe i { position: absolute; top: -3px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); animation: hv-flow 1.8s linear infinite; opacity: 0; }
-.hv-pipe i:nth-child(2) { animation-delay: .6s; }
-.hv-pipe i:nth-child(3) { animation-delay: 1.2s; }
-@keyframes hv-flow { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 8px); opacity: 0; } }
-.hv-pool { position: relative; width: 96px; height: 72px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; flex: none; }
-.hv-pool b { position: relative; font-size: 12px; font-weight: 600; color: var(--ink); }
-.hv-level { position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: var(--brand-bg); border-top: 2px solid var(--brand); animation: hv-fill 3.6s ease-in-out infinite alternate; }
-@keyframes hv-fill { from { height: 35%; } to { height: 70%; } }
+.hv-pipe { position: relative; flex: 1; height: 18px; min-width: 48px; }
+.hv-pipe::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 2px; border-radius: 1px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px); }
+.hv-pipe.in::before { background: repeating-linear-gradient(90deg, rgba(39,117,202,.45) 0 6px, transparent 6px 10px); }
+.hv-pipe.out::before { background: repeating-linear-gradient(90deg, rgba(247,147,26,.45) 0 6px, transparent 6px 10px); }
+.hv-pipe img { position: absolute; top: 1px; left: 0; width: 16px; height: 16px; opacity: 0; animation: hv-flow 2.4s linear infinite; }
+.hv-pipe img:nth-child(2) { animation-delay: 1.2s; }
+.hv-pipe.out img { animation-delay: .6s; }
+.hv-pipe.out img:nth-child(2) { animation-delay: 1.8s; }
+@keyframes hv-flow { 0% { left: 0; opacity: 0; transform: scale(.7); } 15% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { left: calc(100% - 16px); opacity: 0; transform: scale(.7); } }
+.hv-pool { position: relative; width: 80px; height: 80px; flex: none; display: flex; align-items: center; justify-content: center; }
+.hv-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.hv-ring circle { fill: none; stroke-width: 6; }
+.hv-ring .track { stroke: var(--line); }
+.hv-ring .lent { stroke: var(--brand); stroke-linecap: round; stroke-dasharray: 55 100; animation: hv-fill 3.6s ease-in-out infinite alternate; }
+.hv-pool-t { position: relative; display: grid; text-align: center; line-height: 1.15; }
+.hv-pool-t b { font-size: 12px; font-weight: 600; color: var(--ink); }
+@keyframes hv-fill { from { stroke-dasharray: 40 100; } to { stroke-dasharray: 72 100; } }
 @media (prefers-reduced-motion: reduce) {
-  .hv-arrow i, .hv-traders i, .hv-pipe i, .hv-level { animation: none; }
-  .hv-pipe i:first-child { opacity: 1; left: calc(50% - 4px); }
+  .hv-arrow i, .hv-traders i, .hv-pipe img, .hv-ring .lent { animation: none; }
+  .hv-pipe img:first-child { opacity: 1; left: calc(50% - 8px); }
 }
 
 /* Whitepaper figures: numbers count up, bars grow when scrolled into view (WhitepaperPage.tsx) */

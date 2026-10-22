@@ -32,7 +32,7 @@ export function WalletVisual() {
       <div className="hv-arrow"><i /></div>
       <div className={'hv-walletcard' + (beat === 2 ? ' ready' : beat === 1 ? ' busy' : '')}>
         <span className="hv-wicon">
-          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 7a2 2 0 0 1 2-2h12v3H5v9h14v-3h2v5H5a2 2 0 0 1-2-2V7Zm13 4h6v4h-6a2 2 0 0 1 0-4Z" fill="currentColor" /></svg>
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 7a2 2 0 0 1 2-2h12v3H5v9h14v-3h2v5H5a2 2 0 0 1-2-2V7Zm13 4h6v4h-6a2 2 0 0 1 0-4Z" fill="currentColor" /></svg>
         </span>
         <span className="hv-wtext">
           <b className="num">{beat === 0 ? '—' : beat === 1 ? 'Creating…' : ADDRS[m]}</b>
@@ -44,14 +44,21 @@ export function WalletVisual() {
   );
 }
 
-/** Step 2: USDC flows into the Hedge Pool and out to traders. */
+/** Step 2: USDC coins flow into the Hedge Pool, BTC positions flow out to traders; the ring shows how much is lent. */
 export function IssueVisual() {
+  const coin = (src: string, k: number) => <img key={k} src={src} alt="" width="16" height="16" />;
   return (
     <div className="hv hv-issue" aria-hidden="true">
-      <div className="hv-node"><img className="hv-coin" src={TOKEN_LOGO.USDC} alt="" width="34" height="34" /><small>USDC</small></div>
-      <div className="hv-pipe"><i /><i /><i /></div>
-      <div className="hv-pool"><span className="hv-level" /><b>Hedge Pool</b></div>
-      <div className="hv-pipe"><i /><i /><i /></div>
+      <div className="hv-node"><img className="hv-coin" src={TOKEN_LOGO.USDC} alt="" width="36" height="36" /><small>USDC</small></div>
+      <div className="hv-pipe in">{[0, 1].map((k) => coin(TOKEN_LOGO.USDC, k))}</div>
+      <div className="hv-pool">
+        <svg viewBox="0 0 100 100" className="hv-ring">
+          <circle cx="50" cy="50" r="44" className="track" />
+          <circle cx="50" cy="50" r="44" className="lent" pathLength="100" />
+        </svg>
+        <span className="hv-pool-t"><b>Hedge</b><b>Pool</b></span>
+      </div>
+      <div className="hv-pipe out">{[0, 1].map((k) => coin(TOKEN_LOGO.BTC, k))}</div>
       <div className="hv-node"><span className="hv-traders"><i /><i /><i /></span><small>Traders</small></div>
     </div>
   );
