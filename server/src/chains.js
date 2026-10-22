@@ -24,7 +24,7 @@ export const CHAINS = {
   42161: { key: 'arbitrum', name: 'Arbitrum', safePrefix: 'arb1', rpc: env('RPC_ARBITRUM') || 'https://arb1.arbitrum.io/rpc',
     explorer: 'https://arbiscan.io', stable: { symbol: 'USDC', address: '0xaf88d065e77c8cc2239327c5edb3a432268e5831', decimals: 6 },
     wrappedNative: { symbol: 'WETH', address: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', decimals: 18 } },
-  10: { key: 'optimism', name: 'OP Mainnet', safePrefix: 'oeth', rpc: env('RPC_OPTIMISM') || 'https://mainnet.optimism.io',
+  10: { key: 'optimism', name: 'Optimism', safePrefix: 'oeth', rpc: env('RPC_OPTIMISM') || 'https://mainnet.optimism.io',
     explorer: 'https://optimistic.etherscan.io', stable: { symbol: 'USDC', address: '0x0b2c639c533813f4aa9d7837caf62653d097ff85', decimals: 6 },
     wrappedNative: { symbol: 'WETH', address: '0x4200000000000000000000000000000000000006', decimals: 18 } },
   137: { key: 'polygon', name: 'Polygon', safePrefix: 'matic', rpc: env('RPC_POLYGON') || 'https://polygon-bor-rpc.publicnode.com',
