@@ -24,6 +24,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Motion < 300ms, ease-out, `prefers-reduced-motion` fallback.
 - Copy: "multiplication", never "leverage". Never "zero risk". No yield promises.
 - Brand mark: racing yellow `#FFD100` on black.
+- Backgrounds stay clean and flat (owner 2026-10-22): no light circles, radial glows, spotlights or coloured
+  light behind content, in the app, images and videos alike.
 
 ## Login and money (locked)
 - Privy login without wallets: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
@@ -62,6 +64,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
+  Motto (owner 2026-10-22): "Future Trading for Agents" → "Agents" flips to "Capital" (`components/Motto.tsx`, header + Whitepaper).
+  Intro video: `brand/marketing/backx-intro-1080p60.mp4` (chain logos from Uniswap's interface repo).
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, OP Mainnet, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).

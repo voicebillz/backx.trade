@@ -1,3 +1,5 @@
+import { Motto } from '../components/Motto';
+
 // Whitepaper (owner 2026-10-22). Plain copy, no yield promises, "multiplication" never "leverage".
 // Timing figures come from docs/backx/sim/flash.py (modelled latencies, synthetic crash): keep both in sync.
 
@@ -24,6 +26,7 @@ export function WhitepaperPage() {
         <div>
           <p className="eyebrow gold">Whitepaper <span className="soon-badge">Draft</span></p>
           <h1>BackX: put your capital to work</h1>
+          <Motto className="motto-wp" />
           <p className="page-sub">Hedge &amp; Issue trading on Robinhood Chain and other EVM chains. How it works, how positions are executed and how issuers are protected.</p>
         </div>
       </header>

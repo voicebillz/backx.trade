@@ -3,6 +3,7 @@ import { Dropdown } from './Dropdown';
 import { MarketSearch } from './MarketSearch';
 import { BalanceButton } from './BalanceButton';
 import { Avatar } from './Avatar';
+import { Motto } from './Motto';
 import { useAuth } from '../lib/auth';
 import { go, href, type Route } from '../lib/router';
 import type { Theme, PriceColors } from '../lib/theme';
@@ -45,6 +46,7 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
         <a href={href('swap')} onClick={go('swap')} className={route === 'swap' ? 'active' : ''} aria-current={route === 'swap' ? 'page' : undefined}>Swap</a>
         <a href={href('whitepaper')} onClick={go('whitepaper')} className={route === 'whitepaper' ? 'active' : ''} aria-current={route === 'whitepaper' ? 'page' : undefined}>Whitepaper</a>
       </nav>
+      <Motto className="motto-top" />
       {/* Theme + colours: own group so the phone header can move it next to the nav. */}
       <div className="topbar-prefs">
         <button className="icon-btn" onClick={() => onTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
