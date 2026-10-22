@@ -88,8 +88,10 @@ export function HomePage() {
             <h2 id="speed-title">Built for speed</h2>
           </div>
           <div className="h-speed">
-            <SpeedCompare title="Speed of trade" others={TRADE} othersSub="Swaps, bots, wallets" backx={{ who: 'BackX', s: 0.5 }} backxSub="Up to 40× faster" />
-            <SpeedCompare title="Speed of liquidation" others={LIQ} othersSub="Issuer loss up to 11.1 % in a flash crash" backx={{ who: 'BackX', s: 0.5 }} backxSub="Issuer loss 0 %" />
+            <SpeedCompare title="Speed of trade" others={TRADE} backx={0.5}
+              steps={[{ label: 'Issuing', s: 0.25 }, { label: 'Buy', s: 0.3 }, { label: 'Sell', s: 0.3 }]} />
+            <SpeedCompare title="Speed of liquidation" others={LIQ} backx={0.5}
+              steps={[{ label: 'Position', s: 0.05, from: 0 }, { label: 'Planning', s: 0.1, from: 0.05 }, { label: 'Execution', s: 0.35, from: 0.15 }]} />
           </div>
           <p className="h-note">Modelled latencies from our flash-crash simulation, not measurements of other products. BackX figures are launch targets. <a href="/whitepaper#timing">How we tested</a>.</p>
         </section>
