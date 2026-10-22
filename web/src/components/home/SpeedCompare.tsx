@@ -62,10 +62,8 @@ export function SpeedCompare({ title, others, backx, steps }: { title: string; o
             </li>
           ))}
         </ul>
-        <div className="sc-half">
-          <h3>{title} <span className="sc-tag">BackX</span></h3>
-          <p className="sc-big">{backx} s</p>
-        </div>
+        <h3>{title} <span className="sc-tag">BackX</span></h3>
+        <p className="sc-big">{backx} s</p>
       </div>
       <span className="sc-line" aria-hidden="true" />
       <span className="sc-knob" aria-hidden="true">
