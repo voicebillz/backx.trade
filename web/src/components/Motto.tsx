@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
 
-/** Our motto (owner 2026-10-22): "Future Trading for Agents", then "Agents" flips to "Capital" and stays. */
+const WORDS = ['Agents', 'Capital'] as const;
+const EVERY_MS = 2600;
+
+/** Our motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flipping on a steady loop. */
 export function Motto({ className = '' }: { className?: string }) {
-  const [flipped, setFlipped] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [i, setI] = useState(0);
   useEffect(() => {
-    if (flipped) return;
-    const id = setTimeout(() => setFlipped(true), 1400);
-    return () => clearTimeout(id);
-  }, [flipped]);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setI(1); return; }
+    const id = setInterval(() => setI((n) => (n + 1) % WORDS.length), EVERY_MS);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <p className={'motto ' + className} aria-label="Future Trading for Capital">
+    <p className={'motto ' + className} aria-label="Future Trading for Agents and Capital">
       <span aria-hidden="true">Future Trading for </span>
-      <span className={'motto-flip' + (flipped ? ' is-flipped' : '')} aria-hidden="true">
-        <span className="motto-a">Agents</span>
-        <span className="motto-c">Capital</span>
+      <span className="motto-flip" aria-hidden="true">
+        {WORDS.map((w, k) => (
+          <span key={w} className={k === i ? 'is-on' : k === (i + WORDS.length - 1) % WORDS.length ? 'is-out' : ''}>{w}</span>
+        ))}
       </span>
     </p>
   );

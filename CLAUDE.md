@@ -64,7 +64,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
-  Motto (owner 2026-10-22): "Future Trading for Agents" → "Agents" flips to "Capital" (`components/Motto.tsx`, header + Whitepaper).
+  Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; header box + Whitepaper).
+  Vercel: `cleanUrls` is on, so SPA rewrites must point to `/` (not `/index.html`, which 404s on refresh).
   Intro video: `brand/marketing/backx-intro-1080p60.mp4` (chain logos from Uniswap's interface repo).
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, OP Mainnet, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts

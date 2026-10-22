@@ -7,31 +7,31 @@
   "rewrites": [
     {
       "source": "/issue",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/swap",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/whitepaper",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/profile",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/profile/:path*",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/admin",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/admin/:path*",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
   "ignoreCommand": "bash scripts/vercel-ignore.sh",

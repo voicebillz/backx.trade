@@ -859,15 +859,14 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .wp-row.wp-head > span:nth-child(2) { display: none; }
 }
 
-/* Motto: "Future Trading for Agents" → "Capital" (owner 2026-10-22). Flip 280 ms, reduced motion = static Capital. */
+/* Motto: "Future Trading for Agents ⇄ Capital" (owner 2026-10-22). Flip 280 ms on a 2.6 s loop; reduced motion = static Capital. */
 .motto { margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; color: var(--ink-2); }
-.motto-flip { position: relative; display: inline-block; perspective: 400px; color: var(--brand-text); }
-.motto-flip > span { display: inline-block; transition: transform 280ms var(--ease-out), opacity 140ms linear; transform-origin: 50% 55%; backface-visibility: hidden; }
-.motto-c { position: absolute; left: 0; top: 0; transform: rotateX(-90deg); opacity: 0; }
-.motto-flip.is-flipped .motto-a { transform: rotateX(90deg); opacity: 0; }
-.motto-flip.is-flipped .motto-c { transform: rotateX(0); opacity: 1; transition-delay: 120ms; }
-.motto-flip.is-flipped { min-width: 3.6em; }
-.motto-top { font-size: 12px; margin-left: 4px; font-family: var(--mono); font-weight: 500; letter-spacing: .02em; }
+.motto-flip { position: relative; display: inline-grid; perspective: 400px; color: var(--brand-text); vertical-align: bottom; }
+.motto-flip > span { grid-area: 1 / 1; transform: rotateX(-90deg); opacity: 0; transform-origin: 50% 55%; transition: transform 280ms var(--ease-out), opacity 140ms linear; }
+.motto-flip > span.is-on { transform: rotateX(0); opacity: 1; transition-delay: 120ms; }
+.motto-flip > span.is-out { transform: rotateX(90deg); opacity: 0; }
+/* Header: its own box */
+.motto-top { font-size: 12px; margin-left: 4px; font-family: var(--mono); font-weight: 500; letter-spacing: .02em; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); }
 .motto-wp { font-size: 22px; margin: 6px 0 10px; }
 @media (max-width: 1279px) { .motto-top { display: none; } }
 @media (prefers-reduced-motion: reduce) { .motto-flip > span { transition: none; } }
