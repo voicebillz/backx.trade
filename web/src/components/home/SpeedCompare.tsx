@@ -32,7 +32,7 @@ export function SpeedCompare({ title, others, backx, steps }: { title: string; o
     const io = new IntersectionObserver(([e]) => {
       clearTimeout(t);
       if (e.intersectionRatio >= 0.6) {
-        t = window.setTimeout(() => { if (!touched.current) { setAnim(true); setX(0); } }, 2900);
+        t = window.setTimeout(() => { if (!touched.current) { setAnim(true); setX(0); } }, 2400);
       } else if (!e.isIntersecting) {
         touched.current = false; setAnim(false); setX(REST);   // fully out of view: reset, out of sight
       }
