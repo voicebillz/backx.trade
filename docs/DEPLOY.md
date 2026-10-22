@@ -23,7 +23,7 @@ Prosjektet skal ha tre tjenester: **api** (fra GitHub), **Postgres**, **Redis**.
 
 ```
 NODE_ENV=production
-ALLOWED_ORIGINS=https://backx.trade,https://www.backx.trade
+ALLOWED_ORIGINS=https://backx.trade,https://www.backx.trade,https://app.backx.trade
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
 PRIVY_APP_ID=<app-id fra Privy-dashbordet for backx>
@@ -67,21 +67,22 @@ Settes **senere**, ikke nå (vi sier fra når koden trenger dem):
 
 Sjekk etter deploy: `https://api.backx.trade/health` skal vise `{"ok":true}`. Alle andre adresser fra nettleserens adressefelt skal gi `forbidden`, det er riktig.
 
-## 2. Vercel (backx.trade)
+## 2. Vercel (backx.trade + app.backx.trade)
 
 - Settings → General → **Root Directory:** `web` · Framework: Vite · Node 24 (bare for byggingen)
 - Settings → Git → Production Branch: `main`
-- Domener: `backx.trade` som hoved, `www.backx.trade` → redirect til `backx.trade`
+- Domener: `www.backx.trade` (forside) med `backx.trade` → redirect, **og `app.backx.trade`** (appen). Samme prosjekt og bygg:
+  nettsiden ser på adressen. Legg til `app.backx.trade` under Settings → Domains, og hos DNS-leverandøren en
+  CNAME-post `app` → `cname.vercel-dns.com` (Vercel viser nøyaktig verdi).
 - **Environment Variables** (Production):
 
 ```
-VITE_COMING_SOON=true
 VITE_API_URL=https://api.backx.trade
 VITE_PRIVY_APP_ID=<samme app-id som PRIVY_APP_ID på Railway>
 ```
 
 - Alt som starter med `VITE_` havner synlig i nettleseren. **Aldri** hemmeligheter, app-secret eller RPC-URL med nøkkel her.
-- Fjerne «Coming soon» ved lansering: sett `VITE_COMING_SOON=false` og redeploy.
+- Appen åpnes for alle ved lansering i koden (AppGate i `web/src/App.tsx`); i dag slipper bare `ADMIN_WALLETS` inn.
 
 ## 3. Privy (egen app for backx)
 
@@ -92,7 +93,7 @@ VITE_PRIVY_APP_ID=<samme app-id som PRIVY_APP_ID på Railway>
   og lim inn bot-navn og bot-token i Privy. Bot-tokenet er hemmelig: bare i Privy.
 - **SMS:** koster per melding hos Privy, og er utsatt for SMS-svindel. Slå på Captcha (Cloudflare Turnstile) samtidig.
 - **Passkeys:** «Enable passkeys for sign up» av = passkey kan bare legges til etter første innlogging (anbefalt).
-- **Allowed origins:** kun `https://backx.trade` og `https://www.backx.trade`. Ikke `api.backx.trade` (serveren kaller ikke Privy fra en nettleser),
+- **Allowed origins:** kun `https://backx.trade`, `https://www.backx.trade` og `https://app.backx.trade`. Ikke `api.backx.trade` (serveren kaller ikke Privy fra en nettleser),
   ikke Vercel-preview-adresser og ikke `localhost` i produksjonsappen. Trenger vi lokal testing, lager vi en egen Privy-testapp.
 - App-id er offentlig. App-secret er hemmelig og går kun i Railway.
 - «Secure your app»: begge punktene er gjort i koden. CSP og X-Frame-Options sendes fra `web/vercel.json`

@@ -5,8 +5,10 @@ Hedge & Issuer trading on Robinhood Chain. Spec and rules live in `docs/backx/`:
 The owner is not a developer: explain briefly, in Norwegian.
 
 ## Layout
-- `web/` React 18 + Vite + TypeScript trading terminal (Vercel). Landing page IS the terminal.
-  A "Coming soon" overlay covers it for everyone while `VITE_COMING_SOON` is not `"false"`.
+- `web/` React 18 + Vite + TypeScript (Vercel), one build, two hosts (owner 2026-10-22, `src/lib/host.ts`):
+  `backx.trade` = public front page (`pages/HomePage.tsx`: circuit hero, motto, Participate, speed, chain carousel,
+  steps, $GAZZ) + `/whitepaper`; `app.backx.trade` = the trading/issuing app, ADMIN_WALLETS only for now (`AppGate`
+  for everyone else). The old coming-soon / venture overlays are gone. Locally `?app` previews the app.
 - `brand/` logo, X profile picture and banner (4K sources + SVG).
 - `server/` API on Railway at `api.backx.trade` (Express, Postgres, Redis). Setup: `docs/DEPLOY.md`.
   Built from `server/Dockerfile` with an exact Node.js tag (24.22.1, Oct 2026 security release), non-root; bump the tag on
@@ -114,8 +116,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Postgres and Redis never get public networking. Keepers/workers run as separate Railway services without a public domain.
 - Secrets live only in Railway variables. Never in `VITE_*`, never in git. Server refuses to boot without required env (no fallback values).
 - Login: Privy access token (Authorization header) → verified with `jose` → embedded wallet read from Privy's API
-  with the app secret, never from the client → session cookie. `ADMIN_WALLETS` (Railway) lifts the coming-soon
-  overlay for those addresses. Behind the overlay only a static blurred image is shown; the terminal is a
+  with the app secret, never from the client → session cookie. `ADMIN_WALLETS` (Railway) opens app.backx.trade
+  for those addresses; everyone else gets the AppGate. The terminal is a
   separate chunk loaded only after `/api/auth/me` says admin. Its file is still public, so never ship secrets in
   the web bundle: real protection is the server requiring a session on every `/api` route.
 - Read-only data routes: `/api/wallet/balances` (user's own EVM + Solana wallets via RPC, CoinGecko prices) and
@@ -138,10 +140,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   shortMaxM = 0. The contracts keep the Short code (tested) but every market is configured with maxShortM = 0 and no
   token vault until the owner turns it back on. Design kept in `docs/backx/SHORT-SPEC.md` for later.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.
-- Beta gate (owner 2026-10-20): the coming-soon overlay's button is "Login For Beta". Signed-in non-admins then get a
-  second overlay instead ("Join the venture!", shaking vault whose bar fills to 50 % and crashes, button "Participate");
-  nobody but ADMIN_WALLETS passes it. Under Login For Beta: "Buy $GAZZ" (Uniswap, Robinhood Chain) + copyable
-  $GAZZ CA 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
+- Participation (owner 2026-10-20, moved to the front page 2026-10-22): "Participate" on backx.trade logs in (Privy)
+  and records one participation per account; admins see "Open app". Front page also has "Buy $GAZZ" (Uniswap,
+  Robinhood Chain) + copyable $GAZZ CA 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Speed figures on it are the modelled
+  flash-crash sim results, labelled as such. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
+  app.backx.trade sends X-Robots-Tag noindex. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
 - Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts` and `/admin/participants`, button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:

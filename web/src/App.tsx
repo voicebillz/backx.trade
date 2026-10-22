@@ -1,25 +1,23 @@
 import { lazy, Suspense } from 'react';
-import { ComingSoon } from './components/ComingSoon';
-import { Venture } from './components/Venture';
 import { useAuth } from './lib/auth';
+import { IS_APP } from './lib/host';
+import { HomePage } from './pages/HomePage';
+import { AppGate } from './components/AppGate';
 
-const COMING_SOON = import.meta.env.VITE_COMING_SOON !== 'false';
-// Separate chunk: while the overlay is up the terminal is never downloaded or
-// rendered, so removing the overlay in devtools reveals only a static backdrop.
+// backx.trade: public front page (+ /whitepaper). app.backx.trade: the app, admins only for now (owner 2026-10-22).
+// The terminal is its own chunk, fetched only once /api/auth/me says admin; the server guards every /api call anyway.
 const Terminal = lazy(() => import('./Terminal'));
+const Whitepaper = lazy(() => import('./pages/WhitepaperSite'));
 
 export function App() {
-  const { me } = useAuth();
-  // Admin wallets (ADMIN_WALLETS on the server, checked server-side via the session cookie).
-  if (COMING_SOON && !me?.isAdmin) {
-    return (
-      <>
-        <div className="soon-backdrop" aria-hidden="true" />
-        {/* Signed in: the coming-soon overlay closes and "Join the venture!" takes its place (no way past it yet). */}
-        {me ? <Venture /> : <ComingSoon />}
-      </>
-    );
+  const { me, status } = useAuth();
+  if (!IS_APP) {
+    return location.pathname.replace(/\/+$/, '') === '/whitepaper'
+      ? <Suspense fallback={<div className="app-loading" aria-busy="true" />}><Whitepaper /></Suspense>
+      : <HomePage />;
   }
+  if (status === 'checking') return <div className="app-loading" aria-busy="true" />;
+  if (!me?.isAdmin) return <AppGate />;
   return (
     <Suspense fallback={<div className="app-loading" aria-busy="true" />}>
       <Terminal />

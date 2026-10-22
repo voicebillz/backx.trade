@@ -1,46 +1,13 @@
+// Pieces shown on the public front page (they lived in the old coming-soon overlay).
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
-import { Mark } from './Logo';
 import { quote } from '../lib/hedge';
-import { OverlayAccount } from './Account';
 
-const STEPS = [
-  { n: '01', title: 'Hedge' },
-  { n: '02', title: 'Issue' },
-  { n: '03', title: 'Your wallet' },
-];
-const STEP_MS = 2600;
 const MIN = 1, MAX = 20; // Major coins cap at 20× (server HEDGE_CAP, sim5)
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** The three steps light up one after another, in a loop. */
-function Steps() {
-  const [active, setActive] = useState(0);
-  const [still] = useState(reduced);
-  useEffect(() => {
-    if (still) return;
-    const id = setInterval(() => setActive((a) => (a + 1) % STEPS.length), STEP_MS);
-    return () => clearInterval(id);
-  }, [still]);
-  return (
-    <ol className="soon-steps">
-      {STEPS.map((s, i) => {
-        const state = still ? 'done' : i === active ? 'active' : i < active ? 'done' : '';
-        return (
-          <li key={s.n} className={state}>
-            <span className="step-n">{s.n}</span>
-            <span className="step-text"><b>{s.title}</b></span>
-            {/* key restarts the fill each time the step becomes active */}
-            <span className="step-bar" aria-hidden="true"><i key={state === 'active' ? active : 'x'} /></span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
 /** Multiplier bar: glides to random values on its own; drag or use arrow keys to take over. */
-function MultiplierBar() {
+export function MultiplierBar() {
   const [value, setValue] = useState(5);          // shown, smooth
   const target = useRef(5);
   const pos = useRef(5);
@@ -124,7 +91,7 @@ function MultiplierBar() {
 const GAZZ_CA = '0x08a5d78a4bc7754e8aff87b4509e007baeb685f3';
 const GAZZ_BUY = `https://app.uniswap.org/swap?chain=robinhood&inputCurrency=NATIVE&outputCurrency=${GAZZ_CA}`;
 
-function BuyGazz() {
+export function BuyGazz() {
   const [copied, setCopied] = useState(false);
   const copy = () => navigator.clipboard?.writeText(GAZZ_CA).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
   return (
@@ -136,32 +103,6 @@ function BuyGazz() {
         {/* Tap the address to copy it; the label confirms. */}
         <span className="gazz-ca-label" aria-live="polite">{copied ? 'Copied ✓' : '$GAZZ CA:'}</span> <span className="gazz-ca-addr">{GAZZ_CA}</span>
       </button>
-    </div>
-  );
-}
-
-/** Full-screen overlay shown to every visitor until launch. The app behind it is inert. */
-export function ComingSoon() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { ref.current?.focus(); }, []);
-  return (
-    <div className="soon" role="dialog" aria-modal="true" aria-labelledby="soon-title" tabIndex={-1} ref={ref}>
-      <div className="soon-card">
-        <div className="soon-mark">
-          <Mark size={64} />
-          <span className="soon-x" aria-hidden="true">×</span>
-          <a className="soon-partner" href="https://gazz.fun" target="_blank" rel="noopener" aria-label="gazz.fun (opens in a new tab)">
-            <img src="/gazz-logo.svg" alt="" width="48" height="48" />
-          </a>
-        </div>
-        <p className="soon-word">backx<span>.trade</span></p>
-        <h1 id="soon-title">Coming soon</h1>
-        <Steps />
-        <MultiplierBar />
-        <OverlayAccount />
-        <BuyGazz />
-        <p className="soon-legal"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></p>
-      </div>
     </div>
   );
 }

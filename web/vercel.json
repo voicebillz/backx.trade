@@ -96,6 +96,155 @@
           "value": "text/plain; charset=utf-8"
         }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.backx.trade"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/issue",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/issue",
+      "permanent": false
+    },
+    {
+      "source": "/issue",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/issue",
+      "permanent": false
+    },
+    {
+      "source": "/swap",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/swap",
+      "permanent": false
+    },
+    {
+      "source": "/swap",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/swap",
+      "permanent": false
+    },
+    {
+      "source": "/profile",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/profile",
+      "permanent": false
+    },
+    {
+      "source": "/profile",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/profile",
+      "permanent": false
+    },
+    {
+      "source": "/profile/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/profile/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/profile/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/profile/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/admin",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/admin",
+      "permanent": false
+    },
+    {
+      "source": "/admin",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/admin",
+      "permanent": false
+    },
+    {
+      "source": "/admin/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/admin/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/admin/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/admin/:path*",
+      "permanent": false
     }
   ]
 }
