@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 // Front-page speed cards (owner 2026-10-22), styled like an image before/after slider: Others on the left, BackX
 // on the right, a dashed divider with a round knob. The divider rests in the middle and only moves left, so the
 // BackX side is never covered. Dragging left uncovers the BackX timing bars, which fill in green as they appear.
-// When the card comes into view the divider sweeps left once by itself.
+// Each time the card comes into view the divider sweeps left by itself after a pause.
 // Pointer drag follows the finger or mouse exactly (pointer capture, touch-action pan-y keeps vertical page
 // scroll); the knob is a keyboard slider (arrows, Home/End). Reduced motion: no sweep, bars shown full.
 
@@ -26,12 +26,17 @@ export function SpeedCompare({ title, others, backx, steps }: { title: string; o
 
   useEffect(() => {
     if (still) return;
+    // Every time the card comes into view: rest in the middle, then fold over after a pause. Leaving the view
+    // resets it (also after a drag), so scrolling past and back plays it again without a refresh.
     let t = 0;
     const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return;
-      io.disconnect();
-      t = window.setTimeout(() => { if (!touched.current) { setAnim(true); setX(0); } }, 2900);   // owner: a further 2 s before it folds over
-    }, { threshold: 0.6 });
+      clearTimeout(t);
+      if (e.intersectionRatio >= 0.6) {
+        t = window.setTimeout(() => { if (!touched.current) { setAnim(true); setX(0); } }, 2900);
+      } else if (!e.isIntersecting) {
+        touched.current = false; setAnim(false); setX(REST);   // fully out of view: reset, out of sight
+      }
+    }, { threshold: [0, 0.6] });
     if (ref.current) io.observe(ref.current);
     return () => { io.disconnect(); clearTimeout(t); };
   }, [still]);
