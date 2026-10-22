@@ -42,12 +42,17 @@ const S={markIn:.1, markLand:.5, toCoin:1.75, coin0:2.0, wordHit:6.0, wordOut:9.
 window.DUR=S.end;
 // Audio cues live next to the motion they belong to; each hit lands 1 frame after the picture.
 const CUES=[]; const cue=(t,f,g)=>CUES.push({t:+(t+FRAME).toFixed(4),f,g});
-cue(S.markIn,'whoosh-soft',.5); cue(S.markLand,'pop-soft',.6);
-cue(S.toCoin,'whoosh-soft',.35);
-CH.forEach((_,k)=>{ const tb=S.coin0+k*BEAT; cue(tb, k%2?'click-ui-2':'click-ui', .75+(k%3)*.05); if(k>0) cue(tb,'pop-soft',.22+(k%2)*.06); });
-cue(S.wordHit-1.5,'riser-short',.6); cue(S.wordHit,'impact-soft',.85); cue(S.wordHit+.05,'whoosh-soft',.3);
-cue(S.wordOut-.05,'whoosh-fast',.4); cue(S.mottoIn+.05,'click-ui',.6);
-cue(S.flip,'click-ui-2',.85); cue(S.flip+.02,'pop-soft',.5); cue(S.flip+.1,'success-chime',.55);
+// Soft motion sounds only, modelled on the reference: airy swishes on reveals, bright little ticks on UI steps, a
+// long wind whoosh on travel, a soft pop on landings. No impacts, risers or chimes.
+cue(S.markIn-.05,'whoosh-long',.55); cue(S.markLand,'pop-soft',.55);
+cue(S.toCoin,'swish-a',.7);
+CH.forEach((_,k)=>{ const tb=S.coin0+k*BEAT; cue(tb, k%2?'click-tick-b':'click-tick-a', .45+(k%3)*.05); if(k>0) cue(tb-.1,'swish-b',.35+(k%2)*.08); });
+cue(S.wordHit-.32,'whoosh-long',.6); cue(S.wordHit,'pop-soft',.6);
+[0,3,6,9].forEach((i)=>cue(S.wordHit+.06+i*.03+.05,'click-tick-b',.3));
+cue(S.wordOut-.03,'swish-a',.75);
+[0,1,2,3].forEach((i)=>cue(S.mottoIn+i*.09+.05,'click-tick-a',.35+i*.03));
+cue(S.flip-.12,'swish-b',.6); cue(S.flip,'pop-soft',.55);
+cue(S.flip+.55,'click-tick-a',.3);
 window.CUES=CUES;
 
 const $=(id)=>document.getElementById(id);
