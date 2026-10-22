@@ -90,6 +90,20 @@ export async function migrate() {
     );
     create index if not exists venture_joined on venture_participants(joined_at desc);
 
+    -- Core contracts per chain (admin portal "Contracts", owner 2026-10-22). Bookkeeping only: the chain is the
+    -- source of truth. 'proposed' = Safe file prepared, 'deployed' = code seen at the address.
+    create table if not exists core_contracts (
+      chain_id    integer not null,
+      name        text not null,
+      address     text not null,
+      status      text not null default 'proposed',
+      config      jsonb,
+      created_by  text not null,
+      created_at  timestamptz not null default now(),
+      deployed_at timestamptz,
+      primary key (chain_id, name)
+    );
+
     -- Accounts created before sign-up methods were recorded: best known value is the latest login.
     update users set signup_method = last_login_method where signup_method is null and last_login_method is not null;
   `);

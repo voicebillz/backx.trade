@@ -2,7 +2,8 @@ import express from 'express';
 import { db } from './db.js';
 import { config } from './config.js';
 import { listingReport, RULES, TIERS } from './listing.js';
-import { CHAINS, SAFE, factoryOf, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
+import { CHAINS, SAFE, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
+import { IMPLS, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch } from './deployments.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
 // portal's existence is not revealed. Own rate limit, strict validation, every write logged in admin_audit.
@@ -243,14 +244,14 @@ adminRouter.get('/audit', async (_req, res, next) => {
 
 // ---- chains, token search, on-chain check ------------------------------------------------------
 
-adminRouter.get('/chains', (_req, res) => {
-  res.json({
-    safe: SAFE,
-    items: Object.entries(CHAINS).map(([id, c]) => ({
+adminRouter.get('/chains', async (_req, res, next) => {
+  try {
+    const items = await Promise.all(Object.entries(CHAINS).map(async ([id, c]) => ({
       id: Number(id), key: c.key, name: c.name, explorer: c.explorer, stable: c.stable, wrappedNative: c.wrappedNative,
-      factory: factoryOf(id),
-    })),
-  });
+      factory: await factoryAddress(Number(id)),
+    })));
+    res.json({ safe: SAFE, items });
+  } catch (e) { next(e); }
 });
 
 /** Token search on a chain (LI.FI's list, cached 6 h): BTC → cbBTC/WBTC, SOL → Wormhole SOL, ADA → Binance-Peg … */
@@ -312,9 +313,9 @@ adminRouter.post('/assets/:id/deploy', async (req, res, next) => {
     const a = rows[0];
     if (!a) return res.status(404).json({ error: 'not_found' });
     const chain = CHAINS[a.chain_id];
-    const factory = factoryOf(a.chain_id);
+    const factory = await factoryAddress(a.chain_id);
     const missing = [];
-    if (!factory) missing.push(`the factory on ${chain.name} (one-time Deploy.s.sol, then FACTORY_${a.chain_id} on Railway)`);
+    if (!factory) missing.push(`the Market Factory on ${chain.name} (Admin → Contracts)`);
     if (!chain.stable) missing.push(`the reserve stablecoin on ${chain.name} (RESERVE_STABLE_${a.chain_id})`);
     if (!a.adapter_address) missing.push('the swap adapter address');
     if (!a.oracle_address) missing.push('the TWAP oracle address');
@@ -361,7 +362,7 @@ adminRouter.post('/assets/:id/check', async (req, res, next) => {
     const { rows } = await db.query('select * from listed_assets where id = $1', [id]);
     const a = rows[0];
     if (!a) return res.status(404).json({ error: 'not_found' });
-    const factory = factoryOf(a.chain_id);
+    const factory = await factoryAddress(a.chain_id);
     if (!factory) return res.status(409).json({ error: 'no_factory' });
     let out;
     try { out = await ethCall(a.chain_id, factory, SET_OF + padAddr(a.token_address)); } catch { return res.status(502).json({ error: 'rpc' }); }
@@ -374,6 +375,73 @@ adminRouter.post('/assets/:id/check', async (req, res, next) => {
       [id, JSON.stringify(deployed), req.user.address]);
     await audit(req, 'asset.deployed', `${a.symbol} ${a.token_address}`, deployed);
     res.json(assetOut(upd.rows[0]));
+  } catch (e) { next(e); }
+});
+
+// ---- core contracts per chain ("Contracts", owner 2026-10-22) ------------------------------------------
+// Read-only chain checks, cached 60 s per chain. Deploying = a Safe Transaction Builder file; the server signs nothing.
+
+async function contractsOf(redis, chainId, fresh) {
+  const key = `contracts:v1:${chainId}`;
+  if (!fresh) { const c = await redis.get(key); if (c) return JSON.parse(c); }
+  const s = await chainStatus(chainId);
+  await redis.set(key, JSON.stringify(s), 'EX', 60);
+  return s;
+}
+
+adminRouter.get('/contracts', async (req, res, next) => {
+  try {
+    const redis = req.app.locals.redis;
+    const chains = await Promise.all(Object.keys(CHAINS).map((id) => contractsOf(redis, Number(id), false).catch(() => ({ chainId: Number(id), name: CHAINS[id].name, error: 'rpc' }))));
+    res.json({ safe: SAFE, deployer: CREATE2_DEPLOYER, maxRuntime: MAX_RUNTIME, sourceCommit: ARTIFACTS_COMMIT, chains });
+  } catch (e) { next(e); }
+});
+
+adminRouter.post('/contracts/check', async (req, res, next) => {
+  const chainId = req.body?.chainId;
+  if (!CHAIN_IDS.has(chainId)) return res.status(400).json({ error: 'invalid' });
+  try { res.json(await contractsOf(req.app.locals.redis, chainId, true)); } catch { res.status(502).json({ error: 'rpc' }); }
+});
+
+adminRouter.post('/contracts/deploy', async (req, res, next) => {
+  const b = req.body ?? {};
+  const chainId = b.chainId;
+  if (!CHAIN_IDS.has(chainId)) return res.status(400).json({ error: 'invalid' });
+  const chain = CHAINS[chainId];
+  try {
+    const st = await contractsOf(req.app.locals.redis, chainId, true);
+    const item = st.items.find((i) => i.key === b.key);
+    if (!item) return res.status(400).json({ error: 'invalid' });
+    if (item.status === 'deployed') return res.status(409).json({ error: 'already_deployed' });
+    if (item.blocked.length) return res.status(409).json({ error: 'not_ready', missing: item.blocked });
+
+    let initcode, config = null;
+    if (item.key === 'factory') {
+      const errors = {};
+      for (const k of ['feeCollector', 'keeper', 'keeperWallet']) {
+        if (typeof b[k] !== 'string' || !ADDR.test(b[k]) || /^0x0{40}$/.test(b[k])) errors[k] = 'A 0x address (42 characters)';
+      }
+      if (Object.keys(errors).length) return res.status(400).json({ error: 'invalid', fields: errors });
+      config = { feeCollector: b.feeCollector.toLowerCase(), keeper: b.keeper.toLowerCase(), keeperWallet: b.keeperWallet.toLowerCase(), usd: chain.stable.address };
+      initcode = factoryInitcode(chain.stable.address, config);
+    } else {
+      initcode = IMPLS.find((c) => c.key === item.key).initcode;
+    }
+    const address = create2Address(initcode);
+    await db.query(
+      `insert into core_contracts (chain_id, name, address, status, config, created_by) values ($1, $2, $3, 'proposed', $4, $5)
+       on conflict (chain_id, name) do update set address = excluded.address, status = 'proposed', config = excluded.config, created_by = excluded.created_by, created_at = now()
+       where core_contracts.status <> 'deployed'`,
+      [chainId, item.key, address, config ? JSON.stringify(config) : null, req.user.address]);
+    await req.app.locals.redis.del(`contracts:v1:${chainId}`);
+    await audit(req, 'contract.deploy_prepared', `${item.key} ${chain.name}`, { chainId, address, config });
+    res.json({
+      address,
+      batch: safeBatch(chainId, item.label, initcode),
+      safeUrl: chain.safePrefix
+        ? `https://app.safe.global/apps/open?safe=${chain.safePrefix}:${SAFE}&appUrl=${encodeURIComponent('https://apps-portal.safe.global/tx-builder')}`
+        : 'https://app.safe.global/',
+    });
   } catch (e) { next(e); }
 });
 

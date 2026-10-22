@@ -1,11 +1,11 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 
 // Tiny path router: a handful of pages does not need a library.
-export type Route = 'trade' | 'issue' | 'swap' | 'profile' | 'security' | 'wallet' | 'documents' | 'admin' | 'adminUsers' | 'adminParticipants';
+export type Route = 'trade' | 'issue' | 'swap' | 'profile' | 'security' | 'wallet' | 'documents' | 'admin' | 'adminUsers' | 'adminParticipants' | 'adminContracts';
 
 const PATHS: Record<Route, string> = {
   trade: '/', issue: '/issue', swap: '/swap', profile: '/profile', security: '/profile/security', wallet: '/profile/wallet',
-  documents: '/profile/documents', admin: '/admin', adminUsers: '/admin/users', adminParticipants: '/admin/participants',
+  documents: '/profile/documents', admin: '/admin', adminUsers: '/admin/users', adminParticipants: '/admin/participants', adminContracts: '/admin/contracts',
 };
 
 function parse(path: string): Route {

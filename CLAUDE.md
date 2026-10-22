@@ -49,6 +49,17 @@ The owner is not a developer: explain briefly, in Norwegian.
   positions per tx (`liquidateBatch`, `executeLimitBatch`). The admin portal never deploys with a server key: it builds
   the createMarket transaction as a Safe Transaction Builder file, the Safe signs, the portal reads the factory to
   record the new addresses.
+- Admin "Contracts" (`/admin/contracts`, owner 2026-10-22): per chain the four core contracts (vault, fund, manager,
+  factory implementations) + the Market Factory proxy. Deploy = Safe Transaction Builder file calling the CREATE2
+  deployer 0x4e59…956c (salt `backx.v1`), so addresses are known in advance and identical on every chain; the portal
+  reads the chain to mark them deployed (`core_contracts` table, bookkeeping only) and hides the button. Init code lives
+  in `server/src/artifacts.json`: after ANY contract change run `forge build && python3 script/export-artifacts.py`.
+  BLOCKER: BackxPositionManager is 29.5 KB (> 24 KB EIP-170), so it and the factory cannot deploy until it is split or
+  slimmed (removing the Short code is an open owner decision). The DEX pool hook is not written yet (shown as Planned).
+  Safe exists on Robinhood, BNB, Base, Ethereum; not yet on Arbitrum, OP, Polygon, Avalanche.
+- Issue page: "Issue" opens a choice of Hedge Pool (USDC reserve) or Liquidity Pool · DEX (PancakeSwap Infinity /
+  Uniswap v4, price range). Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
+  Partner plan: `docs/backx/PARTNERS.md`.
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, OP Mainnet, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).
@@ -121,7 +132,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   nobody but ADMIN_WALLETS passes it. Under Login For Beta: "Buy $GAZZ" (Uniswap, Robinhood Chain) + copyable
   $GAZZ CA 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
-- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users` and `/admin/participants`, button on the profile page for admins.
+- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts` and `/admin/participants`, button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:
   session + ADMIN_WALLETS or 404, own Redis rate limit (GET 120/min, writes 30/min), POST must be JSON, strict
   validation (Robinhood Chain 4663, addresses, fee tiers, max 20×, margin ≤ 5 %, logo only from CSP image hosts),

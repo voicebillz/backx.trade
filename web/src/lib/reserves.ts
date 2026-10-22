@@ -11,8 +11,11 @@ export function demoReserves(m: Market) {
   const usdRes = Math.round(base * (0.4 + r()));
   const usdUtil = 0.3 + r() * 0.6;
   const aprBase = m.maxM >= 25 ? 6 : m.maxM >= 10 ? 11 : 16;
+  // DEX liquidity pool (Uniswap v4 / PancakeSwap Infinity hook): demo TVL and fee estimate, before range.
+  const dexTvl = Math.round(base * (0.3 + r() * 1.2));
   return {
     usd: { reserve: usdRes, util: usdUtil, apr: aprBase * (0.6 + usdUtil) + r() * 3 },
+    dex: { tvl: dexTvl, apr: 4 + r() * 10 },
   };
 }
 

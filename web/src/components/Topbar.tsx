@@ -41,7 +41,7 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
       <MarketSearch onSelect={onSelectMarket} />
       <nav className="nav" aria-label="Main">
         <a href={href('trade')} onClick={go('trade')} className={route === 'trade' ? 'active' : ''} aria-current={route === 'trade' ? 'page' : undefined}>Trade</a>
-        <a href={href('issue')} onClick={go('issue')} className={route === 'issue' ? 'active' : ''} aria-current={route === 'issue' ? 'page' : undefined}>Issue Reserve</a>
+        <a href={href('issue')} onClick={go('issue')} className={route === 'issue' ? 'active' : ''} aria-current={route === 'issue' ? 'page' : undefined}>Issue</a>
         <a href={href('swap')} onClick={go('swap')} className={route === 'swap' ? 'active' : ''} aria-current={route === 'swap' ? 'page' : undefined}>Swap</a>
       </nav>
       {/* Theme + colours: own group so the phone header can move it next to the nav. */}

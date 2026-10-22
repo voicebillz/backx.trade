@@ -91,7 +91,7 @@ export default function AdminPage({ route }: { route: Route }) {
       <header className="page-head">
         <div>
           <p className="eyebrow gold">Admin portal</p>
-          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : 'Listed assets'}</h1>
+          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : 'Listed assets'}</h1>
           <p className="page-sub">Only wallets in ADMIN_WALLETS can open this. Every change is logged.</p>
         </div>
       </header>
@@ -99,10 +99,11 @@ export default function AdminPage({ route }: { route: Route }) {
         <nav className="profile-tabs" aria-label="Admin sections">
           <a href={href('admin')} onClick={go('admin')} className={route === 'admin' ? 'active' : ''} aria-current={route === 'admin' ? 'page' : undefined}>Listed assets</a>
           <a href={href('adminUsers')} onClick={go('adminUsers')} className={route === 'adminUsers' ? 'active' : ''} aria-current={route === 'adminUsers' ? 'page' : undefined}>Users</a>
+          <a href={href('adminContracts')} onClick={go('adminContracts')} className={route === 'adminContracts' ? 'active' : ''} aria-current={route === 'adminContracts' ? 'page' : undefined}>Contracts</a>
           <a href={href('adminParticipants')} onClick={go('adminParticipants')} className={route === 'adminParticipants' ? 'active' : ''} aria-current={route === 'adminParticipants' ? 'page' : undefined}>Participants</a>
           <a href={href('profile')} onClick={go('profile')}>← Back to profile</a>
         </nav>
-        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : <Assets />}</div>
+        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : route === 'adminContracts' ? <Contracts /> : <Assets />}</div>
       </div>
     </main>
   );
@@ -726,5 +727,210 @@ function Participants() {
         </div>
       </section>
     </>
+  );
+}
+
+// ---- Contracts (core contracts per chain, owner 2026-10-22) -------------------------------------
+
+interface CItem {
+  key: string; label: string; role: string; kind: 'implementation' | 'proxy'; address: string | null; runtimeSize: number | null;
+  status: 'ready' | 'proposed' | 'deployed'; blocked: string[]; markets?: number | null; config?: Record<string, string> | null;
+}
+interface CChain {
+  chainId: number; name: string; explorer?: string; stable?: Chain['stable']; safe?: boolean | null; deployer?: boolean | null;
+  items?: CItem[]; planned?: { key: string; label: string; role: string; note: string }[]; error?: string;
+}
+interface ContractsResp { safe: string; deployer: string; maxRuntime: number; sourceCommit: string | null; chains: CChain[] }
+
+const C_STATUS: Record<CItem['status'], string> = { ready: 'Not deployed', proposed: 'Waiting for Safe', deployed: 'Deployed' };
+const kb = (b: number) => `${(b / 1024).toFixed(1)} KB`;
+// Launch focus first (owner 2026-10-21: BNB Chain main focus, Robinhood Chain home).
+const CHAIN_ORDER = [4663, 56, 8453, 1, 42161, 10, 137, 43114];
+
+function chainState(c: CChain) {
+  if (!c.items) return { label: 'Chain not reachable', cls: 'draft' };
+  const done = c.items.filter((i) => i.status === 'deployed').length;
+  if (done === c.items.length) return { label: 'Live', cls: 'deployed' };
+  return { label: `${done}/${c.items.length} deployed`, cls: done ? 'proposed' : 'draft' };
+}
+
+function Contracts() {
+  const [data, setData] = useState<ContractsResp | null>(null);
+  const [err, setErr] = useState(false);
+  const [sel, setSel] = useState<number>(4663);
+  const [deploying, setDeploying] = useState<CItem | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const load = useCallback(() => {
+    api<ContractsResp>('/api/admin/contracts').then((r) => { setData(r); setErr(false); }).catch(() => setErr(true));
+  }, []);
+  useEffect(load, [load]);
+
+  const chain = data?.chains.find((c) => c.chainId === sel);
+  const recheck = async () => {
+    setChecking(true);
+    try {
+      const c = await api<CChain>('/api/admin/contracts/check', json({ chainId: sel }));
+      setData((d) => d && { ...d, chains: d.chains.map((x) => (x.chainId === sel ? c : x)) });
+    } catch { /* keep the last state */ }
+    setChecking(false);
+  };
+
+  return (
+    <>
+      <section className="card contracts-intro">
+        <p className="muted small">
+          The core contracts each chain needs once: three contract types (used by every coin through upgradeable beacons) and the Market Factory that
+          creates each coin's set. Deploying never uses a server key: the portal prepares a file, the Safe signs it, and the address is known in advance (CREATE2).
+          Coins are added afterwards under Listed assets.
+        </p>
+        <p className="warn small">Not audited. Deploy to mainnet only after the external audit and your sign-off on the open decisions.</p>
+      </section>
+
+      <div className="chain-grid" role="tablist" aria-label="Chains">
+        {!data && !err && Array.from({ length: 8 }, (_, i) => <div key={i} className="chain-card" aria-hidden="true"><span className="sk sk-w60" /></div>)}
+        {data && [...data.chains].sort((a, b) => CHAIN_ORDER.indexOf(a.chainId) - CHAIN_ORDER.indexOf(b.chainId)).map((c) => {
+          const st = chainState(c);
+          return (
+            <button key={c.chainId} role="tab" aria-selected={sel === c.chainId} className={'chain-card' + (sel === c.chainId ? ' on' : '')} onClick={() => setSel(c.chainId)}>
+              <b>{c.name}</b>
+              <span className={'deploy-pill ' + st.cls}>{st.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {err && <p className="field-err" role="alert">Could not load contracts.</p>}
+
+      {chain && (
+        <section className="card">
+          <div className="row-between">
+            <h2 className="contracts-h">{chain.name}</h2>
+            <button className="btn btn-ghost btn-sm" onClick={recheck} disabled={checking}>{checking ? 'Checking…' : 'Check on chain'}</button>
+          </div>
+          {chain.error && <p className="field-err">Could not read {chain.name} right now.</p>}
+          {chain.items && (
+            <p className="muted small">
+              Safe on this chain: {chain.safe ? <span className="ok-text">▲ yes</span> : <span className="down">▼ no</span>} ·
+              CREATE2 deployer: {chain.deployer ? <span className="ok-text">▲ yes</span> : <span className="down">▼ no</span>} ·
+              Reserve currency: {chain.stable ? chain.stable.symbol : 'not chosen yet'}
+            </p>
+          )}
+          <div className="table-wrap">
+            <table className="admin-table contracts-table">
+              <thead><tr><th>Contract</th><th>Status</th><th>Address</th><th className="r">Size</th><th /></tr></thead>
+              <tbody>
+                {chain.items?.map((it) => (
+                  <tr key={it.key}>
+                    <td><b>{it.label}</b><small className="muted block">{it.role}</small></td>
+                    <td><span className={'deploy-pill ' + (it.status === 'ready' ? 'draft' : it.status)}>{C_STATUS[it.status]}</span>
+                      {it.markets != null && <small className="muted block">{it.markets} coin{it.markets === 1 ? '' : 's'} listed</small>}</td>
+                    <td>{it.address ? (it.status === 'deployed' && chain.explorer
+                      ? <a className="num small" href={`${chain.explorer}/address/${it.address}`} target="_blank" rel="noopener noreferrer">{short(it.address)} ↗</a>
+                      : <CopyAddr value={it.address} />) : <span className="muted">After setup</span>}</td>
+                    <td className={'r num' + (it.runtimeSize && data && it.runtimeSize > data.maxRuntime ? ' down' : '')}>{it.runtimeSize ? kb(it.runtimeSize) : '—'}</td>
+                    <td className="r">
+                      {it.status === 'deployed' ? <span className="ok-text small">✓ Live</span>
+                        : it.blocked.length ? <span className="muted small" title={it.blocked.join(' ')}>Blocked</span>
+                        : <button className="btn btn-gold btn-sm" onClick={() => setDeploying(it)}>{it.status === 'proposed' ? 'Prepare again' : 'Deploy'}</button>}
+                    </td>
+                  </tr>
+                ))}
+                {chain.planned?.map((p) => (
+                  <tr key={p.key} className="muted">
+                    <td><b>{p.label}</b><small className="muted block">{p.role}</small></td>
+                    <td><span className="deploy-pill draft">Planned</span></td>
+                    <td colSpan={3} className="small">{p.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {chain.items?.some((i) => i.status !== 'deployed' && i.blocked.length) && (
+            <ul className="missing-list">
+              {[...new Set(chain.items.flatMap((i) => (i.status !== 'deployed' ? i.blocked.map((b) => `${i.label}: ${b}`) : [])))].map((b) => <li key={b}>{b}</li>)}
+            </ul>
+          )}
+          {data?.sourceCommit && <p className="hint">Contract code from commit <span className="num">{data.sourceCommit}</span>. Same code = same address on every chain.</p>}
+        </section>
+      )}
+
+      {deploying && chain && <DeployCore item={deploying} chain={chain} onClose={() => { setDeploying(null); load(); }} />}
+    </>
+  );
+}
+
+function DeployCore({ item, chain, onClose }: { item: CItem; chain: CChain; onClose: () => void }) {
+  const isFactory = item.key === 'factory';
+  const [cfg, setCfg] = useState({ feeCollector: item.config?.feeCollector ?? '', keeper: item.config?.keeper ?? '', keeperWallet: item.config?.keeperWallet ?? '' });
+  const [state, setState] = useState<{ batch?: unknown; safeUrl?: string; address?: string; missing?: string[]; fields?: Record<string, string>; err?: string; live?: boolean }>({});
+  const [busy, setBusy] = useState(false);
+
+  const prepare = async () => {
+    setBusy(true);
+    try {
+      const r = await api<{ batch: unknown; safeUrl: string; address: string }>('/api/admin/contracts/deploy', json({ chainId: chain.chainId, key: item.key, ...(isFactory ? cfg : {}) }));
+      setState(r);
+    } catch (e) {
+      setState(e instanceof ApiError && e.code === 'not_ready' ? { missing: e.body.missing as string[] }
+        : e instanceof ApiError && e.code === 'invalid' && e.body.fields ? { fields: e.body.fields as Record<string, string> }
+        : { err: e instanceof ApiError && e.code === 'already_deployed' ? 'Already deployed.' : 'Could not prepare the transaction.' });
+    }
+    setBusy(false);
+  };
+  useEffect(() => { if (!isFactory) void prepare(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const download = () => {
+    const blob = new Blob([JSON.stringify(state.batch, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backx-${item.key}-${chain.chainId}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  const check = async () => {
+    setBusy(true);
+    try {
+      const c = await api<CChain>('/api/admin/contracts/check', json({ chainId: chain.chainId }));
+      const now = c.items?.find((i) => i.key === item.key);
+      if (now?.status === 'deployed') setState((s) => ({ ...s, live: true, err: undefined }));
+      else setState((s) => ({ ...s, err: 'Not on-chain yet. Sign and execute in the Safe, then check again.' }));
+    } catch { setState((s) => ({ ...s, err: 'Could not read the chain right now.' })); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="sheet-scrim center" onClick={onClose}>
+      <div className="modal admin-form" role="dialog" aria-modal="true" aria-label={`Deploy ${item.label}`} onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="icon-btn modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="modal-title"><div><p className="eyebrow gold">Deploy contract</p><h2>{item.label} on {chain.name}</h2></div></div>
+        {state.live ? (
+          <p className="ok">Live at <span className="num">{state.address}</span>. Owned by the Safe.</p>
+        ) : state.missing ? (
+          <><p>Not ready to deploy:</p><ul className="missing-list">{state.missing.map((m) => <li key={m}>{m}</li>)}</ul></>
+        ) : isFactory && !state.batch ? (
+          <form onSubmit={(e) => { e.preventDefault(); void prepare(); }}>
+            <p className="muted small">The factory is set up once per chain with these addresses (they can be changed later by the Safe). Reserve currency: {chain.stable?.symbol}.</p>
+            {([['feeCollector', 'Fee collector', 'Receives the holders fee (gazz.fun / treasury split is open)'], ['keeper', 'Keeper', 'Bot address allowed to liquidate and fill limits'], ['keeperWallet', 'Keeper gas wallet', 'Receives the per-position keeper gas']] as const).map(([k, l, h]) => (
+              <Field key={k} id={`cf-${k}`} label={l} hint={h} error={state.fields?.[k]}>
+                <input id={`cf-${k}`} className="num" value={cfg[k]} onChange={(e) => setCfg({ ...cfg, [k]: e.target.value.trim() })} placeholder="0x…" autoComplete="off" spellCheck={false} />
+              </Field>
+            ))}
+            <button className="btn btn-gold btn-block" disabled={busy || !ADDR.test(cfg.feeCollector) || !ADDR.test(cfg.keeper) || !ADDR.test(cfg.keeperWallet)}>{busy ? 'Preparing…' : 'Prepare Safe transaction'}</button>
+          </form>
+        ) : !state.batch && !state.err ? (
+          <p className="muted" aria-busy="true"><span className="sk sk-w60" /></p>
+        ) : state.batch ? (
+          <ol className="deploy-steps">
+            <li><b>Download the transaction</b>. It will create the contract at <span className="num">{state.address && short(state.address)}</span>, owned by the Safe.
+              <div><button className="btn btn-gold btn-sm" onClick={download}>Download for Safe</button></div></li>
+            <li><b>Open the Safe</b> on {chain.name} → Transaction Builder → drag the file in → sign and execute.
+              <div><a className="btn btn-ghost btn-sm" href={state.safeUrl} target="_blank" rel="noopener noreferrer">Open Safe ↗</a></div></li>
+            <li><b>Check</b>: the portal reads the chain. Once it is there, the Deploy button disappears.
+              <div><button className="btn btn-ghost btn-sm" onClick={check} disabled={busy}>{busy ? 'Checking…' : 'Check deployment'}</button></div></li>
+          </ol>
+        ) : null}
+        {state.err && <p className="field-err" role="alert">{state.err}</p>}
+      </div>
+    </div>
   );
 }

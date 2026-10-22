@@ -35,12 +35,6 @@ export const CHAINS = {
     wrappedNative: { symbol: 'WAVAX', address: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7', decimals: 18 } },
 };
 
-/** Factory per chain (set on Railway after the one-time Deploy.s.sol on that chain). Null = not deployed there. */
-export const factoryOf = (chainId) => {
-  const a = env(`FACTORY_${chainId}`);
-  return a && /^0x[0-9a-fA-F]{40}$/.test(a) ? a.toLowerCase() : null;
-};
-
 /** Safe that owns everything; the same address must exist on each chain we deploy to (Safe multichain deploy). */
 export const SAFE = '0xfa408F75490C0412d4a5F45FA7553Aff03249BE4';
 

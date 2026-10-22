@@ -21,11 +21,11 @@ import { useBalances, usdcOf } from './lib/useBalances';
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 const TITLES: Record<string, string> = {
-  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue Reserve · backx.trade', swap: 'Swap portal · backx.trade',
+  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', swap: 'Swap portal · backx.trade',
   profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
-  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants',
+  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts',
 };
-const PRIVATE = new Set(['profile', 'security', 'wallet', 'documents', 'admin', 'adminUsers', 'adminParticipants']);
+const PRIVATE = new Set(['profile', 'security', 'wallet', 'documents', 'admin', 'adminUsers', 'adminParticipants', 'adminContracts']);
 
 /** Per-page title, and noindex on private pages (vercel.json also sends X-Robots-Tag there). */
 function usePageMeta(route: string) {
@@ -68,7 +68,7 @@ export default function Terminal() {
       {route === 'issue' && <IssuePage markets={moving.items} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
-      {(route === 'admin' || route === 'adminUsers' || route === 'adminParticipants') && (me?.isAdmin
+      {(route === 'admin' || route === 'adminUsers' || route === 'adminParticipants' || route === 'adminContracts') && (me?.isAdmin
         ? <Suspense fallback={<main id="main" className="page" aria-busy="true"><div className="card"><span className="sk sk-w60" /></div></main>}><AdminPage route={route} /></Suspense>
         : <main id="main" className="page"><h1>Page not found</h1><p className="muted"><a href="/">Back to trading</a></p></main>)}
     </div>
