@@ -30,7 +30,7 @@ export function SpeedCompare({ title, others, backx, steps }: { title: string; o
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       io.disconnect();
-      t = window.setTimeout(() => { if (!touched.current) { setAnim(true); setX(0); } }, 900);
+      t = window.setTimeout(() => { if (!touched.current) { setAnim(true); setX(0); } }, 2900);   // owner: a further 2 s before it folds over
     }, { threshold: 0.6 });
     if (ref.current) io.observe(ref.current);
     return () => { io.disconnect(); clearTimeout(t); };
