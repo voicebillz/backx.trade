@@ -3,8 +3,8 @@
 const CHAINS: [string, string][] = [
   ['robinhood', 'Robinhood'], ['bnb', 'BNB Chain'], ['base', 'Base'], ['ethereum', 'Ethereum'], ['arbitrum', 'Arbitrum'],
   ['polygon', 'Polygon'], ['solana', 'Solana'], ['optimism', 'Optimism'], ['avalanche', 'Avalanche'], ['unichain', 'Unichain'],
-  ['zksync', 'ZKsync'], ['linea', 'Linea'], ['blast', 'Blast'], ['celo', 'Celo'], ['zora', 'Zora'], ['world-chain', 'World Chain'],
-  ['ink', 'Ink'], ['soneium', 'Soneium'], ['monad', 'Monad'], ['megaeth', 'MegaETH'], ['tempo', 'Tempo'], ['arc', 'Arc'], ['xlayer', 'X Layer'],
+  ['zksync', 'ZKsync'], ['linea', 'Linea'], ['celo', 'Celo'], ['zora', 'Zora'], ['world-chain', 'World Chain'],
+  ['ink', 'Ink'], ['soneium', 'Soneium'], ['monad', 'Monad'], ['megaeth', 'MegaETH'], ['arc', 'Arc'], ['xlayer', 'X Layer'],
 ];
 const SVG = new Set(['base', 'optimism']);
 const src = (k: string) => `/chains/${k}.${SVG.has(k) ? 'svg' : 'png'}`;
