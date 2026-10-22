@@ -17,7 +17,15 @@ function usePhase(n: number, ms: number) {
   return i;
 }
 
-const METHODS = ['Email', 'Google', 'X', 'Passkey'];
+// Real logos in web/public/logins: Outlook (Microsoft brand-icons CDN), Google (gstatic), X, Apple, Android
+// (Simple Icons, CC0), Windows (the four-square mark). Each sits in a white round badge so it reads in both themes.
+const METHODS = [
+  { name: 'Email', logos: ['outlook'] },
+  { name: 'Google', logos: ['google'] },
+  { name: 'X', logos: ['x'] },
+  { name: 'Passkey', logos: ['android', 'windows', 'apple'], label: true },
+];
+const logo = (n: string) => <span key={n} className="hv-logo"><img src={`/logins/${n}.svg`} alt="" width="16" height="16" /></span>;
 const ADDRS = ['0x7a3f…c91e', '0x19be…04d2', '0xc4d0…7f3a', '0x5e81…a6b9'];
 
 /** Step 1: a login method lights up, then the wallet is created and its address appears. */
@@ -27,7 +35,11 @@ export function WalletVisual() {
   return (
     <div className="hv hv-wallet" aria-hidden="true">
       <div className="hv-methods">
-        {METHODS.map((x, k) => <span key={x} className={'hv-chip' + (k === m ? ' on' : '')}>{x}</span>)}
+        {METHODS.map((x, k) => (
+          <span key={x.name} className={'hv-chip' + (x.label ? ' wide' : '') + (k === m ? ' on' : '')} title={x.name}>
+            {x.label && <span>{x.name}</span>}{x.logos.map(logo)}
+          </span>
+        ))}
       </div>
       <div className="hv-arrow"><i /></div>
       <div className={'hv-walletcard' + (beat === 2 ? ' ready' : beat === 1 ? ' busy' : '')}>

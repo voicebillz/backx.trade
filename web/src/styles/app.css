@@ -1140,3 +1140,14 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .h-logo a, .h-footer .logo { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; }
 }
 .h-signout { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* Login method chips with real logos (HowVisuals WalletVisual) */
+.hv-methods { align-items: center; }
+.hv-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; }
+.hv-chip.wide { padding: 3px 3px 3px 10px; gap: 6px; }
+.hv-chip.wide > span:first-child { font-size: 12px; }
+.hv-logo { width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.hv-logo + .hv-logo { margin-left: -4px; box-shadow: 0 0 0 2px var(--panel); }
+.hv-logo img { width: 15px; height: 15px; display: block; }
+.hv-chip.on { background: var(--brand); border-color: var(--brand); color: #0A0A0A; }
+.hv-chip.on .hv-logo + .hv-logo { box-shadow: 0 0 0 2px var(--brand); }
