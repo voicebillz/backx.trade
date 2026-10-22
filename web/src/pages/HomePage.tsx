@@ -27,8 +27,6 @@ const LIQ = [
 
 function Participate({ big = false }: { big?: boolean }) {
   const { me, joined, joinedAt, busy, err, canSignIn, participate } = useParticipate();
-  const { me: who } = useAuth();
-  if (who?.isAdmin) return <a className={'h-btn h-btn-gold' + (big ? ' big' : '')} href={APP_URL}>Open app ↗</a>;
   if (joined) return (
     <span className={'h-joined' + (big ? ' big' : '')} aria-live="polite">
       ▲ You're in{joinedAt ? ` · since ${new Date(joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}` : ''}
@@ -76,7 +74,10 @@ export function HomePage() {
           <a href="#how">How it works</a>
           <a href="/whitepaper">Whitepaper</a>
         </nav>
-        <div className="h-header-cta"><Participate /></div>
+        <div className="h-header-cta">
+          {/* Launch App: login happens on app.backx.trade (admins only for now) */}
+          <a className="h-btn h-btn-gold" href={APP_URL}>Launch App</a>
+        </div>
       </header>
 
       <main id="main">
@@ -86,7 +87,7 @@ export function HomePage() {
             <p className="h-eyebrow"><span className="soon-badge">Coming soon</span></p>
             <h1 id="hero-title"><Motto className="h-motto" /></h1>
             <p className="h-sub">Hedge with multiplication or issue capital that backs traders, on Robinhood Chain and 20+ chains. One login, no wallet to connect.</p>
-            <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href="/whitepaper">Read the whitepaper</a></div>
+            <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
             {me && <button className="h-signout" onClick={signOut}>Sign out</button>}
           </div>
         </section>

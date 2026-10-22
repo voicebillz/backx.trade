@@ -141,7 +141,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   token vault until the owner turns it back on. Design kept in `docs/backx/SHORT-SPEC.md` for later.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.
 - Participation (owner 2026-10-20, moved to the front page 2026-10-22): "Participate" on backx.trade logs in (Privy)
-  and records one participation per account; admins see "Open app". Front page also has "Buy $GAZZ" (Uniswap,
+  and records one participation per account. "Launch App" (header + hero) goes to app.backx.trade, where the login
+  step is (AppGate: log in → admins get the app, others "not open yet"). Front page also has "Buy $GAZZ" (Uniswap,
   Robinhood Chain) + copyable $GAZZ CA 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Speed figures on it are the modelled
   flash-crash sim results, labelled as such. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
   app.backx.trade sends X-Robots-Tag noindex. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
