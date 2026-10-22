@@ -6,8 +6,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 
 ## Layout
 - `web/` React 18 + Vite + TypeScript (Vercel), one build, two hosts (owner 2026-10-22, `src/lib/host.ts`):
-  `backx.trade` = public front page (`pages/HomePage.tsx`: circuit hero, motto, Participate, speed, chain carousel,
-  steps, $GAZZ) + `/whitepaper`; `app.backx.trade` = the trading/issuing app, ADMIN_WALLETS only for now (`AppGate`
+  `backx.trade` = public front page (`pages/HomePage.tsx`: circuit hero, motto, Participate, speed before/after
+  wipe (`SpeedCompare`), chain carousel, steps Wallet → Issue → Hedge with moving visuals (`HowVisuals`), $GAZZ, theme toggle) + `/whitepaper`; `app.backx.trade` = the trading/issuing app, ADMIN_WALLETS only for now (`AppGate`
   for everyone else). The old coming-soon / venture overlays are gone. Locally `?app` previews the app.
 - `brand/` logo, X profile picture and banner (4K sources + SVG).
 - `server/` API on Railway at `api.backx.trade` (Express, Postgres, Redis). Setup: `docs/DEPLOY.md`.

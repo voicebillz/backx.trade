@@ -3,26 +3,25 @@ import { Logo } from '../components/Logo';
 import { Motto } from '../components/Motto';
 import { CircuitHero } from '../components/home/CircuitHero';
 import { ChainCarousel } from '../components/home/ChainCarousel';
+import { SpeedCompare } from '../components/home/SpeedCompare';
+import { WalletVisual, IssueVisual } from '../components/home/HowVisuals';
 import { MultiplierBar, BuyGazz } from '../components/Showcase';
 import { useParticipate } from '../lib/useParticipate';
-import { useAuth } from '../lib/auth';
+import { useTheme } from '../lib/theme';
 import { APP_URL } from '../lib/host';
 
 // Public front page at backx.trade (owner 2026-10-22). The app itself lives at app.backx.trade (admins only for now).
 // Speed figures are the modelled results of docs/backx/sim/flash.py, shown as such (see the Whitepaper).
 
 const TRADE = [
-  { who: 'BackX on Robinhood Chain', s: 0.5, ours: true },
-  { who: 'Intent swap (e.g. Relay)', s: 3 },
-  { who: 'Bot on Ethereum L1', s: 9 },
+  { who: 'Intent swap', s: 3 },
+  { who: 'Bot', s: 9 },
   { who: 'Manual wallet swap', s: 20 },
 ];
 const LIQ = [
-  { who: 'BackX keeper, CEX signal', drop: 2.1, loss: 0, ours: true },
-  { who: 'BackX keeper, fast oracle', drop: 2.9, loss: 0, ours: true },
-  { who: 'Intent swap bot', drop: 4.1, loss: 0 },
-  { who: 'Bot on Ethereum L1', drop: 7.6, loss: 2.9 },
-  { who: 'Manual wallet swap', drop: 15.4, loss: 11.1 },
+  { who: 'Intent swap bot', s: 3 },
+  { who: 'Bot', s: 9 },
+  { who: 'Manual wallet swap', s: 20 },
 ];
 
 function Participate({ big = false }: { big?: boolean }) {
@@ -42,26 +41,12 @@ function Participate({ big = false }: { big?: boolean }) {
   );
 }
 
-function Bars<T extends { who: string; ours?: boolean }>({ rows, value, max, label }: { rows: T[]; value: (r: T) => number; max: number; label: (r: T) => string }) {
-  return (
-    <ul className="h-bars">
-      {rows.map((r) => (
-        <li key={r.who} className={r.ours ? 'ours' : ''}>
-          <span className="h-bar-who">{r.who}</span>
-          <span className="h-bar"><i style={{ width: `${Math.max(value(r) / max, 0.025) * 100}%` }} /></span>
-          <span className="h-bar-v num">{label(r)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function HomePage() {
   useEffect(() => {
     document.title = 'BackX · Future Trading for Capital';
     document.querySelector<HTMLMetaElement>('meta[name="robots"]')?.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
   }, []);
-  const { me, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="home">
@@ -75,6 +60,13 @@ export function HomePage() {
           <a href="/whitepaper">Whitepaper</a>
         </nav>
         <div className="h-header-cta">
+          <button className="h-icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+            {theme === 'dark' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+            )}
+          </button>
           {/* Launch App: login happens on app.backx.trade (admins only for now) */}
           <a className="h-btn h-btn-gold" href={APP_URL}>Launch App</a>
         </div>
@@ -84,30 +76,20 @@ export function HomePage() {
         <section className="h-hero" aria-labelledby="hero-title">
           <div className="h-hero-art"><CircuitHero /></div>
           <div className="h-hero-copy">
-            <p className="h-eyebrow"><span className="soon-badge">Coming soon</span></p>
             <h1 id="hero-title"><Motto className="h-motto" /></h1>
             <p className="h-sub">Hedge with multiplication or issue capital that backs traders, on Robinhood Chain and 20+ chains. One login, no wallet to connect.</p>
             <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
-            {me && <button className="h-signout" onClick={signOut}>Sign out</button>}
           </div>
         </section>
 
         <section id="speed" className="h-section" aria-labelledby="speed-title">
           <div className="h-section-head">
-            <p className="h-kicker">Tested in simulation</p>
+            <p className="h-kicker">Speed</p>
             <h2 id="speed-title">Built for speed</h2>
           </div>
           <div className="h-speed">
-            <article className="h-card">
-              <h3>Speed of trade</h3>
-              <p className="h-card-sub">From signing to on-chain, in seconds</p>
-              <Bars rows={TRADE} value={(r) => r.s} max={20} label={(r) => `${r.s} s`} />
-            </article>
-            <article className="h-card">
-              <h3>Speed of liquidation</h3>
-              <p className="h-card-sub">Flash crash −30 % in 60 s, position at 20×: price when the sale lands, and issuer loss</p>
-              <Bars rows={LIQ} value={(r) => r.drop} max={16} label={(r) => `▼ −${r.drop.toFixed(1)}% · ${r.loss ? `${r.loss}%` : '0%'}`} />
-            </article>
+            <SpeedCompare title="Speed of trade" before={TRADE} after={{ who: 'BackX', s: 0.5 }} afterSub="Drag to compare" />
+            <SpeedCompare title="Speed of liquidation" before={LIQ} after={{ who: 'BackX, fast oracle', s: 0.5 }} afterSub="Issuer loss 0 % · drag to compare" />
           </div>
           <p className="h-note">Modelled latencies from our flash-crash simulation, not measurements of other products. BackX figures are launch targets. <a href="/whitepaper#timing">How we tested</a>.</p>
         </section>
@@ -128,20 +110,21 @@ export function HomePage() {
           <ol className="h-steps">
             <li className="h-card">
               <span className="h-step-n">01</span>
-              <h3>Hedge</h3>
-              <p>Pick a coin, an amount and a multiplication. What you type is what you pay; your liquidation price is shown before you open.</p>
-              <MultiplierBar />
+              <h3>Your wallet</h3>
+              <p>Log in with email, Google, X and more. Your own self-custody wallet is created for you via Privy.</p>
+              <WalletVisual />
             </li>
             <li className="h-card">
               <span className="h-step-n">02</span>
               <h3>Issue</h3>
-              <p>Put USDC into a Hedge Pool that backs traders and earn from their activity, up or down. Lent capital comes back first.</p>
-              <p className="h-step-tag">Liquidity Pool · DEX <span className="soon-badge">Soon</span></p>
+              <p>Put USDC into a Hedge Pool that backs traders and earn from their activity.</p>
+              <IssueVisual />
             </li>
             <li className="h-card">
               <span className="h-step-n">03</span>
-              <h3>Your wallet</h3>
-              <p>Log in with email, Google, X and more. Your own wallet is created for you: deposit, swap and withdraw to any address you choose.</p>
+              <h3>Hedge</h3>
+              <p>Pick a coin, an amount and a multiplication.</p>
+              <MultiplierBar />
             </li>
           </ol>
         </section>

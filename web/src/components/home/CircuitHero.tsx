@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
 // or in a background tab; a single still frame for prefers-reduced-motion.
 
 const BRAND = '#FFD100';
-const TRACE = 'rgba(255,255,255,0.10)';
-const PAD = 'rgba(255,255,255,0.16)';
+// Colours follow the theme through CSS variables on .home (dark and light).
+const css = (el: Element, k: string, d: string) => getComputedStyle(el).getPropertyValue(k).trim() || d;
 
 interface Trace { pts: [number, number][]; len: number; seg: number[] }
 
@@ -67,14 +67,15 @@ export function CircuitHero() {
       // static layer: traces, pads and the chip, drawn once per size
       base = document.createElement('canvas'); base.width = cv.width; base.height = cv.height;
       const b = base.getContext('2d')!; b.scale(dpr, dpr);
+      const TRACE = css(cv, '--circuit-trace', 'rgba(255,255,255,0.10)'), PAD = css(cv, '--circuit-pad', 'rgba(255,255,255,0.16)');
       b.lineWidth = 1.2; b.strokeStyle = TRACE; b.lineJoin = 'round';
       for (const tr of traces) { b.beginPath(); tr.pts.forEach(([x, y], k) => (k ? b.lineTo(x, y) : b.moveTo(x, y))); b.stroke(); }
       b.fillStyle = PAD;
       for (const tr of traces) { const [x, y] = tr.pts[3]; b.beginPath(); b.arc(x, y, 3.2, 0, Math.PI * 2); b.fill(); }
       const s = chip, x0 = cx - s / 2, y0 = cy - s / 2;
-      b.fillStyle = '#121212'; b.strokeStyle = 'rgba(255,255,255,0.18)'; b.lineWidth = 1.5;
+      b.fillStyle = css(cv, '--circuit-chip', '#121212'); b.strokeStyle = css(cv, '--circuit-chip-line', 'rgba(255,255,255,0.18)'); b.lineWidth = 1.5;
       b.beginPath(); b.roundRect(x0, y0, s, s, s * 0.08); b.fill(); b.stroke();
-      b.strokeStyle = 'rgba(255,255,255,0.07)'; b.lineWidth = 1;
+      b.strokeStyle = css(cv, '--circuit-trace', 'rgba(255,255,255,0.07)'); b.lineWidth = 1;
       for (let g = 1; g < 6; g++) { const p = x0 + (s * g) / 6; b.beginPath(); b.moveTo(p, y0 + s * 0.12); b.lineTo(p, y0 + s * 0.88); b.stroke(); b.beginPath(); b.moveTo(x0 + s * 0.12, y0 + (s * g) / 6); b.lineTo(x0 + s * 0.88, y0 + (s * g) / 6); b.stroke(); }
       // the backx mark on the die
       const m = new Path2D('M18.3,60 C22.5,57 26.5,55.6 31,55.6 C38,55.6 43.4,58.4 44.8,62.4 C45.4,64.6 43.8,65.6 41,65.6 C33,65.6 25,63.7 18.3,60 Z M31.5,69.4 L44,68.9 C47,68.7 49.6,67.7 51.6,65.7 L92.5,25.6 C84,39 70,60 60.4,75 C57.2,80 53.4,82 48.6,82 C42.6,82 37.5,77 31.5,69.4 Z');
@@ -119,8 +120,10 @@ export function CircuitHero() {
     const ro = new ResizeObserver(() => { layout(); start(); }); ro.observe(cv);
     const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) start(); }); io.observe(cv);
     const vis = () => { if (!document.hidden) start(); };
+    const mo = new MutationObserver(() => { layout(); start(); });   // theme switch: redraw the static layer
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     document.addEventListener('visibilitychange', vis);
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); document.removeEventListener('visibilitychange', vis); };
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); mo.disconnect(); document.removeEventListener('visibilitychange', vis); };
   }, []);
 
   return <canvas ref={ref} className="circuit" aria-hidden="true" />;
