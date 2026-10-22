@@ -1100,3 +1100,17 @@ html:root { --privy-color-icon-muted: var(--brand); }
 /* Hero: a hint of navy, flat linear gradient only (owner 2026-10-22; no glows or light spots) */
 .h-hero { background: linear-gradient(180deg, #0B1222 0%, #0A0F1B 45%, var(--bg) 100%); }
 :root[data-theme="light"] .h-hero { background: linear-gradient(180deg, #E9EEF7 0%, #F1F3F7 45%, var(--bg) 100%); }
+
+/* Front page pieces follow the .home theme variables (dark standard, light when the user picks it) */
+.home .mbar-head, .home .mbar-ticks span.on { color: var(--ink-2); }
+.home .mbar-value { color: var(--ink); }
+.home .mbar-rail { background: var(--line); }
+.home .mbar-ticks { color: var(--ink-3); }
+.home .mbar-thumb { background: var(--panel); box-shadow: none; }
+.home .gazz-btn { color: var(--ink); }
+.home .gazz-ca { color: var(--ink-3); }
+.home .gazz-ca-addr { color: var(--ink-2); }
+.home .gazz-ca:hover .gazz-ca-addr { color: var(--ink); }
+.home .h-btn-ghost:hover { border-color: var(--ink-3); }
+:root[data-theme="light"] .home .gazz-ca-label, :root[data-theme="light"] .home .gazz-ca > span:first-child { color: var(--brand-text); }
+.home .mbar-value span { color: var(--brand-text); }
