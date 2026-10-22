@@ -100,6 +100,30 @@ function BeforeAfter({ title, before, after }: { title: string; before: [string,
   );
 }
 
+/** Simulation results as big before → after numbers (−30 % in 60 s, Major 20×, docs/backx/sim/flash.py). */
+function Results() {
+  const items = [
+    { k: 'Issuer loss', from: 24.2, to: 0, digits: 1, post: ' %' },
+    { k: 'Sells after the trigger', from: 80, to: 0.5, digits: 1, post: ' s' },
+    { k: 'Price drop at the sale', from: 27.9, to: 2.9, digits: 1, post: ' %', down: true },
+  ];
+  return (
+    <Reveal className="wp-fig wp-results" label="Simulation results, before and after">
+      <p className="wp-results-h">Test results · simulated flash crash −30 % in 60 s, Major coin at 20×</p>
+      <div className="wp-results-grid">
+        {items.map((r) => (
+          <div className="wp-result" key={r.k}>
+            <span className="wp-result-k">{r.k}</span>
+            <span className="wp-result-from num">{r.down ? '▼ −' : ''}{r.from.toFixed(r.digits)}{r.post}</span>
+            <b className="wp-result-to">{r.down ? '▼ −' : ''}<CountUp to={r.to} digits={r.digits} post={r.post} /></b>
+            <span className="wp-result-tag">Today → launch design</span>
+          </div>
+        ))}
+      </div>
+    </Reveal>
+  );
+}
+
 /** Two bars that grow to their value: today vs the launch design. */
 function LossBars() {
   const rows = [['TWAP confirm + 2 % TWAP guard (today)', 24.2, 80, 'bad'], ['Fast reference price (launch design)', 0, 0.5, 'good']] as const;
@@ -142,11 +166,12 @@ export function WhitepaperPage() {
         <div><b><CountUp to={1} /></b><span>login, no wallet app needed</span></div>
       </Reveal>
 
-      <div className="wp-grid">
-        <nav className="wp-toc" aria-label="Contents">
-          <ol>{TOC.map(([id, label]) => <li key={id}><a href={`#${id}`}>{label}</a></li>)}</ol>
-        </nav>
+      <nav className="wp-contents" aria-label="Contents">
+        <p className="wp-contents-h">Contents</p>
+        <ol>{TOC.map(([id, label], i) => <li key={id}><a href={`#${id}`}><span className="num">{String(i + 1).padStart(2, '0')}</span>{label}<i aria-hidden="true">→</i></a></li>)}</ol>
+      </nav>
 
+      <div className="wp-wrap">
         <article className="wp-body">
           <section id="overview">
             <h2>Overview</h2>
@@ -179,6 +204,7 @@ export function WhitepaperPage() {
               <li><b>Fair fills.</b> A liquidation sale must fill close to the reference price, so it cannot be sandwiched, and it must return the full lent amount whenever the coins cover it.</li>
               <li><b>Sized to sell.</b> A coin is only listed with real DEX liquidity, and position and open-interest caps are set so a crash can be sold quickly.</li>
             </ul>
+            <Results />
             <LossBars />
             <p className="hint">Simulated with docs/backx/sim/flash.py (synthetic crash, modelled latencies). Loss is before the Reserve Security Fund.</p>
           </section>

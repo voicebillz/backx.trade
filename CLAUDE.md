@@ -64,7 +64,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Issue page: "Issue" opens a choice of Hedge Pool (USDC reserve) or Liquidity Pool · DEX (PancakeSwap Infinity /
   Uniswap v4, price range). Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
   Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
-  Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (nav after Swap; timing table from sim/flash.py,
+  Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (admins only until launch: everyone else sees a greyed-out "Coming soon" placeholder, `WhitepaperSite.tsx`; visual gate only, the text ships in the chunk; nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
   Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; header box + Whitepaper).
   Vercel: `cleanUrls` is on, so SPA rewrites must point to `/` (not `/index.html`, which 404s on refresh).

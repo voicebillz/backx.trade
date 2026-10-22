@@ -77,7 +77,7 @@ export function HomePage() {
           <div className="h-hero-art"><CircuitHero /></div>
           <div className="h-hero-copy">
             <h1 id="hero-title"><Motto className="h-motto" /></h1>
-            <p className="h-sub">Hedge with multiplication or issue capital that backs traders, on Robinhood Chain and 20+ chains. One login, no wallet to connect.</p>
+            <p className="h-sub">Hedge with multiplication or issue capital that backs traders, on Robinhood Chain and 20+ chains.</p>
             <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
           </div>
         </section>
@@ -88,8 +88,8 @@ export function HomePage() {
             <h2 id="speed-title">Built for speed</h2>
           </div>
           <div className="h-speed">
-            <SpeedCompare title="Speed of trade" before={TRADE} after={{ who: 'BackX', s: 0.5 }} afterSub="Drag to compare" />
-            <SpeedCompare title="Speed of liquidation" before={LIQ} after={{ who: 'BackX, fast oracle', s: 0.5 }} afterSub="Issuer loss 0 % · drag to compare" />
+            <SpeedCompare title="Speed of trade" others={TRADE} othersSub="Intent swaps, bots and manual wallet swaps" backx={{ who: 'BackX', s: 0.5 }} backxSub="Up to 40× faster · drag to compare" />
+            <SpeedCompare title="Speed of liquidation" others={LIQ} othersSub="Issuer loss up to 11.1 % in a flash crash" backx={{ who: 'BackX', s: 0.5 }} backxSub="Issuer loss 0 % · drag to compare" />
           </div>
           <p className="h-note">Modelled latencies from our flash-crash simulation, not measurements of other products. BackX figures are launch targets. <a href="/whitepaper#timing">How we tested</a>.</p>
         </section>
