@@ -26,7 +26,7 @@ The guard protects against sandwiches but, measured against a lagging TWAP, it a
 
 ## 2. Recommended design: fast oracle as the reference price
 
-- **Primary price:** a low-latency pull oracle (Pyth Lazer/Core, Chainlink Data Streams or RedStone), aggregated
+- **Primary price:** Pyth (owner 2026-10-22; live on Robinhood Chain and Base, update fee 0 wei today), a low-latency pull oracle, aggregated
   from CEX and DEX venues. The keeper posts the signed price update and the liquidation in the same transaction.
   Staleness limit ≈ 3 s; reject when the oracle's confidence interval is wide.
 - **Trigger:** spot (net exit on the pool) AND the fast oracle both at or below the threshold. No TWAP wait.

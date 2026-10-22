@@ -26,7 +26,8 @@ never call it a partnership in public until they agree. Nothing below is agreed 
 
 | Partner | Why | Ask |
 |---|---|---|
-| **Oracles** (Chainlink, Pyth, RedStone) | A fast second price check next to the TWAP (LIQUIDATION.md §3) | Feed coverage for listed coins on our chains; their builder/partner programmes |
+| **Pyth** (chosen, owner 2026-10-22) | Fast reference price for triggers and the liquidation guard (EXECUTION.md §2). Live on Robinhood Chain (Pyth Core `0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a`, v1.4.5-alpha.1, checked on-chain 2026-10-22) and Base; on-chain update fee 0 wei today; also covers equities for stock listings | Launch terms: free or discounted Hermes / Pyth Pro access, a Lazer (low-latency) trial, confirm the Robinhood contract leaves alpha, co-marketing. Pitch: early adopter on Robinhood Chain, stock + crypto feeds, liquidation volume |
+| **Chainlink / RedStone** (backup) | Second source if Pyth is down or a feed is missing | Chainlink BUILD / RedStone partner terms only if needed |
 | **Auditors** (e.g. OpenZeppelin, Spearbit/Cantina, Sherlock or Code4rena contest) | Required before mainnet (CLAUDE.md) | Quote for the four core contracts + the DEX hook |
 | **Safe** | Owns every contract; deploys via Transaction Builder | Robinhood Chain support in the Safe app (no chain prefix yet in our config) |
 | **Privy** | Login and embedded wallets | Case study / co-marketing once live |

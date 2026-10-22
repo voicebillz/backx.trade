@@ -90,7 +90,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   Swaps are booked from balance deltas, never from the adapter's return value. See `docs/backx/SECURITY-REVIEW.md`.
   OPEN FLAW (flash-crash sim 2026-10-22, `docs/backx/EXECUTION.md`, `sim/flash.py`): the 60 s TWAP confirm and the
   2 % TWAP guard lag in a fast crash, so liquidations revert until the crash stops (issuer losses 10–57 % of lent in
-  the sim). Fix before audit: fast pull oracle (Pyth/Chainlink Data Streams/RedStone, ≤ 3 s stale) as trigger and
+  the sim). Fix before audit: fast pull oracle (Pyth chosen 2026-10-22: Robinhood 0x8250f4aF…487a, ≤ 3 s stale) as trigger and
   guard reference, keeper posts update+liquidation in one tx; TWAP only for opens/limits. Sim with it: 0 % loss. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
 - Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
