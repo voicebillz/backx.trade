@@ -39,21 +39,19 @@ export function SpeedCompare({ title, others, othersSub, backx, backxSub }: { ti
     <article ref={ref} className={'h-card sc' + (anim ? ' anim' : '')} style={{ ['--x' as string]: x.toFixed(4) }}>
       <div className="sc-layer sc-others">
         <div className="sc-half">
-          <h3>{title}</h3>
+          <h3>{title} <span className="sc-tag">Others</span></h3>
           <p className="sc-big">{lo}–{max} s</p>
           <p className="sc-sub">{othersSub}</p>
           <ul className="sc-bars">{others.map((r) => bar(r))}</ul>
         </div>
-        <span className="sc-label">Others</span>
       </div>
       <div className="sc-layer sc-backx">
         <div className="sc-half">
-          <h3>{title}</h3>
+          <h3>{title} <span className="sc-tag">BackX</span></h3>
           <p className="sc-big">{backx.s} s</p>
           <p className="sc-sub">{backxSub}</p>
           <ul className="sc-bars">{bar(backx, true)}</ul>
         </div>
-        <span className="sc-label">BackX</span>
       </div>
       <span className="sc-line" aria-hidden="true" />
       <span className="sc-knob" aria-hidden="true">
