@@ -18,7 +18,7 @@ function Locked({ checking }: { checking: boolean }) {
           <span className="soon-badge">Coming soon</span>
           <h1>Whitepaper</h1>
           <p>The BackX whitepaper is being finalised and opens here soon.</p>
-          {!me && <button className="h-btn" onClick={signIn} disabled={!canSignIn}>Admin log in</button>}
+          {!me && <button className="h-btn h-btn-ghost" onClick={signIn} disabled={!canSignIn}>Admin log in</button>}
         </div>
       )}
     </main>

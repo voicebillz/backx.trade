@@ -93,7 +93,6 @@ export function HomePage() {
             <SpeedCompare title="Speed of liquidation" others={LIQ} backx={0.5}
               steps={[{ label: 'Position', s: 0.05, from: 0 }, { label: 'Planning', s: 0.1, from: 0.05 }, { label: 'Execution', s: 0.35, from: 0.15 }]} />
           </div>
-          <p className="h-note">Modelled latencies from our flash-crash simulation, not measurements of other products. BackX figures are launch targets. <a href="/whitepaper#timing">How we tested</a>.</p>
         </section>
 
         <section id="chains" className="h-section h-chains" aria-labelledby="chains-title">

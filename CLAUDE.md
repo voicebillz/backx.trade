@@ -145,7 +145,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   and records one participation per account. "Launch App" (header + hero) goes to app.backx.trade, where the login
   step is (AppGate: log in → admins get the app, others "not open yet"). Front page also has "Buy $GAZZ" (Uniswap,
   Robinhood Chain) + copyable $GAZZ CA 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Speed figures on it are the modelled
-  flash-crash sim results, labelled as such. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
+  flash-crash sim results and launch targets; the owner removed the on-page footnote (2026-10-22), the Whitepaper carries the method. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
   app.backx.trade sends X-Robots-Tag noindex. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
 - Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts` and `/admin/participants`, button on the profile page for admins.
