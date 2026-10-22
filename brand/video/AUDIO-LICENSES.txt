@@ -24,3 +24,5 @@ pop-bubble-a.wav - "Water bubble" - https://mixkit.co (sfx 1317)
 pop-bubble-b.wav - "Soap bubble sound" - https://mixkit.co (sfx 2925)
 pop-deep.wav - "Liquid bubble" - https://mixkit.co (sfx 3000)
 swish-a / swish-b / whoosh-long: as v3, low-passed at 5 / 4.5 / 6 kHz. Mixed to -16 LUFS.
+
+v5 (owner 2026-10-22): no echo, tails trimmed/faded, 15 cues spaced >= 0.3 s (one sound per key motion).
