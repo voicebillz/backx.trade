@@ -814,4 +814,12 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .kind-pill { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 999px; margin-left: 4px; }
 .kind-pill.hedge { background: var(--brand-bg); color: var(--brand-text); }
 .kind-pill.dex { background: var(--info-bg); color: var(--info); }
-.hint.center { text-align: center; }
+.hint-center { text-align: center; }
+
+/* Not live yet: blurred numbers, greyed DEX pool, Soon badges (owner 2026-10-22) */
+.soon-badge { display: inline-block; vertical-align: middle; margin-left: 6px; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--brand-bg); color: var(--brand-text); border: 1px solid var(--brand); white-space: nowrap; }
+.stats-soon .blurred { filter: blur(7px); user-select: none; pointer-events: none; }
+.is-soon { opacity: .45; }
+.grp-dex.is-soon { opacity: 1; }
+.seg button.is-soon { opacity: .5; cursor: not-allowed; }
+.seg button.is-soon .soon-badge { opacity: 1; }

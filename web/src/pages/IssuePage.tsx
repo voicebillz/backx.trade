@@ -14,6 +14,8 @@ type Range = 'full' | 'wide' | 'narrow';
 interface DemoIssue { id: number; kind: Kind; symbol: string; image: string; amount: number; venue?: Venue; range?: Range; at: number }
 
 const DEMO_START = 10_000;
+/** DEX liquidity pools need the hook contract (not written yet): shown greyed out with a Soon badge (owner 2026-10-22). */
+const DEX_OPEN = false;
 const VENUES: Record<Venue, string> = { pancakeswap: 'PancakeSwap Infinity', uniswap: 'Uniswap v4' };
 // Narrower range = more of the trading fees while the price stays inside it, nothing while it is outside.
 const RANGES: Record<Range, { label: string; hint: string; feeMult: number }> = {
@@ -49,15 +51,15 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
     <main id="main" className="page issue-page">
       <header className="page-head">
         <div>
-          <p className="eyebrow gold">Issue</p>
+          <p className="eyebrow gold">Issue <span className="soon-badge">Coming soon</span></p>
           <h1>Put your capital to work</h1>
           <p className="page-sub">Issue <b>USDC</b> into a <b>Hedge Pool</b> that backs traders, or into a <b>Liquidity Pool</b> that trades on DEXs.</p>
         </div>
-        <dl className="page-stats">
-          <div><dt className="label">Hedge pools</dt><dd className="num">{usdCompact(totUsd)}</dd></div>
-          <div><dt className="label">Lent to Hedges</dt><dd className="num">{usdCompact(lent)}</dd></div>
-          <div><dt className="label">DEX pools</dt><dd className="num">{usdCompact(totDex)}</dd></div>
-          <span className="demo-tag">Demo data</span>
+        {/* Numbers are blurred until launch: the pools are not live yet. */}
+        <dl className="page-stats stats-soon">
+          <div><dt className="label">Hedge pools</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(totUsd)}</span><span className="sr-only">Coming soon</span></dd></div>
+          <div><dt className="label">Lent to Hedges</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(lent)}</span><span className="sr-only">Coming soon</span></dd></div>
+          <div><dt className="label">DEX pools</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(totDex)}</span><span className="sr-only">Coming soon</span></dd></div>
         </dl>
       </header>
 
@@ -95,15 +97,15 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
               <tr>
                 <th rowSpan={2}>Coin</th>
                 <th colSpan={3} className="grp grp-usd"><CoinIcon symbol="USDC" size={14} /> Hedge Pool · backs Hedges ▲</th>
-                <th colSpan={2} className="grp grp-dex">Liquidity Pool · DEX</th>
+                <th colSpan={2} className={'grp grp-dex' + (DEX_OPEN ? '' : ' is-soon')}>Liquidity Pool · DEX {!DEX_OPEN && <span className="soon-badge">Soon</span>}</th>
                 <th rowSpan={2} />
               </tr>
               <tr>
                 <th className="r"><button className={'th-sort' + (sort === 'usd' ? ' on' : '')} onClick={() => setSort('usd')}>Reserve</button></th>
                 <th>Lent out</th>
                 <th className="r"><button className={'th-sort' + (sort === 'apr' ? ' on' : '')} onClick={() => setSort('apr')}>Est. APR</button></th>
-                <th className="r"><button className={'th-sort' + (sort === 'dex' ? ' on' : '')} onClick={() => setSort('dex')}>Pool size</button></th>
-                <th className="r">Est. fee APR</th>
+                <th className={'r' + (DEX_OPEN ? '' : ' is-soon')}><button className={'th-sort' + (sort === 'dex' ? ' on' : '')} onClick={() => setSort('dex')} disabled={!DEX_OPEN}>Pool size</button></th>
+                <th className={'r' + (DEX_OPEN ? '' : ' is-soon')}>Est. fee APR</th>
               </tr>
             </thead>
             <tbody>
@@ -113,8 +115,8 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
                   <td className="r num">{usd(v.usd.reserve, 0)}</td>
                   <td><Util v={v.usd.util} /></td>
                   <td className="r num gold">{v.usd.apr.toFixed(1)}%</td>
-                  <td className="r num">{usd(v.dex.tvl, 0)}</td>
-                  <td className="r num">{v.dex.apr.toFixed(1)}%</td>
+                  <td className={'r num' + (DEX_OPEN ? '' : ' is-soon')}>{usd(v.dex.tvl, 0)}</td>
+                  <td className={'r num' + (DEX_OPEN ? '' : ' is-soon')}>{v.dex.apr.toFixed(1)}%</td>
                   <td className="r"><button className="btn btn-gold btn-sm" onClick={() => setIssuing(m)}>Issue</button></td>
                 </tr>
               ))}
@@ -175,7 +177,9 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
           <>
             <div className="seg issue-kind" role="tablist" aria-label="Pool type">
               <button role="tab" aria-selected={kind === 'hedge'} className={kind === 'hedge' ? 'active issue' : ''} onClick={() => setKind('hedge')}>Hedge Pool</button>
-              <button role="tab" aria-selected={kind === 'dex'} className={kind === 'dex' ? 'active issue' : ''} onClick={() => setKind('dex')}>Liquidity Pool · DEX</button>
+              <button role="tab" aria-selected={kind === 'dex'} className={(kind === 'dex' ? 'active issue' : '') + (DEX_OPEN ? '' : ' is-soon')} onClick={() => setKind('dex')} disabled={!DEX_OPEN} aria-disabled={!DEX_OPEN}>
+                Liquidity Pool · DEX {!DEX_OPEN && <span className="soon-badge">Soon</span>}
+              </button>
             </div>
 
             {kind === 'dex' && (
@@ -238,7 +242,7 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
             {demo
               ? <button className="btn btn-gold btn-block" disabled={!(n > 0) || tooMuch} onClick={issueDemo}>Issue {n > 0 ? usd(Math.floor(n * 100) / 100) : ''} (demo)</button>
               : <button className="btn btn-gold btn-block" disabled>Issuing opens at launch</button>}
-            {!demo && <p className="hint center">Turn on Demo mode on the Issue page to try it now.</p>}
+            {!demo && <p className="hint hint-center">Turn on Demo mode on the Issue page to try it now.</p>}
           </>
         )}
       </div>

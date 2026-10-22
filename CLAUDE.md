@@ -59,6 +59,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   Safe exists on Robinhood, BNB, Base, Ethereum; not yet on Arbitrum, OP, Polygon, Avalanche.
 - Issue page: "Issue" opens a choice of Hedge Pool (USDC reserve) or Liquidity Pool · DEX (PancakeSwap Infinity /
   Uniswap v4, price range). Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
+  Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`.
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, OP Mainnet, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
