@@ -24,7 +24,6 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#070707
 #flip span{position:absolute;left:0;top:0;color:#FFD100}
 #flip .a{position:relative}
 #sub{position:absolute;bottom:130px;left:0;right:0;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:30px;letter-spacing:.32em;color:#8A8A8A}
-#bar{position:absolute;left:0;bottom:0;height:6px;background:#FFD100}
 #grid{position:absolute;left:50%;top:50%;width:1160px;height:420px;margin:-260px 0 0 -580px;display:grid;grid-template-columns:repeat(8,110px);gap:40px;justify-content:center}
 #grid div{width:110px;height:110px;border-radius:50%;overflow:hidden}
 #grid img{width:100%;height:100%;display:block}
@@ -40,7 +39,6 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#070707
 <div class="layer"><div id="motto"><span>Future</span><span>Trading</span><span>for</span><span id="flip"><span class="a">Agents</span><span class="c">Capital</span></span></div></div>
 <div id="grid"></div><div id="gcap">20+ chains. <b>More coming.</b></div>
 <div id="sub">BACKX.TRADE</div>
-<div id="bar"></div>
 <script>
 // Composition for render.mjs: everything is a function of t (seek), no timers. 120 BPM: beat 0.5 s, bar 2 s.
 const CH=[['robinhood','Robinhood'],['bnb','BNB Chain'],['base','Base'],['ethereum','Ethereum'],['arbitrum','Arbitrum'],['polygon','Polygon']];
@@ -143,7 +141,7 @@ window.seek=(t)=>{
   fc.style.transform=`rotateX(${Math.max(f*180-180,-90)}deg) scale(${1+.06*Math.sin(Math.PI*seg(t,S.flip,S.flip+.1))})`; fc.style.opacity=f<.5?0:1;
   const sp=IN(seg(t,S.flip+.5,S.flip+1.1));
   $('sub').style.opacity=(sp*fade).toFixed(3); $('sub').style.letterSpacing=(.32+.08*(1-sp))+'em';
-  $('bar').style.width=(cl(t/S.end)*100)+'%'; $('bar').style.opacity=fade;
+
 };
 Promise.all([fetch('mark.svg').then(r=>r.text()).then(s=>{$('mark').innerHTML=s;$('wmark').innerHTML=s;}), document.fonts.ready,
   ...imgs.map(i=>i.decode())]).then(()=>{window.seek(0);window.READY=true;}).catch(e=>window.BOOT_ERR=String(e));
