@@ -1,0 +1,120 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#070707;font-family:"IBM Plex Sans",sans-serif;color:#F2F2F2}
+.layer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1600px}
+#mark{width:300px;transform-origin:50% 55%}
+#mark svg,#wmark svg{display:block;width:100%;height:auto}
+#coinWrap{position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-190px 0 0 -150px;perspective:1000px}
+#coin{width:300px;height:300px;border-radius:50%;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.08)}
+#coin img{width:100%;height:100%;display:block}
+#label{position:absolute;left:0;right:0;top:calc(50% + 145px);text-align:center;font-family:"IBM Plex Mono",monospace;font-size:34px;letter-spacing:.18em;color:#B4B4B4;text-transform:uppercase;perspective:600px}
+#label span{display:inline-block}
+#dots{position:absolute;left:50%;top:calc(50% + 215px);transform:translateX(-50%);display:flex;gap:14px}
+#dots i{width:10px;height:10px;border-radius:50%;background:#2A2A2A;display:block}
+#dots i.on{background:#FFD100}
+#word{display:flex;align-items:center;gap:36px;transform-style:preserve-3d}
+#wmark{width:160px}
+#wtext{font-weight:700;font-size:156px;letter-spacing:-.04em;line-height:1;display:flex}
+#wtext span{display:inline-block}
+#wtext .y{color:#FFD100;font-weight:500}
+#motto{font-weight:700;font-size:120px;letter-spacing:-.04em;line-height:1;display:flex;gap:.26em;transform-style:preserve-3d}
+#motto>span{display:inline-block}
+#flip{position:relative;display:inline-block;min-width:4.4em}
+#flip span{position:absolute;left:0;top:0;color:#FFD100}
+#flip .a{position:relative}
+#sub{position:absolute;bottom:130px;left:0;right:0;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:30px;letter-spacing:.32em;color:#8A8A8A}
+#bar{position:absolute;left:0;bottom:0;height:6px;background:#FFD100}
+</style></head><body>
+<div class="layer"><div id="mark"></div></div>
+<div id="coinWrap"><div id="coin"><img id="coinImg" alt=""></div></div>
+<div id="label"><span id="labelText"></span></div>
+<div id="dots"></div>
+<div class="layer"><div id="word"><div id="wmark"></div><div id="wtext"></div></div></div>
+<div class="layer"><div id="motto"><span>Future</span><span>Trading</span><span>for</span><span id="flip"><span class="a">Agents</span><span class="c">Capital</span></span></div></div>
+<div id="sub">BACKX.TRADE</div>
+<div id="bar"></div>
+<script>
+// Composition for render.mjs: everything is a function of t (seek), no timers. 120 BPM: beat 0.5 s, bar 2 s.
+const CH=[['robinhood','Robinhood'],['bnb','BNB Chain'],['base','Base'],['ethereum','Ethereum'],['arbitrum','Arbitrum'],['optimism','OP Mainnet'],['polygon','Polygon'],['avalanche','Avalanche']];
+const BEAT=.5, FRAME=1/60;
+const S={markIn:.1, markLand:.5, toCoin:1.75, coin0:2.0, wordHit:6.0, wordOut:9.0, mottoIn:9.25, flip:12.0, end:15.0};
+window.DUR=S.end;
+// Audio cues live next to the motion they belong to; each hit lands 1 frame after the picture.
+const CUES=[]; const cue=(t,f,g)=>CUES.push({t:+(t+FRAME).toFixed(4),f,g});
+cue(S.markIn,'whoosh-soft',.5); cue(S.markLand,'pop-soft',.6);
+cue(S.toCoin,'whoosh-soft',.35);
+CH.forEach((_,k)=>{ const tb=S.coin0+k*BEAT; cue(tb, k%2?'click-ui-2':'click-ui', .75+(k%3)*.05); if(k>0) cue(tb,'pop-soft',.22+(k%2)*.06); });
+cue(S.wordHit-1.5,'riser-short',.6); cue(S.wordHit,'impact-soft',.85); cue(S.wordHit+.05,'whoosh-soft',.3);
+cue(S.wordOut-.05,'whoosh-fast',.4); cue(S.mottoIn+.05,'click-ui',.6);
+cue(S.flip,'click-ui-2',.85); cue(S.flip+.02,'pop-soft',.5); cue(S.flip+.1,'success-chime',.55);
+window.CUES=CUES;
+
+const $=(id)=>document.getElementById(id);
+const cl=(x)=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>cl((t-a)/(b-a)), lerp=(a,b,x)=>a+(b-a)*x;
+// cubic-bezier easing (recipe curves)
+function bez(x1,y1,x2,y2){const cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by;
+  const X=(s)=>((ax*s+bx)*s+cx)*s, Y=(s)=>((ay*s+by)*s+cy)*s, dX=(s)=>(3*ax*s+2*bx)*s+cx;
+  return (x)=>{if(x<=0)return 0;if(x>=1)return 1;let s=x;for(let i=0;i<8;i++){const e=X(s)-x;if(Math.abs(e)<1e-6)break;s-=e/(dX(s)||1e-6);}return Y(cl(s));};}
+const IN=bez(.16,1,.3,1), MOVE=bez(.76,0,.24,1), OUT=bez(.7,0,.84,0);
+// damped spring, zeta .72 (~4 % overshoot): position/size only, never opacity
+const spring=(t,wn=16,z=.72)=>{ if(t<=0) return 0; const wd=wn*Math.sqrt(1-z*z); return 1-Math.exp(-z*wn*t)*(Math.cos(wd*t)+z*wn/wd*Math.sin(wd*t)); };
+
+const dots=$('dots'); CH.forEach(()=>dots.appendChild(document.createElement('i')));
+const imgs=CH.map(([k])=>{const i=new Image(); i.src=`logos/${k}.png`; return i;});
+const word='backx.trade'.split(''); $('wtext').innerHTML=word.map((c,i)=>`<span class="${i>=5?'y':''}">${c}</span>`).join('');
+const letters=[...$('wtext').children];
+
+window.seek=(t)=>{
+  // 1. mark: springs in and lands on beat 1, slow 2 % push, then shrinks into the coin
+  const mIn=spring(t-S.markIn,14), mOp=IN(seg(t,S.markIn,S.markIn+.35)), toC=MOVE(seg(t,S.toCoin,S.toCoin+.25));
+  const m=$('mark'); m.style.opacity=(mOp*(1-toC)).toFixed(3);
+  m.style.transform=`scale(${(.55+.45*mIn)*(1+.02*seg(t,S.markLand,S.toCoin))*(1-.7*toC)}) translateY(${-30*toC}px)`;
+
+  // 2. one coin, flips to the next chain on every beat
+  const cIn=spring(t-(S.toCoin+.12),16), cOp=IN(seg(t,S.toCoin+.1,S.toCoin+.3));
+  const out=MOVE(seg(t,S.wordHit-.3,S.wordHit));
+  let k=Math.max(0,Math.min(CH.length-1,Math.floor((t-S.coin0+1e-6)/BEAT)));
+  if(t<S.coin0) k=0;
+  // flip window: 0.12 s before to 0.12 s after each beat (k ≥ 1)
+  let ang=0, face=k;
+  for(let j=1;j<CH.length;j++){const tb=S.coin0+j*BEAT; const q=seg(t,tb-.12,tb+.12); if(q>0&&q<1){ const e=MOVE(q); if(e<.5){ang=e*180;face=j-1;} else {ang=(e-1)*180;face=j;} } }
+  $('coinImg').src=imgs[face].src;
+  const coin=$('coin'), wrap=$('coinWrap');
+  wrap.style.opacity=(cOp*(1-seg(t,S.wordHit-.06,S.wordHit+.04))).toFixed(3);
+  // on the drop the coin travels to where the wordmark's mark sits
+  // the wordmark's mark: measured once from the static layout (word is laid out even while invisible)
+  if(!window.MT){const a=$('wmark').getBoundingClientRect(), c=$('coinWrap').getBoundingClientRect(); window.MT={x:a.left+a.width/2-(c.left+c.width/2), y:a.top+a.height/2-(c.top+c.height/2), s:$('wmark').offsetWidth/300};}
+  const tx=lerp(0,window.MT.x,out), ty=lerp(0,window.MT.y,out), sc=(.4+.6*cIn)*lerp(1,window.MT.s,out);
+  wrap.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`;
+  coin.style.transform=`rotateY(${ang}deg)`;
+  coin.style.filter=`brightness(${1-.35*Math.abs(Math.sin(ang*Math.PI/180))})`;
+  // label: swaps with a short vertical turn on each beat
+  const lab=$('labelText'); lab.textContent=CH[face][1];
+  $('label').style.opacity=(IN(seg(t,S.coin0-.1,S.coin0+.2))*(1-OUT(seg(t,S.wordHit-.35,S.wordHit-.1)))).toFixed(3);
+  lab.style.transform=`rotateX(${-ang*.5}deg)`;
+  [...dots.children].forEach((d,i)=>d.classList.toggle('on',t>=S.coin0+i*BEAT-.001));
+  dots.style.opacity=$('label').style.opacity;
+
+  // 3. wordmark on the drop: mark pops, letters land 30 ms apart; 2 % push; flips away on X
+  const wIn=spring(t-S.wordHit,15), wOut=OUT(seg(t,S.wordOut,S.wordOut+.3));
+  const wd=$('word'); wd.style.opacity=(t>=S.wordHit-.02?1:0)*(1-wOut);
+  wd.style.transform=`rotateX(${wOut*90}deg) scale(${1+.02*seg(t,S.wordHit+.6,S.wordOut)})`;
+  $('wmark').style.transform=`scale(${.6+.4*wIn})`;
+  letters.forEach((el,i)=>{const a=S.wordHit+.06+i*.03; const p=spring(t-a,18); el.style.opacity=IN(seg(t,a,a+.2)).toFixed(3); el.style.transform=`translateY(${(1-p)*60}px)`;});
+
+  // 4. motto flips in word by word, Agents flips to Capital on the downbeat
+  const mt=$('motto'), words=[...mt.children];
+  const fade=1-seg(t,S.end-.9,S.end-.1);
+  words.forEach((w,i)=>{const a=S.mottoIn+i*.09; const p=IN(seg(t,a,a+.45)); w.style.opacity=(p*fade).toFixed(3); w.style.transform=`rotateX(${(1-p)*-90}deg)`;});
+  const f=MOVE(seg(t,S.flip-.15,S.flip+.15));
+  const fa=document.querySelector('#flip .a'), fc=document.querySelector('#flip .c');
+  fa.style.transform=`rotateX(${Math.min(f*180,90)}deg)`; fa.style.opacity=f<.5?1:0;
+  fc.style.transform=`rotateX(${Math.max(f*180-180,-90)}deg) scale(${1+.06*Math.sin(Math.PI*seg(t,S.flip,S.flip+.1))})`; fc.style.opacity=f<.5?0:1;
+  const sp=IN(seg(t,S.flip+.5,S.flip+1.1));
+  $('sub').style.opacity=(sp*fade).toFixed(3); $('sub').style.letterSpacing=(.32+.08*(1-sp))+'em';
+  $('bar').style.width=(cl(t/S.end)*100)+'%'; $('bar').style.opacity=fade;
+};
+Promise.all([fetch('mark.svg').then(r=>r.text()).then(s=>{$('mark').innerHTML=s;$('wmark').innerHTML=s;}), document.fonts.ready,
+  ...imgs.map(i=>i.decode())]).then(()=>{window.seek(0);window.READY=true;}).catch(e=>window.BOOT_ERR=String(e));
+</script></body></html>

@@ -1,0 +1,12 @@
+Audio from Mixkit (https://mixkit.co). Music: Mixkit Stock Music Free License.
+SFX: Mixkit Sound Effects Free License. Attribution not required; recorded for the record.
+
+music-120-corporate.wav - "Your Breath" by Eugenio Mininni (120 BPM, first beat 13.471 s) - https://mixkit.co/free-stock-music/discover/your-breath-634/ - https://assets.mixkit.co/music/634/634.mp3
+whoosh-soft.wav - "Air woosh" - https://mixkit.co/free-sound-effects/discover/air-woosh-1489/ - https://assets.mixkit.co/active_storage/sfx/1489/1489-preview.mp3
+whoosh-fast.wav - "Fast air sweep transition" - https://mixkit.co/free-sound-effects/discover/fast-air-sweep-transition-168/ - https://assets.mixkit.co/active_storage/sfx/168/168-preview.mp3
+click-ui.wav - "Modern click box check" - https://mixkit.co/free-sound-effects/discover/modern-click-box-check-1120/ - https://assets.mixkit.co/active_storage/sfx/1120/1120-preview.mp3
+click-ui-2.wav - "Cool interface click tone" - https://mixkit.co/free-sound-effects/discover/cool-interface-click-tone-2568/ - https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3
+pop-soft.wav - "Explainer video pops whoosh light pop" - https://mixkit.co/free-sound-effects/discover/explainer-video-pops-whoosh-light-pop-3005/ - https://assets.mixkit.co/active_storage/sfx/3005/3005-preview.mp3
+success-chime.wav - "Success software tone" - https://mixkit.co/free-sound-effects/discover/success-software-tone-2865/ - https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3
+riser-short.wav - "Cinematic trailer riser" - https://mixkit.co/free-sound-effects/discover/cinematic-trailer-riser-790/ - https://assets.mixkit.co/active_storage/sfx/790/790-preview.mp3
+impact-soft.wav - "Short bass hit" - https://mixkit.co/free-sound-effects/discover/short-bass-hit-2299/ - https://assets.mixkit.co/active_storage/sfx/2299/2299-preview.mp3
