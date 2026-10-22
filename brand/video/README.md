@@ -7,7 +7,7 @@ collapses into the backx wordmark (8.0 s), motto flip at 13.5 s. Sound cues live
 (`window.CUES`, written to `cues.json`).
 
 Render (4K, 60 fps) and mix: serve this folder, `render.mjs --url …/comp.html --out video-4k-noaudio.mp4`,
-then `python3 mix-sfx.py --no-music --cues cues.json --music none --sfx-dir audio --out mix.wav`
+then `python3 mix-sfx.py --no-music --lufs -16 --cues cues.json --music none --sfx-dir audio --out mix.wav`
 (motion sounds only, no music: owner 2026-10-22; limiter, loudnorm, true peak −1.5 dBTP), then `render.mjs --mux`.
 The 120 BPM grid is kept for timing. Audio is Mixkit (free licence, see
 `AUDIO-LICENSES.txt`); the audio files themselves are not committed. Chain logos are the real ones: Base from base/brand-kit (in-product logo, SVG), Optimism from

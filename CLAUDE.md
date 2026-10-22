@@ -66,7 +66,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
   Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; header box + Whitepaper).
   Vercel: `cleanUrls` is on, so SPA rewrites must point to `/` (not `/index.html`, which 404s on refresh).
-  Intro video: `brand/marketing/backx-intro-4k.mp4` + `-1080p.mp4`, source `brand/video/` (recipe: beat grid, real Mixkit SFX; no music, motion sounds only).
+  Intro video: `brand/marketing/backx-intro-4k.mp4` + `-1080p.mp4`, source `brand/video/` (recipe: beat grid, real Mixkit SFX; no music, calm bubble/swish motion sounds, −16 LUFS).
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, Optimism, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).

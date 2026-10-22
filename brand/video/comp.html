@@ -51,19 +51,17 @@ const S={markIn:.1, markLand:.5, toCoin:1.75, coin0:2.0, grid:5.0, gridOut:7.5, 
 window.DUR=S.end;
 // Audio cues live next to the motion they belong to; each hit lands 1 frame after the picture.
 const CUES=[]; const cue=(t,f,g)=>CUES.push({t:+(t+FRAME).toFixed(4),f,g});
-// Soft motion sounds only, modelled on the reference: airy swishes on reveals, bright little ticks on UI steps, a
-// long wind whoosh on travel, a soft pop on landings. No impacts, risers or chimes.
-cue(S.markIn-.05,'whoosh-long',.55); cue(S.markLand,'pop-soft',.55);
-cue(S.toCoin,'swish-a',.7);
-CH.forEach((_,k)=>{ const tb=S.coin0+k*BEAT; cue(tb, k%2?'click-tick-b':'click-tick-a', .45+(k%3)*.05); if(k>0) cue(tb-.1,'swish-b',.35+(k%2)*.08); });
-cue(S.grid-.25,'swish-a',.6); [1,5,9,13,17,21].forEach((i)=>cue(S.grid+.08+i*.05,i%2?'click-tick-a':'click-tick-b',.3+(i%3)*.04));
-cue(S.grid+1.25,'swish-b',.4);
-cue(S.gridOut-.1,'whoosh-long',.6); cue(S.wordHit,'pop-soft',.6);
-[0,3,6,9].forEach((i)=>cue(S.wordHit+.06+i*.03+.05,'click-tick-b',.3));
-cue(S.wordOut-.03,'swish-a',.75);
-[0,1,2,3].forEach((i)=>cue(S.mottoIn+i*.09+.05,'click-tick-a',.35+i*.03));
-cue(S.flip-.12,'swish-b',.6); cue(S.flip,'pop-soft',.55);
-cue(S.flip+.55,'click-tick-a',.3);
+// Calm, smooth motion sounds (owner 2026-10-22): soft water/soap bubbles instead of mechanical ticks, deep liquid
+// bubble on landings, low-passed swishes and a soft wind whoosh for travel. No clicks, impacts, risers or chimes.
+cue(S.markIn-.05,'whoosh-long',.45); cue(S.markLand,'pop-deep',.55);
+cue(S.toCoin,'swish-a',.45);
+CH.forEach((_,k)=>{ const tb=S.coin0+k*BEAT; cue(tb, k%2?'pop-bubble-b':'pop-bubble-a', .5+(k%3)*.05); if(k>0) cue(tb-.1,'swish-b',.25); });
+cue(S.grid-.25,'swish-a',.4); [0,2,4,7,10,13,16,19,22].forEach((i,n)=>cue(S.grid+.06+i*.045,n%2?'pop-bubble-b':'pop-bubble-a',.28+(n%3)*.05));
+cue(S.grid+1.25,'swish-b',.3);
+cue(S.gridOut-.1,'whoosh-long',.45); cue(S.wordHit,'pop-deep',.6);
+cue(S.wordOut-.03,'swish-a',.5);
+[0,1,2,3].forEach((i)=>cue(S.mottoIn+i*.09+.05,i%2?'pop-bubble-b':'pop-bubble-a',.3+i*.03));
+cue(S.flip-.12,'swish-b',.4); cue(S.flip,'pop-deep',.55);
 window.CUES=CUES;
 
 const $=(id)=>document.getElementById(id);
