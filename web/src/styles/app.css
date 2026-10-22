@@ -1096,3 +1096,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-locked-card { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 32px)); text-align: center; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 28px 24px; display: grid; gap: 12px; justify-items: center; }
 .wp-locked-card h1 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
 .wp-locked-card p { margin: 0; color: var(--ink-2); line-height: 1.55; }
+
+/* Hero: a hint of navy, flat linear gradient only (owner 2026-10-22; no glows or light spots) */
+.h-hero { background: linear-gradient(180deg, #0B1222 0%, #0A0F1B 45%, var(--bg) 100%); }
+:root[data-theme="light"] .h-hero { background: linear-gradient(180deg, #E9EEF7 0%, #F1F3F7 45%, var(--bg) 100%); }

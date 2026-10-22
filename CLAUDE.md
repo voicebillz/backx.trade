@@ -28,6 +28,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Brand mark: racing yellow `#FFD100` on black.
 - Backgrounds stay clean and flat (owner 2026-10-22): no light circles, radial glows, spotlights or coloured
   light behind content, in the app, images and videos alike. No dark drop shadows behind logos or coins either.
+  Only exception: the front-page hero has a hint of navy as a flat top-to-bottom linear gradient (owner 2026-10-22).
 
 ## Login and money (locked)
 - Privy login without wallets: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
