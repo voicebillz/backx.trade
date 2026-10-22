@@ -9,6 +9,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   A "Coming soon" overlay covers it for everyone while `VITE_COMING_SOON` is not `"false"`.
 - `brand/` logo, X profile picture and banner (4K sources + SVG).
 - `server/` API on Railway at `api.backx.trade` (Express, Postgres, Redis). Setup: `docs/DEPLOY.md`.
+  Built from `server/Dockerfile` with an exact Node.js tag (24.22.1, Oct 2026 security release), non-root; bump the tag on
+  every Node.js security release.
 - `docs/backx/` spec, design kit, security, simulations.
 
 ## Design rules (DESIGN-KIT part A)

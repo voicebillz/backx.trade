@@ -16,6 +16,7 @@ Prosjektet skal ha tre tjenester: **api** (fra GitHub), **Postgres**, **Redis**.
 2. **api-tjenesten** (GitHub-repoet `voicebillz/backx.trade`):
    - Settings → Source → **Root Directory:** `server`
    - Settings → **Config file path:** `/server/railway.json` (gir start-kommando, healthcheck `/health` og at den bare bygger når `server/` endres)
+   - Bygges med `server/Dockerfile` (låst Node-versjon, kjører som ikke-root). Ved en Node.js-sikkerhetsoppdatering: bytt taggen øverst i Dockerfile (`FROM node:…`) og push.
    - Settings → Branch: `main`
    - Settings → Networking → Custom domain: `api.backx.trade` (det har du gjort). Ingen andre offentlige domener; slett den automatiske `*.up.railway.app` hvis du vil ha alt bak eget domene.
 3. **Variables på api-tjenesten** (lim inn i «Raw Editor»):
@@ -68,7 +69,7 @@ Sjekk etter deploy: `https://api.backx.trade/health` skal vise `{"ok":true}`. Al
 
 ## 2. Vercel (backx.trade)
 
-- Settings → General → **Root Directory:** `web` · Framework: Vite · Node 22
+- Settings → General → **Root Directory:** `web` · Framework: Vite · Node 24 (bare for byggingen)
 - Settings → Git → Production Branch: `main`
 - Domener: `backx.trade` som hoved, `www.backx.trade` → redirect til `backx.trade`
 - **Environment Variables** (Production):
