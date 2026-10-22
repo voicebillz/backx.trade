@@ -7,7 +7,6 @@ import { useAuth } from '../lib/auth';
 /** Shown to everyone but admins until launch (owner 2026-10-22): greyed-out placeholder, no whitepaper text.
  *  Visual gate only: the text still ships in this chunk, so keep nothing secret in it. */
 function Locked({ checking }: { checking: boolean }) {
-  const { me, canSignIn, signIn } = useAuth();
   return (
     <main id="main" className="wp-locked">
       <div className="wp-locked-ghost" aria-hidden="true">
@@ -18,7 +17,6 @@ function Locked({ checking }: { checking: boolean }) {
           <span className="soon-badge">Coming soon</span>
           <h1>Whitepaper</h1>
           <p>The BackX whitepaper is being finalised and opens here soon.</p>
-          {!me && <button className="h-btn h-btn-ghost" onClick={signIn} disabled={!canSignIn}>Admin log in</button>}
         </div>
       )}
     </main>
