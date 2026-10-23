@@ -1,7 +1,7 @@
 import express from 'express';
 import { db } from './db.js';
 import { config } from './config.js';
-import { listingReport, RULES, TIERS } from './listing.js';
+import { listingReport, bestChainCached, RULES, TIERS } from './listing.js';
 import { CHAINS, SAFE, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
 import { mountKeeperAdmin } from './keepers.js';
 import { IMPLS, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch } from './deployments.js';
@@ -451,6 +451,19 @@ adminRouter.post('/contracts/deploy', async (req, res, next) => {
 // ---- listing requirements -----------------------------------------------------------------------
 
 adminRouter.get('/listing-rules', (_req, res) => res.json({ rules: RULES, tiers: TIERS }));
+
+/** Best launch chain to list a coin on: finds its token on each chain, checks it, ranks by tier, gas, liquidity. */
+adminRouter.get('/listing-best', async (req, res) => {
+  const symbol = String(req.query.symbol || '').trim();
+  if (!/^[A-Za-z0-9.$_-]{1,16}$/.test(symbol)) return res.status(400).json({ error: 'invalid' });
+  try {
+    const r = await bestChainCached(req.app.locals.redis, symbol);
+    if (!r) return res.status(202).json({ pending: true });
+    res.json(r);
+  } catch {
+    res.status(502).json({ error: 'checks_unavailable' });
+  }
+});
 
 /** Live listing checks for one token (market data + automated on-chain audit). Read-only. */
 adminRouter.get('/listing-check', async (req, res) => {

@@ -2,6 +2,9 @@
 // server (GeckoTerminal for market data, GoPlus for an automated on-chain token audit). The admin portal shows the
 // same list as the "recipe" in the listing window, and deploy re-runs the checks: a failing coin is rejected.
 
+import { CHAINS, LAUNCH_CHAIN_IDS, NATIVE_CG } from './chains.js';
+import { rpc } from './wallet.js';
+
 const GT_NETWORK = { 4663: 'robinhood', 1: 'eth', 8453: 'base', 56: 'bsc', 42161: 'arbitrum', 10: 'optimism', 137: 'polygon_pos', 43114: 'avax' };
 
 /** Hard minimums for any listing. */
@@ -27,8 +30,17 @@ export const TIERS = [
 const num = (v) => (v == null || v === '' ? null : Number(v));
 const flag = (v) => v === '1' || v === 1;
 
-async function getJson(url) {
+// GeckoTerminal's free API allows about 10 calls a minute (measured 2026-10-23): space calls 6.5 s apart and
+// retry once on 429.
+let gtNext = 0;
+async function getJson(url, retry = true) {
+  if (url.startsWith('https://api.geckoterminal.com/')) {
+    const wait = Math.max(0, gtNext - Date.now());
+    gtNext = Math.max(Date.now(), gtNext) + 6500;
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+  }
   const r = await fetch(url, { signal: AbortSignal.timeout(12000), headers: { Accept: 'application/json' } });
+  if (r.status === 429 && retry) { await new Promise((x) => setTimeout(x, 15000)); return getJson(url, false); }
   if (!r.ok) throw new Error(`${r.status}`);
   return r.json();
 }
@@ -37,8 +49,8 @@ async function getJson(url) {
  * Runs every check for one token. Returns { pass, tier, maxM, minMarginBps, maxPositionUsd, market, items[] } where
  * each item is { key, label, ok, value, required }. Cached 10 minutes in Redis (both APIs are rate limited).
  */
-export async function listingReport(redis, chainId, token) {
-  const key = `listing:v1:${chainId}:${token}`;
+export async function listingReport(redis, chainId, token, opts = {}) {
+  const key = `listing:v1:${chainId}:${token}${opts.underlyingCap ? ':u' : ''}`;
   const cached = await redis.get(key);
   if (cached) return JSON.parse(cached);
 
@@ -52,7 +64,8 @@ export async function listingReport(redis, chainId, token) {
   const poolList = pools.status === 'fulfilled' ? pools.value?.data ?? [] : [];
   const sec = gp.status === 'fulfilled' ? Object.values(gp.value?.result ?? {})[0] ?? null : null;
 
-  const marketCap = num(a.market_cap_usd) ?? num(a.fdv_usd);
+  // A wrapped major (cbBTC, WETH, BTCB…) is priced as the coin it wraps: use that coin's market cap.
+  const marketCap = opts.underlyingCap ?? num(a.market_cap_usd) ?? num(a.fdv_usd);
   const liquidity = num(a.total_reserve_in_usd);
   const volume = num(a.volume_usd?.h24);
   const created = poolList.map((p) => Date.parse(p.attributes?.pool_created_at)).filter(Number.isFinite);
@@ -93,4 +106,93 @@ export async function listingReport(redis, chainId, token) {
   };
   await redis.set(key, JSON.stringify(report), 'EX', 600);
   return report;
+}
+
+// ---- best chain to list a coin on (owner 2026-10-23) ----------------------------------------------------------------
+// Majors exist on every launch chain, usually as a wrapped token with its own symbol. For a coin we find its biggest
+// token on each launch chain (GeckoTerminal pool search), run the full listing check there, and pick:
+// 1) a chain where it passes, 2) the highest tier (more multiplication allowed, set by liquidity on that chain),
+// 3) the cheapest liquidation (gas), 4) the deepest liquidity. Gas is an estimate: gas price × 450k gas; on Base the
+// L1 data fee comes on top.
+export const UNDERLYING_CG = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin' };
+export const ALIASES = {
+  BTC: ['cbBTC', 'WBTC', 'BTCB', 'BTC.b', 'BTC'], ETH: ['WETH', 'ETH'], SOL: ['SOL', 'WSOL'], BNB: ['WBNB', 'BNB'],
+};
+const TIER_RANK = { Major: 0, Large: 1, Mid: 2, Small: 3 };
+const LIQ_GAS = 450_000n;
+
+async function nativeUsd(redis) {
+  const c = await redis.get('price:native:v1');
+  if (c) return JSON.parse(c);
+  const ids = [...new Set(Object.values(NATIVE_CG))].join(',');
+  const j = await getJson(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+  const out = Object.fromEntries(Object.entries(j).map(([k, v]) => [k, v.usd]));
+  await redis.set('price:native:v1', JSON.stringify(out), 'EX', 300);
+  return out;
+}
+
+/** The token with the most DEX liquidity on `net` whose symbol is one of `symbols` (case-insensitive). */
+async function findToken(net, symbols) {
+  const want = new Set(symbols.map((x) => x.toLowerCase()));
+  const best = new Map();
+  for (const q of symbols) {
+    const j = await getJson(`https://api.geckoterminal.com/api/v2/search/pools?query=${encodeURIComponent(q)}&network=${net}&page=1`).catch(() => null);
+    for (const p of j?.data ?? []) {
+      const name = String(p.attributes?.name || '');
+      const reserve = Number(p.attributes?.reserve_in_usd || 0);
+      for (const side of ['base_token', 'quote_token']) {
+        const id = p.relationships?.[side]?.data?.id || '';
+        const addr = id.split('_').pop();
+        const sym = (side === 'base_token' ? name.split(' / ')[0] : name.split(' / ')[1]?.split(' ')[0]) || '';
+        // 0x000…0 is GeckoTerminal's native coin: not a token the contracts can hold or GoPlus can audit.
+        if (!/^0x[0-9a-f]{40}$/.test(addr) || /^0x0{40}$/.test(addr) || !want.has(sym.toLowerCase())) continue;
+        const cur = best.get(addr) || { address: addr, symbol: sym, poolLiquidity: 0 };
+        cur.poolLiquidity += reserve;
+        best.set(addr, cur);
+      }
+    }
+    // No early stop: every alias is searched so the main wrapper wins (WBTC on Arbitrum, ETH on BNB Chain).
+  }
+  return [...best.values()].sort((a, b) => b.poolLiquidity - a.poolLiquidity)[0] || null;
+}
+
+export async function bestChain(redis, symbol, chainIds = LAUNCH_CHAIN_IDS) {
+  const key = `listing:best:v1:${symbol.toUpperCase()}:${chainIds.join(',')}`;
+  const cached = await redis.get(key);
+  if (cached) return JSON.parse(cached);
+  const symbols = ALIASES[symbol.toUpperCase()] ?? [symbol];
+  const prices = await nativeUsd(redis).catch(() => ({}));
+  const cg = UNDERLYING_CG[symbol.toUpperCase()];
+  const underlyingCap = cg ? await getJson(`https://api.coingecko.com/api/v3/simple/price?ids=${cg}&vs_currencies=usd&include_market_cap=true`)
+    .then((j) => j?.[cg]?.usd_market_cap ?? null).catch(() => null) : null;
+  const rows = [];
+  for (const chainId of chainIds) rows.push(await (async () => {
+    const token = await findToken(GT_NETWORK[chainId], symbols).catch(() => null);
+    let gasUsd = null;
+    try {
+      const gp = BigInt(await rpc(CHAINS[chainId].rpc, 'eth_gasPrice', []));
+      const px = prices[NATIVE_CG[chainId]];
+      if (px) gasUsd = Number(gp * LIQ_GAS) / 1e18 * px;
+    } catch { /* unknown gas: ranked last on cost */ }
+    if (!token) return { chainId, chain: CHAINS[chainId].name, token: null, pass: false, tier: null, maxM: 0, liquidity: null, gasUsd };
+    const r = await listingReport(redis, chainId, token.address, { underlyingCap }).catch(() => null);
+    return { chainId, chain: CHAINS[chainId].name, token: { address: token.address, symbol: token.symbol }, pass: !!r?.pass, tier: r?.tier ?? null,
+      maxM: r?.maxM ?? 0, liquidity: r?.market?.liquidity ?? null, maxPositionUsd: r?.maxPositionUsd ?? 0, gasUsd };
+  })());
+  rows.sort((a, b) => (Number(b.pass) - Number(a.pass)) || ((TIER_RANK[a.tier] ?? 9) - (TIER_RANK[b.tier] ?? 9))
+    || ((a.gasUsd ?? Infinity) - (b.gasUsd ?? Infinity)) || ((b.liquidity ?? 0) - (a.liquidity ?? 0)));
+  const out = { symbol: symbol.toUpperCase(), best: rows[0]?.pass ? rows[0].chainId : null, rows, checkedAt: new Date().toISOString() };
+  await redis.set(key, JSON.stringify(out), 'EX', 3600);
+  return out;
+}
+
+/** Cached result, or null after starting the check in the background (it takes a minute or two). */
+export async function bestChainCached(redis, symbol) {
+  const sym = symbol.toUpperCase();
+  const hit = await redis.get(`listing:best:v1:${sym}:${LAUNCH_CHAIN_IDS.join(',')}`);
+  if (hit) return JSON.parse(hit);
+  if (await redis.set(`listing:best:job:${sym}`, '1', 'EX', 300, 'NX') === 'OK') {
+    bestChain(redis, sym).catch((e) => console.error('bestChain', sym, e.message)).finally(() => redis.del(`listing:best:job:${sym}`));
+  }
+  return null;
 }

@@ -70,6 +70,13 @@ The owner is not a developer: explain briefly, in Norwegian.
   Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; header box + Whitepaper).
   Vercel: `cleanUrls` is on, so SPA rewrites must point to `/` (not `/index.html`, which 404s on refresh).
   Intro video: `brand/marketing/backx-intro-4k.mp4` + `-1080p.mp4`, source `brand/video/` (recipe: beat grid, real Mixkit SFX; no music, calm bubble/swish motion sounds, −16 LUFS).
+- Launch chains (owner 2026-10-23, `LAUNCH_CHAIN_IDS` in server/src/chains.js): Robinhood Chain, BNB Chain, Base, Arbitrum;
+  the others later. Solana is wanted too but is not EVM (needs its own program); until then SOL lists as a wrapped token.
+  The contracts read the stablecoin's decimals (BNB Chain USDC has 18): `USD_DECIMALS=18 forge test` must pass too.
+  Listing goes through the best launch chain (Admin → Listed assets → Best chain, `bestChain` in listing.js): find the
+  coin's main token per chain (GeckoTerminal search, wrapped majors priced at the underlying's market cap), run the
+  listing rules, pick highest tier → cheapest liquidation gas → deepest liquidity. GeckoTerminal allows ~10 calls/min,
+  so it runs in the background and is cached 1 h. One keeper set per chain (CHAIN_ID).
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, Optimism, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).

@@ -1,5 +1,6 @@
 import { AdminBranding } from './AdminBranding';
 import { AdminKeepers } from './AdminKeepers';
+import { AdminBestChain } from './AdminBestChain';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../lib/api';
 import { go, href, type Route } from '../lib/router';
@@ -157,6 +158,7 @@ function Assets() {
         </div>
         <p className="hint">Add and save, then <b>Deploy contracts</b>: the portal prepares one transaction that creates the coin's own reserve, security fund and trading contract. The Safe signs it; the server never holds keys.</p>
       </section>
+      <AdminBestChain />
 
       {err && <p className="field-err" role="alert">Could not reach the admin API. Sign in again or try later.</p>}
 

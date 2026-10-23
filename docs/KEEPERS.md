@@ -3,6 +3,12 @@
 A keeper watches the Position Managers on Robinhood Chain and sends `liquidateBatch` / `executeLimitBatch` when a
 position is due. Code: `keeper/` (Node, viem, no BackX dependency). Why several: `docs/backx/LIVENESS.md`.
 
+## Chains
+A keeper process watches one chain (`CHAIN_ID`, its own `RPC_URLS` and `MANAGERS`). Launch chains: Robinhood Chain
+(4663), BNB Chain (56), Base (8453), Arbitrum (42161). Split the 50 processes across the chains that have markets
+(e.g. 12–13 per chain), each chain with its own ranks 0…n and its own gas wallets (ETH on Robinhood / Base /
+Arbitrum, BNB on BNB Chain). Multicall3 exists on all four.
+
 ## How 50 keepers work together without wasting gas
 - **Ranks.** Each keeper has a unique rank 0–49. Rank 0 sends in the block it sees a position due. Rank r waits
   `r × RANK_BLOCKS` blocks (default 2 ≈ 0.5 s on Robinhood Chain) and simulates first; if someone above it already

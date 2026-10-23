@@ -31,9 +31,12 @@ abstract contract Base is Test {
     address trader = makeAddr("trader");
     address issuer = makeAddr("issuer");
 
-    uint256 constant USD = 1e6;          // 1 USDC
+    // Stablecoin decimals: 6 (USDC on Robinhood/Base/Arbitrum) by default; `USD_DECIMALS=18 forge test` runs the
+    // whole suite as on BNB Chain, where the USDC token has 18 decimals.
+    uint8 USD_DEC = uint8(vm.envOr("USD_DECIMALS", uint256(6)));
+    uint256 USD = 10 ** uint256(USD_DEC); // 1 USDC
     uint256 constant COIN = 1e18;        // 1 coin
-    uint256 constant P0 = 2_000 * USD;   // $2,000 per coin (ETH-like)
+    uint256 P0 = 2_000 * USD;            // $2,000 per coin (ETH-like)
 
     BackxMarketFactory factory;
 
@@ -41,7 +44,7 @@ abstract contract Base is Test {
     /// Everything is created the way production does it: implementations behind beacons, one factory per chain,
     /// one createMarket call (by the Safe) per coin. Short side included so its tested code stays covered.
     function _deploy(uint256 feeBps, uint256 depthUsd) internal {
-        usd = new MockERC20("USD Coin", "USDC", 6);
+        usd = new MockERC20("USD Coin", "USDC", USD_DEC);
         coin = new MockERC20("Coin", "COIN", 18);
         pool = new MockPool(usd, coin, P0, feeBps, depthUsd);
 

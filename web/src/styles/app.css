@@ -1186,3 +1186,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .kp-late { color: var(--warning); }
 .kp-down { color: var(--down); }
 .kp-never { color: var(--ink-3); }
+.best-form { display: flex; gap: 8px; align-items: center; }
+.best-form .input-wrap { width: 140px; }
+.best-row td { background: var(--brand-bg); }
+.best-badge { margin-left: 8px; }

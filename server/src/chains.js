@@ -35,6 +35,12 @@ export const CHAINS = {
     wrappedNative: { symbol: 'WAVAX', address: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7', decimals: 18 } },
 };
 
+/** Launch chains (owner 2026-10-23): BackX starts on these four EVM chains and adds the others later. Solana is the
+ *  fifth wanted chain but is not EVM: the Solidity contracts cannot run there (it needs its own program), so SOL is
+ *  listed through a wrapped SOL token on one of these until then. Native gas token per chain for cost estimates. */
+export const LAUNCH_CHAIN_IDS = [4663, 56, 8453, 42161];
+export const NATIVE_CG = { 4663: 'ethereum', 56: 'binancecoin', 8453: 'ethereum', 42161: 'ethereum', 1: 'ethereum', 10: 'ethereum', 137: 'polygon-ecosystem-token', 43114: 'avalanche-2' };
+
 /** Safe that owns everything; the same address must exist on each chain we deploy to (Safe multichain deploy). */
 export const SAFE = '0xfa408F75490C0412d4a5F45FA7553Aff03249BE4';
 
