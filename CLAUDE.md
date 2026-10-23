@@ -97,6 +97,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   the sim). Fix before audit: fast pull oracle (Pyth chosen 2026-10-22: Robinhood 0x8250f4aF…487a, ≤ 3 s stale) as trigger and
   guard reference, keeper posts update+liquidation in one tx; TWAP only for opens/limits. Sim with it: 0 % loss. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
+  LIVENESS (owner 2026-10-23, `docs/backx/LIVENESS.md`): nothing that protects money may depend on our servers. Planned
+  (needs owner sign-off, with the size fix): liquidate / limit fills / processQueue open to anyone, keeper gas escrowed per
+  position and paid to whoever executes plus a capped liquidation bonus, Pyth + Chainlink price anyone can post with a TWAP
+  fallback, pause never blocks exits, two keepers on two clouds, timelocked upgrades, IPFS app mirror.
 - Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
   `requestRedeem(shares)`, the shares are parked in the vault and reserved, and every settlement point (`repay`, a new
   deposit, `processQueue`) pays the queue first, FIFO, part-payments, straight to the wallet that asked. Reserved money
