@@ -1180,3 +1180,9 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .logo-wall img { width: 48px; height: 48px; object-fit: contain; }
 .hv-logo.big { width: 48px; height: 48px; }
 .hv-logo.big img { width: 26px; height: 26px; }
+
+/* Admin Keepers (AdminKeepers.tsx) */
+.kp-up { color: var(--up); }
+.kp-late { color: var(--warning); }
+.kp-down { color: var(--down); }
+.kp-never { color: var(--ink-3); }

@@ -8,6 +8,7 @@ import { marketsRouter } from './markets.js';
 import { swapRouter } from './swap.js';
 import { adminRouter } from './admin.js';
 import { ventureRouter } from './venture.js';
+import { keeperReportRouter } from './keepers.js';
 
 // family: 0 lets ioredis resolve Railway's IPv6 private network.
 const redis = new Redis(config.redisUrl, { family: 0, maxRetriesPerRequest: 2, lazyConnect: false });
@@ -41,6 +42,10 @@ app.get('/health', async (_req, res) => {
     res.status(503).json({ ok: false });
   }
 });
+
+// Keeper health reports (docs/KEEPERS.md): machines, not browsers, so outside /api and its origin guard.
+// Each report is signed with that keeper's own ed25519 key; own rate limit and replay guard in keepers.js.
+app.use('/keeper', keeperReportRouter);
 
 // --- Everything under /api is closed by default ---------------------------
 

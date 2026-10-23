@@ -28,6 +28,21 @@ function wallets(raw) {
   return new Set(list);
 }
 
+// Keepers that may report health (docs/KEEPERS.md): "id:gasAddress:ed25519PublicKeyBase64,...", max 64. Optional.
+function keeperList(raw) {
+  const out = [];
+  for (const item of (raw || '').split(',').map((s) => s.trim()).filter(Boolean)) {
+    const [id, address, pub] = item.split(':');
+    if (!/^[a-z0-9-]{1,32}$/.test(id || '')) throw new Error(`KEEPERS: bad id ${id}`);
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address || '')) throw new Error(`KEEPERS: bad address for ${id}`);
+    if (!/^[A-Za-z0-9+/=]{40,80}$/.test(pub || '')) throw new Error(`KEEPERS: bad public key for ${id}`);
+    out.push({ id, address: address.toLowerCase(), pub });
+  }
+  if (out.length > 64) throw new Error('KEEPERS: at most 64');
+  if (new Set(out.map((k) => k.id)).size !== out.length) throw new Error('KEEPERS: duplicate id');
+  return out;
+}
+
 export const config = {
   isProd,
   port: Number(process.env.PORT) || 8080,
@@ -40,4 +55,5 @@ export const config = {
   adminWallets: wallets(process.env.ADMIN_WALLETS),
   // Requests per minute per IP across /api.
   rateLimitPerMin: Number(process.env.RATE_LIMIT_PER_MIN) || 120,
+  keepers: keeperList(process.env.KEEPERS),
 };

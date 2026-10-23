@@ -101,6 +101,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   (needs owner sign-off, with the size fix): liquidate / limit fills / processQueue open to anyone, keeper gas escrowed per
   position and paid to whoever executes plus a capped liquidation bonus, Pyth + Chainlink price anyone can post with a TWAP
   fallback, pause never blocks exits, two keepers on two clouds, timelocked upgrades, IPFS app mirror.
+  Keepers (owner 2026-10-23, `keeper/`, `docs/KEEPERS.md`): up to 50 processes on 4 providers, unique ranks (rank r acts
+  r × 2 blocks later after a simulation re-check), chain-only, several RPCs, self-balancing gas (richest tops up the
+  poorest, excess above the cap swept to the Safe). Optional signed ed25519 heartbeat to `POST /keeper/heartbeat`
+  (outside /api, KEEPERS env on Railway); Admin → Keepers shows health, balances, latency and builds a Safe file to fund them.
 - Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
   `requestRedeem(shares)`, the shares are parked in the vault and reserved, and every settlement point (`repay`, a new
   deposit, `processQueue`) pays the queue first, FIFO, part-payments, straight to the wallet that asked. Reserved money
@@ -152,7 +156,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   flash-crash sim results and launch targets; the owner removed the on-page footnote (2026-10-22), the Whitepaper carries the method. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
   app.backx.trade sends X-Robots-Tag noindex. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
-- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts`, `/admin/participants` and `/admin/branding`, button on the profile page for admins.
+- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts`, `/admin/participants`, `/admin/branding` and `/admin/keepers`, button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:
   session + ADMIN_WALLETS or 404, own Redis rate limit (GET 120/min, writes 30/min), POST must be JSON, strict
   validation (Robinhood Chain 4663, addresses, fee tiers, max 20×, margin ≤ 5 %, logo only from CSP image hosts),

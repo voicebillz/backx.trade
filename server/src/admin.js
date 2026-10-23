@@ -3,6 +3,7 @@ import { db } from './db.js';
 import { config } from './config.js';
 import { listingReport, RULES, TIERS } from './listing.js';
 import { CHAINS, SAFE, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
+import { mountKeeperAdmin } from './keepers.js';
 import { IMPLS, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch } from './deployments.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
@@ -32,6 +33,8 @@ adminRouter.use(async (req, res, next) => {
 const audit = (req, action, target, detail) =>
   db.query('insert into admin_audit (admin, action, target, detail) values ($1, $2, $3, $4)',
     [req.user.address, action, target, detail ? JSON.stringify(detail) : null]);
+
+mountKeeperAdmin(adminRouter, audit);
 
 // ---- validation -------------------------------------------------------------------------------
 
