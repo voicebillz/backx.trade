@@ -1,8 +1,9 @@
-# backx.trade
+# BackX (backx.trade)
 
-> backx.trade is a Hedge & Issuer trading platform on Robinhood Chain, built by GAZZFUN LLC. Traders hedge a coin
-> (profit when its price rises) with multiplication backed by real tokens. Issuers supply USDC that backs those hedges.
-> Status: coming soon (private beta).
+> BackX is a Hedge & Issuer trading platform on Robinhood Chain and 20+ chains, built by GAZZFUN LLC.
+> Motto: "Future Trading for Agents & Capital". Traders hedge a coin (profit when its price rises) with multiplication
+> backed by real tokens. Issuers supply USDC that backs those hedges. Everything settles on-chain in open contracts
+> owned by a multisig (Safe). Status: private beta; the app runs at app.backx.trade (admins only for now).
 
 ## Product
 - **Hedge**: buys real tokens worth stake × multiplication. Up to 20× on major coins (BTC/ETH-type pools), 5× on large
@@ -26,15 +27,23 @@
 - **Wallets**: every user gets a self-custodial embedded wallet (Privy). Login with email, SMS, Google, X, Discord,
   Twitch, Telegram, Farcaster or passkey. No external wallet connection.
 - **Swap portal**: same-chain swaps on Ethereum, Base and BNB Chain, routed by LI.FI, with MEV protection.
+- **Liquidity Pool (DEX)**: issuing into DEX liquidity pools (PancakeSwap Infinity / Uniswap v4) is planned, not live.
+- **Speed**: Robinhood Chain has ~250 ms blocks; BackX targets about 0.5 s for a trade or a liquidation (launch
+  targets from a flash-crash simulation, not measurements). Liquidations use a fast reference price (Pyth).
+- **$GAZZ**: the core token of BackX and part of the gazz.fun ecosystem. A 2 % holders fee on every hedge goes
+  on-chain to gazz.fun, so BackX shares revenue with the ecosystem's holders. Contract on Robinhood Chain:
+  0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Not a promise of returns.
 - Short (price down) is not offered at this time.
 
 ## Terminology
 - "Multiplication" is the platform's word for the position size relative to the stake.
 
 ## Links
-- Website: https://backx.trade/
-- Terms of Service: https://backx.trade/terms
-- Privacy Policy: https://backx.trade/privacy
+- Website: https://www.backx.trade/
+- App (private beta): https://app.backx.trade/
+- Whitepaper: https://www.backx.trade/whitepaper
+- Terms of Service: https://www.backx.trade/terms
+- Privacy Policy: https://www.backx.trade/privacy
 - Operator: GAZZFUN LLC (https://gazz.fun)
 - Support: support@gazz.fun · Legal: terms@gazz.fun
 

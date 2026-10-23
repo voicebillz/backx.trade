@@ -1,13 +1,28 @@
 {
-  "name": "backx.trade · Hedge & Issuer Trading",
-  "short_name": "backx",
-  "description": "Hedge & Issuer trading on Robinhood Chain.",
+  "name": "BackX \u00b7 Future Trading for Agents & Capital",
+  "short_name": "BackX",
+  "description": "Hedge & Issuer trading on Robinhood Chain and 20+ chains.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0F1A",
-  "theme_color": "#0A0F1A",
+  "background_color": "#070707",
+  "theme_color": "#070707",
   "icons": [
-    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
-  ]
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "scope": "/"
 }

@@ -14,10 +14,6 @@
       "destination": "/"
     },
     {
-      "source": "/whitepaper",
-      "destination": "/"
-    },
-    {
       "source": "/profile",
       "destination": "/"
     },

@@ -43,7 +43,7 @@ function Participate({ big = false }: { big?: boolean }) {
 
 export function HomePage() {
   useEffect(() => {
-    document.title = 'BackX · Future Trading for Capital';
+    document.title = 'BackX · Future Trading for Agents & Capital';
     document.querySelector<HTMLMetaElement>('meta[name="robots"]')?.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
   }, []);
   const { theme, setTheme } = useTheme();

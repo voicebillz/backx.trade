@@ -1,4 +1,4 @@
-# backx.trade: Hedge & Issuer Trading on Robinhood Chain.
+# BackX (www.backx.trade): Future Trading for Agents & Capital. Hedge & Issuer trading on Robinhood Chain.
 # Search engines and AI assistants are welcome on the public pages.
 User-agent: *
 Allow: /
@@ -21,4 +21,4 @@ Allow: /
 Disallow: /profile
 Disallow: /admin
 
-Sitemap: https://backx.trade/sitemap.xml
+Sitemap: https://www.backx.trade/sitemap.xml

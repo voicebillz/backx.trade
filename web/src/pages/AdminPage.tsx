@@ -1,3 +1,4 @@
+import { AdminBranding } from './AdminBranding';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../lib/api';
 import { go, href, type Route } from '../lib/router';
@@ -91,8 +92,7 @@ export default function AdminPage({ route }: { route: Route }) {
       <header className="page-head">
         <div>
           <p className="eyebrow gold">Admin portal</p>
-          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : 'Listed assets'}</h1>
-          <p className="page-sub">Only wallets in ADMIN_WALLETS can open this. Every change is logged.</p>
+          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : 'Listed assets'}</h1>
         </div>
       </header>
       <div className="admin-grid">
@@ -101,9 +101,10 @@ export default function AdminPage({ route }: { route: Route }) {
           <a href={href('adminUsers')} onClick={go('adminUsers')} className={route === 'adminUsers' ? 'active' : ''} aria-current={route === 'adminUsers' ? 'page' : undefined}>Users</a>
           <a href={href('adminContracts')} onClick={go('adminContracts')} className={route === 'adminContracts' ? 'active' : ''} aria-current={route === 'adminContracts' ? 'page' : undefined}>Contracts</a>
           <a href={href('adminParticipants')} onClick={go('adminParticipants')} className={route === 'adminParticipants' ? 'active' : ''} aria-current={route === 'adminParticipants' ? 'page' : undefined}>Participants</a>
+          <a href={href('adminBranding')} onClick={go('adminBranding')} className={route === 'adminBranding' ? 'active' : ''} aria-current={route === 'adminBranding' ? 'page' : undefined}>Branding</a>
           <a href={href('profile')} onClick={go('profile')}>← Back to profile</a>
         </nav>
-        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : route === 'adminContracts' ? <Contracts /> : <Assets />}</div>
+        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : route === 'adminContracts' ? <Contracts /> : route === 'adminBranding' ? <AdminBranding /> : <Assets />}</div>
       </div>
     </main>
   );

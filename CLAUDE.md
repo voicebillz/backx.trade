@@ -148,12 +148,12 @@ The owner is not a developer: explain briefly, in Norwegian.
   flash-crash sim results and launch targets; the owner removed the on-page footnote (2026-10-22), the Whitepaper carries the method. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
   app.backx.trade sends X-Robots-Tag noindex. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
-- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts` and `/admin/participants`, button on the profile page for admins.
+- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts`, `/admin/participants` and `/admin/branding`, button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:
   session + ADMIN_WALLETS or 404, own Redis rate limit (GET 120/min, writes 30/min), POST must be JSON, strict
   validation (Robinhood Chain 4663, addresses, fee tiers, max 20×, margin ≤ 5 %, logo only from CSP image hosts),
   every write in `admin_audit`. Listed assets are a prepared list only; the Safe configures the contracts.
-- SEO / AI search: index.html carries full meta, Open Graph, JSON-LD (Organization, WebSite, WebApplication, FAQPage;
+- SEO / AI search (reviewed 2026-10-23): canonical host is https://www.backx.trade (apex redirects there); every public page's title, description and preview image live in `web/src/lib/seoPages.ts`, and the build (vite.config.ts) writes `dist/whitepaper.html` with its own head. Admin → Branding (`/admin/branding`) shows all brand images, icons, chain and login logos and each page's link preview; brand images are no longer under Profile → Documents. index.html carries full meta, Open Graph, JSON-LD (Organization, WebSite, WebApplication, FAQPage;
   a data block, not executed) and a no-JS text version inside #root. `robots.txt` allows search and AI crawlers
   (blocks /profile, /admin), plus `sitemap.xml`, `llms.txt`, `site.webmanifest`. Keep FAQ/llms.txt in sync with the
   product (no yield promises, multiplication not leverage).

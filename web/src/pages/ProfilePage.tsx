@@ -58,7 +58,7 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
           {route === 'profile' && <ProfileTab me={me} />}
           {route === 'security' && <SecurityTab me={me} actions={actions} />}
           {route === 'wallet' && <WalletTab me={me} actions={actions} balances={balances} />}
-          {route === 'documents' && <DocumentsTab isAdmin={me.isAdmin} />}
+          {route === 'documents' && <DocumentsTab />}
         </div>
       </div>
     </main>
@@ -402,49 +402,11 @@ function Withdraw({ me, actions, balances }: { me: Me; actions: PrivyActions | n
 }
 
 // ---- Documents --------------------------------------------------------------
+// Brand images moved to the admin portal (Admin → Branding, owner 2026-10-23).
 
-const BRAND = [
-  { name: 'Profile picture', note: '4000 × 4000 · for X and other socials', file: 'backx-pfp', adminOnly: true },
-  { name: 'Official banner', note: '4500 × 1500 · X header', file: 'backx-banner', adminOnly: true },
-  { name: 'Logo', note: '3840 × 1280 · transparent PNG', file: 'backx-logo', adminOnly: false },
-  { name: 'Mark', note: 'transparent PNG', file: 'backx-mark', adminOnly: false },
-] as const;
-
-/** Everyone gets the two transparent assets; admins also get the social images. */
-function DocumentsTab({ isAdmin }: { isAdmin: boolean }) {
-  const [mode, setMode] = useState<'dark' | 'light'>('dark');
+function DocumentsTab() {
   return (
     <>
-      <section className="card">
-        <div className="row-between docs-head">
-          <div><h2>Branding</h2><p className="muted">Official backx.trade assets. Download in full resolution.</p></div>
-          <div className="seg seg-inline" role="tablist" aria-label="Asset version">
-            <button role="tab" aria-selected={mode === 'dark'} className={mode === 'dark' ? 'active' : ''} onClick={() => setMode('dark')}>Dark</button>
-            <button role="tab" aria-selected={mode === 'light'} className={mode === 'light' ? 'active' : ''} onClick={() => setMode('light')}>Light</button>
-          </div>
-        </div>
-        <div className="brand-grid">
-          {BRAND.filter((b) => isAdmin || !b.adminOnly).map((b) => {
-            const url = `/brand/${b.file}-${mode}.png`;
-            return (
-              <figure key={b.file} className={'brand-item ' + mode}>
-                <div className="brand-preview"><img src={url} alt={`${b.name}, ${mode} version`} loading="lazy" /></div>
-                <figcaption>
-                  <span><b>{b.name}</b><small className="muted">{b.note}</small></span>
-                  <a className="btn btn-primary btn-sm" href={url} download={`${b.file}-${mode}.png`}>Download</a>
-                </figcaption>
-              </figure>
-            );
-          })}
-          {isAdmin && <figure className="brand-item dark">
-            <div className="brand-preview"><img src="/brand/backx-end-of-post.png" alt="End of post card" loading="lazy" /></div>
-            <figcaption>
-              <span><b>End of post</b><small className="muted">3840 × 2160 · last image in X threads</small></span>
-              <a className="btn btn-primary btn-sm" href="/brand/backx-end-of-post.png" download="backx-end-of-post.png">Download</a>
-            </figcaption>
-          </figure>}
-        </div>
-      </section>
       <section className="card">
         <h2>Legal</h2>
         <div className="row-between">
