@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 // on the right, a dashed divider with a round knob. The divider rests in the middle and only moves left, so the
 // BackX side is never covered. Dragging left uncovers the BackX timing bars, which fill in green as they appear.
 // Each time the card comes into view the divider sweeps left by itself after a pause.
-// Pointer drag follows the finger or mouse exactly (pointer capture, touch-action pan-y keeps vertical page
+// Pointer drag is relative and geared up, see below (pointer capture, touch-action pan-y keeps vertical page
 // scroll); the knob is a keyboard slider (arrows, Home/End). Reduced motion: no sweep, bars shown full.
 
 export interface Row { who: string; s: number }
@@ -12,6 +12,7 @@ export interface Row { who: string; s: number }
 export interface Step { label: string; s: number; from?: number }
 
 const REST = 0.5;
+const SWIPE = 140;   // px of finger travel for the full range
 
 export function SpeedCompare({ title, others, backx, steps }: { title: string; others: Row[]; backx: number; steps: Step[] }) {
   const ref = useRef<HTMLElement>(null);
@@ -41,18 +42,25 @@ export function SpeedCompare({ title, others, backx, steps }: { title: string; o
     return () => { io.disconnect(); clearTimeout(t); };
   }, [still]);
 
-  const dragging = useRef(false);
-  const at = (e: PointerEvent<HTMLElement>) => {
-    const box = e.currentTarget.getBoundingClientRect();
-    setX(Math.min(Math.max((e.clientX - box.left) / box.width, 0), REST));
-  };
+  // Relative drag: a short swipe covers the whole range (SWIPE px or a third of the card, whichever is
+  // smaller), so a thumb never has to reach the edge of the screen. A tap without movement flips between the two.
+  const drag = useRef<{ x0: number; v0: number; w: number; moved: boolean } | null>(null);
   const down = (e: PointerEvent<HTMLElement>) => {
-    touched.current = true; dragging.current = true; setAnim(false);
+    touched.current = true; setAnim(false);
     e.currentTarget.setPointerCapture(e.pointerId);
-    at(e);
+    const w = Math.min(SWIPE, e.currentTarget.getBoundingClientRect().width / 3);
+    drag.current = { x0: e.clientX, v0: x, w, moved: false };
   };
-  const move = (e: PointerEvent<HTMLElement>) => { if (dragging.current) at(e); };
-  const up = () => { dragging.current = false; };
+  const move = (e: PointerEvent<HTMLElement>) => {
+    const d = drag.current; if (!d) return;
+    const dx = e.clientX - d.x0;
+    if (Math.abs(dx) > 4) d.moved = true;
+    if (d.moved) setX(Math.min(Math.max(d.v0 + (dx / d.w) * REST, 0), REST));
+  };
+  const up = () => {
+    const d = drag.current; drag.current = null;
+    if (d && !d.moved) { setAnim(true); setX(d.v0 > REST / 2 ? 0 : REST); }
+  };
   const key = (e: KeyboardEvent<HTMLElement>) => {
     const step = { ArrowLeft: -0.05, ArrowDown: -0.05, ArrowRight: 0.05, ArrowUp: 0.05 }[e.key];
     const to = e.key === 'Home' ? 0 : e.key === 'End' ? REST : step !== undefined ? x + step : null;
@@ -63,7 +71,7 @@ export function SpeedCompare({ title, others, backx, steps }: { title: string; o
 
   return (
     <article ref={ref} className={'h-card sc' + (anim ? ' anim' : '')}
-      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} style={{ ['--x' as string]: x.toFixed(4), ['--r' as string]: r.toFixed(4) }}>
+      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { drag.current = null; }} style={{ ['--x' as string]: x.toFixed(4), ['--r' as string]: r.toFixed(4) }}>
       <div className="sc-layer sc-others">
         <div className="sc-half">
           <h3>{title} <span className="sc-tag">Others</span></h3>
