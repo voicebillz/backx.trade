@@ -66,6 +66,23 @@ not only us. L2BEAT notes there is no guaranteed forced-inclusion path on Robinh
 Handling: a sequencer-uptime check; after a restart, a short grace period where opens stay paused while prices
 settle, liquidations allowed, the RSF covers gaps. This is a chain risk issuers must be told about (Risks section).
 
+## 2b. Orders that already sit on-chain (owner question 2026-10-23: no keeper at all?)
+
+An EVM chain never runs code by itself: every change needs someone's transaction. What we *can* do is make the
+market's own trades carry out our orders, so no BackX keeper is needed:
+
+| Order | Keeperless on-chain form | Executed by |
+|---|---|---|
+| Take-profit (sell above a price) | Range order: the position's coins sit as single-sided liquidity just above the target in our hooked Uniswap v4 / PancakeSwap Infinity pool; buyers swapping through the range turn them into USDC | Every trader who pushes the price up. A hook (`afterSwap`) marks the order filled and pulls the liquidity out in the same transaction, so it cannot convert back if the price falls again |
+| Entry limit (buy below a price) | Range order: USDC sits as single-sided liquidity just below the target; sellers turn it into the coin | Every trader who pushes the price down; the hook opens the position |
+| Liquidation / stop-loss (sell when the price falls) | Not possible as passive liquidity (coins can only rest above the price). Instead the pool's hook checks, after each swap, the positions whose liquidation price that swap crossed and settles a bounded number of them inside that same transaction | Whoever moves the price down, including arbitrage bots that copy a CEX crash into the pool. Backed by the permissionless liquidate + bonus (Layer 0) for everything the hook does not reach |
+
+Limits: range orders fill gradually across their range (fill price = average of the range, set narrow), and only
+on trading in our pool; a liquidation-checking hook adds gas to swaps, so aggregators may route around the pool if
+it is heavy (cap it to a few positions per swap, skip when nothing is due). Robinhood Chain's sequencer still has
+to be running. Plan: put this in the DEX hook spec (not written yet) as an extra executor next to Layers 0 and 1,
+never as the only one.
+
 ## 3. What changes, and in what order
 1. Contracts (needs owner sign-off; together with the 24 KB size fix, i.e. removing Short or splitting the
    manager, and the Pyth integration already planned):
