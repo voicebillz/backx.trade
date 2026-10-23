@@ -4,7 +4,6 @@ import { price, usd, usdCompact } from '../lib/format';
 import { FEES, KEEPER_GAS, LIMIT_SLIP, maxNotional, type Quote } from '../lib/hedge';
 import type { usdcOf } from '../lib/useBalances';
 import { MultiplierSlider } from './MultiplierSlider';
-import { CoinIcon } from './CoinIcon';
 
 interface Props {
   market: Market;
@@ -52,7 +51,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
   const limitMove = hasLimit ? limitNum / market.price - 1 : 0;
   const limitErr = !hasLimit ? null
     : limitNum <= 0 ? 'Enter a price above 0.'
-    : limitNum <= market.price ? `Set a price above today's price (${price(market.price)}).`
+    : limitNum <= market.price ? `Above ${price(market.price)}`
     : null;
   // Worst fill the contract allows: the limit minus limitSlip (sale) or plus it (buy-back).
   const preview = hasLimit && !limitErr ? q.at((limitNum / market.price) * (1 - LIMIT_SLIP)) : null;
@@ -60,8 +59,6 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
   return (
     <aside className="panel ticket" aria-label="Order ticket">
       <h2 className="ticket-title"><span className="up" aria-hidden="true">▲</span> Hedge {market.symbol}</h2>
-
-      <p className="ticket-sub">Profit when {market.symbol} rises. Backed by issuers' <CoinIcon symbol="USDC" size={14} /> USDC.</p>
 
       <div className="field">
         <div className="field-head">
@@ -74,10 +71,10 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
           <button className="max-btn" disabled={!usdc || maxByUsdc <= 0} title={usdc ? 'Largest stake your USDC covers, fees included' : 'Sign in to use your USDC'}
             onClick={() => onStake(String(Math.min(maxByUsdc, maxStake)))}>Max</button>
         </div>
-        <span className={tooBig ? 'field-err' : 'hint'}>Max {usd(maxStake, 0)} at {m}× (keeps price impact under 0.5%).</span>
-        {lacking && <span className="field-err">Not enough USDC: you have {usd(usdc!.total)}. Deposit USDC, or swap to USDC in the Swap portal.</span>}
+        {tooBig && <span className="field-err">Max {usd(maxStake, 0)} at {m}×</span>}
+        {lacking && <span className="field-err">Not enough USDC</span>}
         {!lacking && usdc && elsewhere.length > 0 && (
-          <span className="hint">Paid in USDC. Your USDC on {elsewhere.map((p) => p.chainName).join(', ')} moves to {MARKET_CHAIN} automatically when you open (one extra signature, about 1–3 min).</span>
+          <span className="hint">Moves from {elsewhere.map((p) => p.chainName).join(', ')} when you open</span>
         )}
       </div>
 
@@ -87,13 +84,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
           <span className="num m-value">{m}×</span>
         </div>
         <MultiplierSlider value={Math.min(m, max)} min={1} max={max} onChange={onM} />
-        {max < market.maxM && (
-          <span className="hint">
-            {byReserve
-              ? `Up to ${max}× right now: issuers have ${usdCompact(available)} USDC free to lend on ${market.symbol} (cap ${market.maxM}×).`
-              : `Up to ${max}× at this stake (max position size). Lower the stake for up to ${market.maxM}×.`}
-          </span>
-        )}
+        {max < market.maxM && <span className="hint">Up to {max}× {byReserve ? `(${usdCompact(available)} free to lend)` : 'at this amount'}</span>}
       </div>
 
       <div className="field">
@@ -104,7 +95,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
         <div className="input-wrap">
           <span className="prefix">$</span>
           <input id={id + 'limit'} inputMode="decimal" className="num" placeholder={'Above ' + price(market.price)}
-            value={limit} onChange={(e) => setLimit(e.target.value.replace(/[^0-9.]/g, ''))} aria-invalid={!!limitErr} aria-describedby={id + 'limit-hint'} />
+            value={limit} onChange={(e) => setLimit(e.target.value.replace(/[^0-9.]/g, ''))} aria-invalid={!!limitErr} aria-describedby={limitErr ? id + 'limit-hint' : undefined} />
           {limit && <button className="max-btn" onClick={() => setLimit('')} aria-label="Clear limit">Clear</button>}
         </div>
         <div className="chips" role="group" aria-label="Quick limit">
@@ -117,21 +108,14 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
             );
           })}
         </div>
-        <span id={id + 'limit-hint'} className={limitErr ? 'field-err' : 'hint'}>
-          {limitErr ?? (hasLimit
-            ? `${pct(limitMove)} from now. Closes automatically when the price reaches it (filled within ${LIMIT_SLIP * 100}% of your price).`
-            : 'Closes your position automatically at this price.')}
-        </span>
+        {limitErr && <span id={id + 'limit-hint'} className="field-err">{limitErr}</span>}
       </div>
 
       <dl className="kv">
         {q.noLiquidation ? (
           <div><dt>Liquidation</dt><dd className="num ok">None at 1×</dd></div>
         ) : (
-          <>
-            <div><dt>Liquidation price</dt><dd className="num down">{price(q.liqPrice)}</dd></div>
-            <div><dt>Liquidation at</dt><dd className="num down">{`▼ −${(q.liqMove * 100).toFixed(1)}%`}</dd></div>
-          </>
+          <div><dt>Liquidation</dt><dd className="num down">{price(q.liqPrice)} <span className="liq-pct">▼ −{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
         )}
         <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
         <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas)}</dd></div>
@@ -140,7 +124,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
       <div className="waterfall">
         {preview ? (
           <>
-            <div className="label">At your limit {price(limitNum)} (▲ {pct(limitMove)}), worst fill</div>
+            <div className="label">At {price(limitNum)} (▲ {pct(limitMove)})</div>
             <div className="wf-row"><span>You</span><span className={'num ' + (preview.trader >= 0 ? 'up' : 'down')}>{signed(preview.trader)}</span></div>
             <div className="wf-row"><span>Issuers</span><span className="num gold">+{usd(preview.issuers)}</span></div>
           </>
@@ -151,9 +135,7 @@ export function OrderTicket({ market, usdc, maxM, available, stake, onStake, m, 
             <div className="wf-row"><span>Issuers</span><span className="num gold">+{usd(q.ifWin10.issuers)}</span></div>
           </>
         )}
-        {q.noLiquidation ? (
-          <p className="hint">1× borrows nothing: no liquidation, issuers get 0%.</p>
-        ) : (
+        {q.noLiquidation ? null : (
           <>
             <div className="label" style={{ marginTop: 8 }}>If liquidated</div>
             <div className="wf-row"><span>You keep</span><span className="num">{usd(q.ifLiquidated.traderKeeps)}</span></div>

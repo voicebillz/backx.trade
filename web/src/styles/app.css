@@ -149,10 +149,14 @@ th { text-align: left; font-weight: 500; color: var(--ink-3); height: 32px; padd
 /* Mobile bar + sheet */
 .mobile-bar { display: none; }
 .sheet-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; display: flex; align-items: flex-end; }
-.sheet { position: relative; width: 100%; max-height: 90vh; overflow-y: auto; background: var(--panel); border-radius: 12px 12px 0 0; padding-top: 16px; animation: sheet-in 260ms var(--ease-out); }
+.sheet { position: relative; width: 100%; max-height: 82vh; max-height: 82dvh; display: flex; flex-direction: column; background: var(--panel); border-radius: 16px 16px 0 0; animation: sheet-in 260ms var(--ease-out); transition: transform 200ms var(--ease-out); }
+.sheet-head { position: relative; flex: none; height: 44px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
+.sheet .ticket { height: auto; padding-top: 0; }
+.sheet .ticket .btn-block { position: sticky; bottom: 0; margin-top: 4px; box-shadow: 0 -12px 0 var(--panel); }
 .sheet .ticket { border: 0; }
 .sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto; }
-.sheet-close { position: absolute; right: 8px; top: 8px; }
+.sheet-close { position: absolute; right: 6px; top: 0; width: 44px; height: 44px; }
 @keyframes sheet-in { from { transform: translateY(100%); } }
 
 /* Coming soon */
@@ -1150,3 +1154,10 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .hv-logo img { width: 15px; height: 15px; display: block; }
 .hv-chip.on { background: var(--brand); border-color: var(--brand); color: #0A0A0A; }
 .hv-chip.on .hv-logo + .hv-logo { box-shadow: 0 0 0 2px var(--brand); }
+
+/* Compact ticket (owner 2026-10-23: less text) */
+.kv .liq-pct { margin-left: 6px; font-size: 12px; }
+@media (max-width: 720px) {
+  .ticket { gap: 10px; }
+  .ticket .field { gap: 6px; }
+}

@@ -274,7 +274,7 @@ function WalletTab({ me, actions, balances }: { me: Me; actions: PrivyActions | 
             {!balances.data && <tr><td colSpan={4}><span className="sk sk-w60" /></td></tr>}
           </tbody>
         </table>
-        {balances.data?.partial && <p className="hint">Some networks did not answer. Showing what we could read.</p>}
+        {balances.data?.partial && <p className="hint">Some networks did not answer.</p>}
       </section>
     </>
   );
@@ -388,8 +388,8 @@ function Withdraw({ me, actions, balances }: { me: Me; actions: PrivyActions | n
           <button className="max-btn" onClick={() => setAmount(fromUnits(maxUnits, decimals))} disabled={maxUnits === 0n}>Max</button>
         </div>
         {tooMuch && <span className="field-err">More than you have.</span>}
-        {kind === 'native' && <span className="hint">Max keeps {chain.feeReserve} {chain.native} back for the network fee.</span>}
-        {kind === 'usdc' && <span className="hint">You need a little {chain.native} on {chain.name} to pay the network fee.</span>}
+        {kind === 'native' && <span className="hint">Keeps {chain.feeReserve} {chain.native} for fees.</span>}
+        {kind === 'usdc' && <span className="hint">Needs a little {chain.native} for fees.</span>}
       </div>
       <button className="btn btn-primary btn-block" disabled={!canSend} onClick={send}>
         {state.kind === 'sending' ? 'Confirm in the wallet window…' : `Withdraw ${symbol}`}
@@ -397,7 +397,6 @@ function Withdraw({ me, actions, balances }: { me: Me; actions: PrivyActions | n
       {state.kind === 'sent' && <p className="ok small">Sent. <a href={explorer + state.msg} target="_blank" rel="noopener">View transaction</a></p>}
       {state.kind === 'error' && <p className="field-err">Not sent: {state.msg}</p>}
       {!actions && <p className="hint">Sign in again to sign withdrawals with your wallet.</p>}
-      <p className="hint">Solana withdrawals come next. Until then you can export your keys under Security.</p>
     </section>
   );
 }

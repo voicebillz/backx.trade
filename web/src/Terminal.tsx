@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Topbar } from './components/Topbar';
 import { MarketList } from './components/MarketList';
 import { CoinHeader } from './components/CoinHeader';
@@ -136,15 +136,35 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
       <div className="mobile-bar single">
         <button className="btn btn-primary" onClick={() => setSheet(true)}>▲ Hedge {market?.symbol ?? ''}</button>
       </div>
-      {sheet && ticket && (
-        <div className="sheet-scrim" onClick={() => setSheet(false)}>
-          <div className="sheet" role="dialog" aria-modal="true" aria-label="Order ticket" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-grip" aria-hidden="true" />
-            <button className="icon-btn sheet-close" onClick={() => setSheet(false)} aria-label="Close">✕</button>
-            {ticket}
-          </div>
-        </div>
-      )}
+      {sheet && ticket && <TicketSheet onClose={() => setSheet(false)}>{ticket}</TicketSheet>}
     </>
+  );
+}
+
+/** Phone bottom sheet for the ticket: the header (grip + close) stays put while the body scrolls, the Hedge button
+ *  sticks to the bottom, a swipe down on the header or a tap on the backdrop closes it, and the page behind does not scroll. */
+function TicketSheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const y0 = useRef<number | null>(null);
+  const [dy, setDy] = useState(0);
+  useEffect(() => {
+    const html = document.documentElement, prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    return () => { html.style.overflow = prev; };
+  }, []);
+  return (
+    <div className="sheet-scrim" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Order ticket" onClick={(e) => e.stopPropagation()}
+        style={dy ? { transform: `translateY(${dy}px)`, transition: 'none' } : undefined}>
+        <div className="sheet-head"
+          onPointerDown={(e) => { y0.current = e.clientY; e.currentTarget.setPointerCapture(e.pointerId); }}
+          onPointerMove={(e) => { if (y0.current !== null) setDy(Math.max(0, e.clientY - y0.current)); }}
+          onPointerUp={() => { y0.current = null; if (dy > 80) onClose(); else setDy(0); }}
+          onPointerCancel={() => { y0.current = null; setDy(0); }}>
+          <span className="sheet-grip" aria-hidden="true" />
+          <button className="icon-btn sheet-close" onClick={onClose} onPointerDown={(e) => e.stopPropagation()} aria-label="Close">✕</button>
+        </div>
+        <div className="sheet-body">{children}</div>
+      </div>
+    </div>
   );
 }

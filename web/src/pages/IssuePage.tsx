@@ -53,7 +53,6 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
         <div>
           <p className="eyebrow gold">Issue <span className="soon-badge">Coming soon</span></p>
           <h1>Put your capital to work</h1>
-          <p className="page-sub">Issue <b>USDC</b> into a <b>Hedge Pool</b> that backs traders, or into a <b>Liquidity Pool</b> that trades on DEXs.</p>
         </div>
         {/* Numbers are blurred until launch: the pools are not live yet. */}
         <dl className="page-stats stats-soon">
@@ -127,7 +126,7 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
           </table>
         </div>
       </div>
-      <p className="hint">Est. APR figures are demo estimates, not a promise. Live pools will show realized earnings for the last 7 days.</p>
+      <p className="hint">APR: demo estimates, not a promise.</p>
 
       {issuing && (
         <IssueModal
@@ -170,7 +169,6 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
         {done ? (
           <>
             <p className="ok">▲ Demo issue added: {usd(Math.floor(n * 100) / 100)} into the {market.symbol} {kind === 'hedge' ? 'Hedge Pool' : `Liquidity Pool on ${VENUES[venue]}`}.</p>
-            <p className="hint">It shows under “Your demo issues”. Nothing was sent: demo mode never touches your wallet.</p>
             <button className="btn btn-gold btn-block" onClick={onClose}>Done</button>
           </>
         ) : (
@@ -213,8 +211,8 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                 <button className="max-btn" disabled={!bal || bal <= 0} onClick={() => bal && setAmt(String(Math.floor(bal * 100) / 100))}>Max</button>
               </div>
               {tooMuch
-                ? <span className="field-err">Not enough {demo ? 'demo ' : ''}USDC: you have {usd(bal!)}.{demo ? '' : ' Deposit USDC, or swap to USDC in the Swap portal.'}</span>
-                : <span className="hint">Issued in USDC. USDC on another chain moves to the pool's chain automatically when you issue.</span>}
+                ? <span className="field-err">Not enough {demo ? 'demo ' : ''}USDC</span>
+                : null}
             </div>
 
             {kind === 'hedge' ? (
@@ -225,7 +223,7 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                   <div><dt>Lent out</dt><dd className="num">{Math.round(v.usd.util * 100)}%</dd></div>
                   <div><dt>Comes back first</dt><dd>Same dollars (USDC)</dd></div>
                 </dl>
-                <p className="hint">Your USDC is lent to Hedges and comes back first when they close. Issuers share in traders' gains, and when a position falls it is closed early and the reserve is paid back first. Rewards go into the pool and are shared by all issuers in proportion: nothing to claim. A sudden drop past a liquidation can leave a gap; the Reserve Security Fund covers it first.</p>
+                <p className="hint">Not risk-free: a sudden crash can leave a gap the Reserve Security Fund covers first.</p>
               </>
             ) : (
               <>
@@ -235,14 +233,14 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                   <div><dt>Est. fee APR</dt><dd className="num gold">{dexApr.toFixed(1)}%</dd></div>
                   <div><dt>Pool size</dt><dd className="num">{usd(v.dex.tvl, 0)}</dd></div>
                 </dl>
-                <p className="hint">Half of your USDC is swapped to {market.symbol} and both go into the pool, which anyone can trade against on DEXs. You earn a share of the trading fees. When the price moves, the pool holds more of whichever side fell, so you can get back less than you put in; fees can offset this, they do not remove it.</p>
+                <p className="hint">Half becomes {market.symbol}. When the price moves you can get back less than you put in.</p>
               </>
             )}
 
             {demo
               ? <button className="btn btn-gold btn-block" disabled={!(n > 0) || tooMuch} onClick={issueDemo}>Issue {n > 0 ? usd(Math.floor(n * 100) / 100) : ''} (demo)</button>
               : <button className="btn btn-gold btn-block" disabled>Issuing opens at launch</button>}
-            {!demo && <p className="hint hint-center">Turn on Demo mode on the Issue page to try it now.</p>}
+            {!demo && <p className="hint hint-center">Try it now in Demo mode.</p>}
           </>
         )}
       </div>
