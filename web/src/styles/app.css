@@ -1130,11 +1130,10 @@ html:root { --privy-color-icon-muted: var(--brand); }
 
 /* Phone review (owner 2026-10-22) */
 @media (max-width: 720px) {
-  .sc-backx { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
-  .sc-backx h3, .sc-backx .sc-big { grid-column: 1; }
-  .sc-backx h3 { grid-row: 1; justify-self: end; max-width: 42%; }
-  .sc-backx .sc-big { grid-row: 2; }
-  .sc-steps { grid-column: 1; grid-row: 3; margin: 22px 0 0 28px; }
+  .sc-backx { column-gap: 5%; }
+  .sc-steps { margin: 14px 0 0 14px; gap: 10px; }
+  .sc-steps .sc-row { font-size: 11px; }
+  .sc-backx .sc-big { font-size: 34px; }
   .h-hero-art { inset: -12% -30% 40% -30%; }
   .h-footer nav a { display: inline-flex; align-items: center; min-height: 44px; }
   .h-logo a, .h-footer .logo { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; }
