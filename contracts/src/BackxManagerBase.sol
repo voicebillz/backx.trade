@@ -58,6 +58,8 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         uint16 borrowBps;       // of the amount lent → issuers (claimable USDC)
         uint16 oracleDevBps;    // max distance between pool execution and the oracle at open
         uint16 spotBps;         // of the margin on a 1x hedge (nothing lent, no fund fee) → fee collector
+        uint16 gainBps;         // platform's share of a trader's gain on a position with a loan → fee collector
+        uint16 liqCutBps;       // platform's share of what is left at a liquidation, before the issuers' share
     }
 
     /// @notice Validator pay. gasUsd is escrowed per position at open and paid to whoever settles it.
@@ -203,7 +205,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         nextOrderId = 1;
         _oneUsd = 10 ** IERC20Metadata(address(a.usd)).decimals();
         validation = Validation({gasUsd: uint64(_oneUsd / 10), liqBonusBps: 50, fillBonusBps: 10, accuracyBps: 100});
-        fees = Fees({platformBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200, spotBps: 30});
+        fees = Fees({platformBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200, spotBps: 30, gainBps: 200, liqCutBps: 500});
         // e, s from docs/backx/sim/sim3.py (v3); p = 10 % flat since v4. Packed: 2 bytes per m (m = 1..30), in bps.
         for (uint256 m = 1; m <= MAX_M; m++) {
             uint256 extra = m > 10 ? 2 * (m - 10) : 0; // +0.02 % per step past 10×
@@ -234,7 +236,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     }
 
     function setFees(Fees calldata f) external onlyOwner {
-        if (f.platformBps > 300 || f.rsfStakeBps > 200 || f.rsfLentBps > 50 || f.borrowBps > 100 || f.oracleDevBps > 1000 || f.spotBps > 100) {
+        if (f.platformBps > 300 || f.rsfStakeBps > 200 || f.rsfLentBps > 50 || f.borrowBps > 100 || f.oracleDevBps > 1000 || f.spotBps > 100 || f.gainBps > 500 || f.liqCutBps > 1000) {
             revert BadParams();
         }
         fees = f;
@@ -511,6 +513,25 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     }
 
     /// Issuers' USDC (borrow fee, share of a gain or of a liquidation rest): claimable from the vault.
+    /// Splits a settled position's rest (after the validator bonus): at a liquidation the platform takes liqCutBps and
+    /// the issuers sBps of the remainder; otherwise, on a gain of a position with a loan, the issuers take pBps and the
+    /// platform gainBps of the gain (owner 2026-10-25). Pays both; the trader gets net − issuers − platform.
+    function _outcome(uint8 kind, uint256 net, uint256 stake, Params memory pr, bool lends)
+        internal
+        returns (uint256 toIssuers, uint256 platform)
+    {
+        Fees memory f = fees;
+        if (kind == K_LIQ) {
+            platform = net * f.liqCutBps / BPS;
+            toIssuers = (net - platform) * pr.sBps / BPS;
+        } else if (lends && net > stake) {
+            toIssuers = (net - stake) * pr.pBps / BPS;
+            platform = (net - stake) * f.gainBps / BPS;
+        }
+        if (platform > 0) usd.safeTransfer(feeCollector, platform);
+        _toIssuers(toIssuers);
+    }
+
     function _toIssuers(uint256 amt) internal {
         if (amt == 0) return;
         usd.forceApprove(address(vault), amt);

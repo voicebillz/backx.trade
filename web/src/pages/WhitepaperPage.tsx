@@ -372,7 +372,7 @@ export function WhitepaperPage() {
                 ['Short issuers (the coin)', 'Borrow fee 0.25 % of what is lent + 10 % of shorters\' gains, in USDC', 'Reserve'],
                 ['Validators', 'Each position\'s gas + accuracy bonus', 'Manager'],
                 ['Reserve Security Fund', '0.5 % of the margin + 0.03 % of what is lent', 'Crises only'],
-                ['BackX Treasury', '2 % of the margin with multiplication, 0.3 % on a 1× hedge', 'Sent at open'],
+                ['BackX Treasury', '2 % of the margin with multiplication, 0.3 % on a 1× hedge; 2 % of gains and 5 % of what is left at a liquidation', 'Sent by the contract'],
                 ['$GAZZ revenue share', '10 % of what the Treasury receives', 'To gazz.fun'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
@@ -393,8 +393,8 @@ export function WhitepaperPage() {
               <div className="wp-row wp-head" role="row"><span role="columnheader">Position</span><span role="columnheader">Platform fee</span><span role="columnheader" className="r">Other fees</span></div>
               {[
                 ['Hedge 1×', '0.3 % of the amount', 'None, nothing is borrowed'],
-                ['Hedge with multiplication', '2 % of the margin', 'Borrow 0.25 % + fund'],
-                ['Short', '2 % of the margin', 'Borrow 0.25 % + fund'],
+                ['Hedge with multiplication', '2 % of the margin + 2 % of a gain', 'Borrow 0.25 % + fund'],
+                ['Short', '2 % of the margin + 2 % of a gain', 'Borrow 0.25 % + fund'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
             <p><b>Treasury.</b> Every platform fee goes on-chain to the BackX Treasury, one contract per chain at the same address everywhere, owned by the BackX Safe and holding USDC. 10 % of what it receives is the $GAZZ revenue share, sent every week on-chain to a contract gazz.fun controls; the rest pays for running BackX (validators, servers, audits, development). Only the Safe can withdraw the platform part, and never the holders' part.</p>

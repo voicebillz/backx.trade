@@ -177,17 +177,13 @@ contract BackxShortManager is BackxManagerBase {
             if (cost > maxUsdIn) revert Underwater(); // the pool is off the oracle (or past your limit): try again
             uint256 paid = _swapOut(address(usd), token, pos.lent, Math.min(pos.amount, maxUsdIn));
             uint256 rest = pos.amount - paid;
-            if (kind == K_LIQ) {
-                bonus = Math.min(rest, _accuracyBonus(value * validation.liqBonusBps / BPS, value, target));
-                toIssuers = (rest - bonus) * pr.sBps / BPS;
-            } else {
-                if (kind == K_LIMIT) bonus = Math.min(rest, _accuracyBonus(value * validation.fillBonusBps / BPS, value, target));
-                if (rest - bonus > pos.stake) toIssuers = (rest - bonus - pos.stake) * pr.pBps / BPS;
-            }
-            toTrader = rest - bonus - toIssuers;
+            if (kind == K_LIQ) bonus = Math.min(rest, _accuracyBonus(value * validation.liqBonusBps / BPS, value, target));
+            else if (kind == K_LIMIT) bonus = Math.min(rest, _accuracyBonus(value * validation.fillBonusBps / BPS, value, target));
             IERC20(token).forceApprove(address(vault), pos.lent);
             vault.repay(pos.lent, 0);
-            _toIssuers(toIssuers);
+            uint256 platform;
+            (toIssuers, platform) = _outcome(kind, rest - bonus, pos.stake, pr, true);
+            toTrader = rest - bonus - toIssuers - platform;
         } else {
             if (kind != K_LIQ) revert Underwater(); // past zero: validators settle it
             // Gap: the fund adds what the oracle confirms is missing (within its guardrails), then ONE purchase

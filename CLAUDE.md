@@ -112,6 +112,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   (contract `_stakeFor`, web `marginFor`), the rest is the margin X and the position is m × X (platform 2 % of X,
   borrow 0.25 % of lent to issuers, RSF 0.5 % of X + 0.03 % of lent), issuers' share of a gain p = 10 %.
   1× hedge (owner 2026-10-25, borrows nothing): only the platform fee `spotBps` 0.3 % of X + gas, no RSF/borrow.
+  Outcome share (owner 2026-10-25, "not much but a little"): on positions with a loan the platform also takes `gainBps`
+  2 % of a trader's gain (next to issuers' 10 %) and `liqCutBps` 5 % of what is left at a liquidation (before the issuers'
+  share), to the Treasury (`_outcome` in BackxManagerBase, web `OUTCOME` in hedge.ts).
   Treasury (owner 2026-10-25, `BackxTreasury`, CREATE2 via Admin → Contracts, same address every chain, Safe-owned,
   not upgradeable) is the feeCollector of every market: all platform revenue in USDC (everything except what goes to
   issuers, validators and the RSF). holderBps 10 % (owner 2026-10-25, Safe can lower it, max 50 %) goes via

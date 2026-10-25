@@ -7,6 +7,9 @@
 /** Platform (Treasury, $GAZZ holders' share) + Reserve Security Fund on the stake; borrow + RSF on the amount lent.
  *  A 1× hedge borrows nothing and pays only `spot` (owner 2026-10-25, contract Fees.spotBps). */
 export const FEES = { platform: 0.02, spot: 0.003, borrow: 0.0025, rsfStake: 0.005, rsfLent: 0.0003 } as const;
+/** Platform's share of the outcome on positions with a loan (owner 2026-10-25, contract gainBps / liqCutBps):
+ *  2 % of a trader's gain, 5 % of what is left at a liquidation (before the issuers' share). */
+export const OUTCOME = { gain: 0.02, liq: 0.05 } as const;
 
 /** Fee rate on the margin for a position that lends lentMult × margin (contract _rates + _stakeFor). */
 export const feeRate = (lentMult: number) =>
@@ -52,13 +55,13 @@ export interface Quote {
   /** Price moves 10 % in the trader's favour (up for Hedge, down for Short). */
   ifWin10: { trader: number; issuers: number };
   /** traderKeeps = USDC back to the wallet after a liquidation. */
-  ifLiquidated: { traderKeeps: number; issuers: number };
+  ifLiquidated: { traderKeeps: number; issuers: number; platform: number };
   /** Close at price ratio x (P / entry), as the contract settles it. A move past liquidation settles at the trigger. */
   at: (x: number) => Outcome;
 }
 
 /** trader = net result (payout − everything paid), issuers = total issuer income from the position. */
-export interface Outcome { trader: number; issuers: number; liquidated: boolean }
+export interface Outcome { trader: number; issuers: number; platform: number; liquidated: boolean }
 
 /** Contract default: a limit close fills at most 1 % worse than the limit (limitSlipBps). */
 export const LIMIT_SLIP = 0.01;
@@ -97,12 +100,12 @@ export function quote(amount: number, m: number, entry: number, poolFee: number,
   const liqRatio = noLiquidation ? 0 : (loan * (1 + buffer('hedge', mm)) + e * equity + liqMargin * notional) / (coins * (1 - cost));
   const at = (x: number): Outcome => {
     if (!noLiquidation && x <= liqRatio) {
-      const r = coins * liqRatio * (1 - cost) - loan;
-      return { trader: r * (1 - s) - paid, issuers: borrow + r * s, liquidated: true };
+      const r = (coins * liqRatio * (1 - cost) - loan) * (1 - OUTCOME.liq);
+      return { trader: r * (1 - s) - paid, issuers: borrow + r * s, platform: r / (1 - OUTCOME.liq) * OUTCOME.liq, liquidated: true };
     }
     const rest = coins * x * (1 - cost) - loan;
-    const cut = noLiquidation ? 0 : Math.max(rest - equity, 0) * p;
-    return { trader: rest - cut - paid, issuers: borrow + cut, liquidated: false };
+    const gain = noLiquidation ? 0 : Math.max(rest - equity, 0);
+    return { trader: rest - gain * (p + OUTCOME.gain) - paid, issuers: borrow + gain * p, platform: gain * OUTCOME.gain, liquidated: false };
   };
   const win = at(1.1);
   const rest = e * equity;
@@ -111,7 +114,7 @@ export function quote(amount: number, m: number, entry: number, poolFee: number,
     fees: { holders, borrow, rsf, gas, swap, total: holders + borrow + rsf + gas + swap },
     liqMove: noLiquidation ? 1 : Math.max(1 - liqRatio, 0), liqPrice: entry * liqRatio,
     ifWin10: { trader: win.trader, issuers: win.issuers },
-    ifLiquidated: { traderKeeps: noLiquidation ? 0 : rest * (1 - s), issuers: borrow + rest * s },
+    ifLiquidated: { traderKeeps: noLiquidation ? 0 : rest * (1 - OUTCOME.liq) * (1 - s), issuers: borrow + rest * (1 - OUTCOME.liq) * s, platform: rest * OUTCOME.liq },
     at,
   };
 }
@@ -140,12 +143,12 @@ export function shortQuote(amount: number, m: number, entry: number, poolFee: nu
   const at = (y: number): Outcome => {
     const x = Math.max(y, 1 - roof); // the profit roof closes it: no gain past it
     if (x >= liqRatio) {
-      const r = usdHeld - buyBack(liqRatio);
-      return { trader: r * (1 - s) - paid, issuers: borrow + r * s, liquidated: true };
+      const r = (usdHeld - buyBack(liqRatio)) * (1 - OUTCOME.liq);
+      return { trader: r * (1 - s) - paid, issuers: borrow + r * s, platform: r / (1 - OUTCOME.liq) * OUTCOME.liq, liquidated: true };
     }
     const rest = usdHeld - buyBack(x);
-    const cut = Math.max(rest - equity, 0) * p;
-    return { trader: rest - cut - paid, issuers: borrow + cut, liquidated: false };
+    const gain = Math.max(rest - equity, 0);
+    return { trader: rest - gain * (p + OUTCOME.gain) - paid, issuers: borrow + gain * p, platform: gain * OUTCOME.gain, liquidated: false };
   };
   const win = at(0.9);
   const rest = e * equity;
@@ -154,7 +157,7 @@ export function shortQuote(amount: number, m: number, entry: number, poolFee: nu
     fees: { holders, borrow, rsf, gas, swap: notional * 2 * cost, total: holders + borrow + rsf + gas + notional * 2 * cost },
     liqMove: Math.max(liqRatio - 1, 0), liqPrice: entry * liqRatio,
     ifWin10: { trader: win.trader, issuers: win.issuers },
-    ifLiquidated: { traderKeeps: rest * (1 - s), issuers: borrow + rest * s },
+    ifLiquidated: { traderKeeps: rest * (1 - OUTCOME.liq) * (1 - s), issuers: borrow + rest * (1 - OUTCOME.liq) * s, platform: rest * OUTCOME.liq },
     at,
   };
 }

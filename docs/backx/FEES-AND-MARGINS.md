@@ -6,7 +6,9 @@
 > - **Plattformgebyr** (2026-10-25, før «holders»): 2 % av marginen når issuers låner ut (multiplikasjon og short),
 >   **0,3 % på 1× hedge** (`spotBps`, ingen RSF og ingen lån). Alt går til **BackX Treasury** (én per kjede, samme
 >   adresse, eid av Safe); 10 % av det er $GAZZ revenue share (`holderBps`, kan justeres, maks 50 %), sendt hver uke til en kontrakt
->   gazz.fun styrer; gazz.fun fordeler videre. Resten er plattforminntekt. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
+>   gazz.fun styrer; gazz.fun fordeler videre. Resten er plattforminntekt.
+> - **Utfallsandel** (2026-10-25): på posisjoner med lån tar plattformen også 2 % av traderens gevinst (`gainBps`) og
+>   5 % av det som er igjen ved likvidering (`liqCutBps`, før issuers' andel). Til Treasury. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
 >   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
 > - **Keeper-gas** (2026-10-19): et fast beløp per posisjon (standard $0,10, `keeperGasUsd`, maks $5) betales ved åpning
 >   rett til keeper-walleten. Settes til ca. 2× gassen for én lukking/likvidering: halvparten dekker gassen, halvparten

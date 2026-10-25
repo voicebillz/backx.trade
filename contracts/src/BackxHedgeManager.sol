@@ -169,19 +169,15 @@ contract BackxHedgeManager is BackxManagerBase {
         uint256 bonus;
         if (out >= pos.lent) {
             uint256 rest = out - pos.lent;
-            if (kind == K_LIQ) {
-                bonus = Math.min(rest, _accuracyBonus(value * validation.liqBonusBps / BPS, value, target));
-                toIssuers = (rest - bonus) * pr.sBps / BPS;
-            } else {
-                if (kind == K_LIMIT) bonus = Math.min(rest, _accuracyBonus(value * validation.fillBonusBps / BPS, value, target));
-                if (rest - bonus > pos.stake && pos.m > 1) toIssuers = (rest - bonus - pos.stake) * pr.pBps / BPS; // 1×: 0 %
-            }
-            toTrader = rest - bonus - toIssuers;
+            if (kind == K_LIQ) bonus = Math.min(rest, _accuracyBonus(value * validation.liqBonusBps / BPS, value, target));
+            else if (kind == K_LIMIT) bonus = Math.min(rest, _accuracyBonus(value * validation.fillBonusBps / BPS, value, target));
             if (pos.lent > 0) {
                 usd.forceApprove(address(vault), pos.lent);
                 vault.repay(pos.lent, 0);
             }
-            _toIssuers(toIssuers);
+            uint256 platform;
+            (toIssuers, platform) = _outcome(kind, rest - bonus, pos.stake, pr, pos.m > 1); // 1×: nothing to share
+            toTrader = rest - bonus - toIssuers - platform;
         } else {
             // Gap: everything goes to the issuers. The fund covers only what the oracle confirms is missing (not a
             // loss a sandwich created inside the liqMaxGap band, review 2026-10-25); the rest is written off.

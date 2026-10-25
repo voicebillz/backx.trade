@@ -36,7 +36,9 @@ contract HedgeTest is Base {
         out = out * (10_000 - 5 - out * 10_000 / (10_000_000 * USD)) / 10_000;
         uint256 rest = out - p.lent;
         uint256 issuerShare = (rest - p.stake) * 1_000 / 10_000; // p = 10 % (v4)
-        assertEq(got, rest - issuerShare + p.gas, "trader gets rest minus p, plus its own gas back");
+        uint256 platformShare = (rest - p.stake) * 200 / 10_000; // 2 % of the gain to the Treasury (owner 2026-10-25)
+        assertEq(got, rest - issuerShare - platformShare + p.gas, "trader gets rest minus p and the platform's 2 %, plus its own gas back");
+        assertEq(usd.balanceOf(feeCollector), uint256(p.stake) * 200 / 10_000 + platformShare, "open fee + gain share");
         vm.warp(block.timestamp + 1 days); // rewards stream in over 24 h
         assertApproxEqAbs(usdVault.pendingRewards(issuer), borrow + issuerShare, 2, "issuers: borrow fee + p, claimable USDC");
         assertGt(got, 135 * USD, "$100 in at 5x, +10 %: about +$39 net");
@@ -294,7 +296,7 @@ contract GuardsTest is Base {
         vm.prank(makeAddr("stranger"));
         hm.liquidate(id); // open validators: anyone can liquidate a due position
         vm.expectRevert(); // only the Safe configures
-        hm.setFees(BackxManagerBase.Fees(0, 0, 0, 0, 0, 0));
+        hm.setFees(BackxManagerBase.Fees(0, 0, 0, 0, 0, 0, 0, 0));
         vm.expectRevert(BackxManagerBase.OnlySelf.selector);
         hm.selfSettle(1, 1, address(this), 0);
     }
@@ -316,7 +318,7 @@ contract GuardsTest is Base {
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setParams(30, BackxManagerBase.Params(100, 9000, 3000, 70)); // e below 5 %
         vm.expectRevert(BackxManagerBase.BadParams.selector);
-        hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200, 30)); // platform above 3 %
+        hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200, 30, 200, 500)); // platform above 3 %
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100)); // gas above $5
         vm.expectRevert(BackxManagerBase.BadParams.selector);
