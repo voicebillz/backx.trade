@@ -27,7 +27,8 @@ Our own validators (code in `keeper/`, 10 per chain on 5 servers, docs/KEEPERS.m
 
 ```
 bonus = maxBonus · ((W − d) / W)²      d = how far past the trigger (oracle), W = accuracyBps (default 1 %)
-maxBonus: liquidation 0.5 % of the position value (liqBonusBps), fills 0.1 % (fillBonusBps)
+maxBonus: liquidation 0.5 % of the position value (liqBonusBps), fills 0.1 % (fillBonusBps), and never more than
+15 % of what is left after the issuers' principal (restCapBps, owner 2026-10-25: issuers get the most)
 ```
 
 | Distance past the trigger | 0 % | 0.1 % | 0.25 % | 0.5 % | 0.75 % | ≥ 1 % |
@@ -38,7 +39,7 @@ maxBonus: liquidation 0.5 % of the position value (liqBonusBps), fills 0.1 % (fi
 Where the bonus comes from: a liquidation's bonus comes out of the trader's rest after the issuers' principal is
 repaid (never out of the principal; capped by that rest). A take-profit / roof bonus comes out of the trader's
 payout, an entry-order bonus out of the order's amount. Issuers are never paid less principal because of it.
-The Safe can tune it (`setValidation`): gas ≤ $5, liquidation bonus ≤ 2 %, fill bonus ≤ 0.5 %, W 0.1–5 %.
+The Safe can tune it (`setValidation`): gas ≤ $5, liquidation bonus ≤ 2 %, fill bonus ≤ 0.5 %, W 0.1–5 %, rest cap ≤ 50 %.
 
 ## Claims: everyone claims on-chain (or on the website)
 | Who | Where the USDC waits | Claim |

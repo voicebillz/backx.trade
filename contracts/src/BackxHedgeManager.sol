@@ -169,8 +169,7 @@ contract BackxHedgeManager is BackxManagerBase {
         uint256 bonus;
         if (out >= pos.lent) {
             uint256 rest = out - pos.lent;
-            if (kind == K_LIQ) bonus = Math.min(rest, _accuracyBonus(value * validation.liqBonusBps / BPS, value, target));
-            else if (kind == K_LIMIT) bonus = Math.min(rest, _accuracyBonus(value * validation.fillBonusBps / BPS, value, target));
+            bonus = _settleBonus(kind, rest, value, target);
             if (pos.lent > 0) {
                 usd.forceApprove(address(vault), pos.lent);
                 vault.repay(pos.lent, 0);

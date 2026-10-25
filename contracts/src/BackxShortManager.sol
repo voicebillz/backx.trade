@@ -177,8 +177,7 @@ contract BackxShortManager is BackxManagerBase {
             if (cost > maxUsdIn) revert Underwater(); // the pool is off the oracle (or past your limit): try again
             uint256 paid = _swapOut(address(usd), token, pos.lent, Math.min(pos.amount, maxUsdIn));
             uint256 rest = pos.amount - paid;
-            if (kind == K_LIQ) bonus = Math.min(rest, _accuracyBonus(value * validation.liqBonusBps / BPS, value, target));
-            else if (kind == K_LIMIT) bonus = Math.min(rest, _accuracyBonus(value * validation.fillBonusBps / BPS, value, target));
+            bonus = _settleBonus(kind, rest, value, target);
             IERC20(token).forceApprove(address(vault), pos.lent);
             vault.repay(pos.lent, 0);
             uint256 platform;

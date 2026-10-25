@@ -68,6 +68,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         uint16 liqBonusBps;     // max accuracy bonus on a liquidation, of the position value (from the trader's rest)
         uint16 fillBonusBps;    // max accuracy bonus on a take-profit / roof / entry fill, of the position value
         uint16 accuracyBps;     // W: the bonus is zero this far past the trigger
+        uint16 restCapBps;      // the bonus never takes more than this share of what is left (issuers first, owner 2026-10-25)
     }
 
     struct Position {
@@ -204,7 +205,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         nextId = 1;
         nextOrderId = 1;
         _oneUsd = 10 ** IERC20Metadata(address(a.usd)).decimals();
-        validation = Validation({gasUsd: uint64(_oneUsd / 10), liqBonusBps: 50, fillBonusBps: 10, accuracyBps: 100});
+        validation = Validation({gasUsd: uint64(_oneUsd / 10), liqBonusBps: 50, fillBonusBps: 10, accuracyBps: 100, restCapBps: 1500});
         fees = Fees({platformBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200, spotBps: 30, gainBps: 200, liqCutBps: 500});
         // e, s from docs/backx/sim/sim3.py (v3); p = 10 % flat since v4. Packed: 2 bytes per m (m = 1..30), in bps.
         for (uint256 m = 1; m <= MAX_M; m++) {
@@ -244,7 +245,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
 
     /// @notice Gas at most $5; bonuses at most 2 % (liquidation) / 0.5 % (fills); W between 0.1 % and 5 %.
     function setValidation(Validation calldata v) external onlyOwner {
-        if (v.gasUsd > 5 * _oneUsd || v.liqBonusBps > 200 || v.fillBonusBps > 50 || v.accuracyBps < 10 || v.accuracyBps > 500) {
+        if (v.gasUsd > 5 * _oneUsd || v.liqBonusBps > 200 || v.fillBonusBps > 50 || v.accuracyBps < 10 || v.accuracyBps > 500 || v.restCapBps > 5000) {
             revert BadParams();
         }
         validation = v;
@@ -387,6 +388,15 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         claimable[v] += amt;
         totalClaimable += amt;
         emit Rewarded(v, id, kind, gas, bonus);
+    }
+
+    /// Validator bonus on a liquidation or take-profit, from the rest: the accuracy bonus, capped at restCapBps of it.
+    function _settleBonus(uint8 kind, uint256 rest, uint256 value, uint256 target) internal view returns (uint256) {
+        Validation memory v = validation;
+        uint256 maxB = kind == K_LIQ ? v.liqBonusBps : kind == K_LIMIT ? v.fillBonusBps : 0;
+        uint256 cap = rest * v.restCapBps / BPS;
+        uint256 b = _accuracyBonus(value * maxB / BPS, value, target);
+        return b < cap ? b : cap;
     }
 
     /// maxBonus · ((W − d) / W)², d = |got − target| / target in bps.

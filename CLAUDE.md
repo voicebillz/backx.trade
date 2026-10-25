@@ -58,7 +58,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   append-only across versions. Validators settle many per tx (`liquidateBatch`, `executeLimitBatch`, `fillOrderBatch`).
   Contracts v2 (owner 2026-10-25, `docs/backx/VALIDATORS.md`, `AGENTS.md`): execution is OPEN to anyone (no keeper
   allow list); each position escrows its validator gas, paid to whoever settles it + an accuracy bonus
-  (max·((W−d)/W)², W 1 %; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal); own
+  (max·((W−d)/W)², W 1 %; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal, and
+  never above `restCapBps` 15 % of the rest: issuers get the most, owner 2026-10-25); own
   close refunds the gas. Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
   cancel; a short order waits until coins are issued). ALL rewards are claimable USDC: validators `claim()/claimTo()`
   per manager; issuers (USDC reserve AND coin reserves) `claimRewards()/claimRewardsTo()` on the vault, streamed over

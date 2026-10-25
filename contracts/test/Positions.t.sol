@@ -320,7 +320,7 @@ contract GuardsTest is Base {
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200, 30, 200, 500)); // platform above 3 %
         vm.expectRevert(BackxManagerBase.BadParams.selector);
-        hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100)); // gas above $5
+        hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100, 1500)); // gas above $5
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setConfig(_cfg(31, 0, 0));
         vm.stopPrank();

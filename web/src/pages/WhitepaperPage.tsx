@@ -330,7 +330,7 @@ export function WhitepaperPage() {
                 <div className="wp-row" role="row" key={d}><span role="cell" className="num">{d}%</span><span role="cell" className="r num">{Math.round((d as number) >= 1 ? 0 : (1 - (d as number)) ** 2 * 100)}%</span><span role="cell" className="r num">{v} + gas</span></div>
               ))}
             </div>
-            <p className="hint">Liquidation bonus up to 0.5 % of the position, from what is left for the trader after the issuers are repaid; take-profit, roof and order fills up to 0.1 %. The issuers' principal never pays a bonus.</p>
+            <p className="hint">Liquidation bonus up to 0.5 % of the position, from what is left for the trader after the issuers are repaid; take-profit, roof and order fills up to 0.1 %. A bonus never takes more than 15 % of what is left, so issuers always get the largest share. The issuers' principal never pays a bonus.</p>
           </section>
 
           <section id="timing">
