@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { AgentCallSheet } from '../components/AgentCallSheet';
-import { quote } from '../lib/hedge';
+import { Logo } from '../components/Logo';
+import { OUTCOME, params, quote } from '../lib/hedge';
 import { usd } from '../lib/format';
 
 // Whitepaper (owner 2026-10-22). Plain copy, no yield promises, "multiplication" never "leverage".
@@ -18,10 +20,31 @@ const MAX_S = 20;
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** True once the element has scrolled into view (at once for reduced motion). */
+// Printing / saving as PDF: every animated figure shows its final state, also below the fold (owner 2026-10-25).
+let printing = false;
+const printSubs = new Set<() => void>();
+const setPrinting = (v: boolean) => { printing = v; printSubs.forEach((f) => f()); };
+const subscribePrint = (f: () => void) => { printSubs.add(f); return () => { printSubs.delete(f); }; };
+const usePrinting = () => useSyncExternalStore(subscribePrint, () => printing);
+if (typeof window !== 'undefined') {
+  addEventListener('beforeprint', () => flushSync(() => setPrinting(true)));
+  addEventListener('afterprint', () => setPrinting(false));
+}
+/** Opens the browser's save dialog with the whitepaper laid out for PDF, in the current theme's colours. */
+function savePdf() {
+  flushSync(() => setPrinting(true));
+  const title = document.title;
+  document.title = 'BackX Whitepaper';
+  print();
+  document.title = title;
+}
+
+/** True once the element has scrolled into view (at once for reduced motion, and when printing). */
 function useInView<T extends Element>() {
   const ref = useRef<T>(null);
-  const [seen, setSeen] = useState(false);
+  const [seenState, setSeen] = useState(false);
+  const isPrinting = usePrinting();
+  const seen = seenState || isPrinting;
   useEffect(() => {
     if (reduced()) { setSeen(true); return; }
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect(); } }, { threshold: 0.3 });
@@ -51,6 +74,20 @@ function Reveal({ className, children, label }: { className: string; children: R
   const [ref, seen] = useInView<HTMLDivElement>();
   return <div ref={ref} className={className + (seen ? ' in' : '')} aria-label={label} role={label ? 'figure' : undefined}>{children}</div>;
 }
+
+// Who gets what from $100 at 20× on a Major coin (same math as the ticket and the contracts), validator at full accuracy.
+const SPLIT = (() => {
+  const q = quote(100, 20, 1, 0.0005, 50_000_000, 0.015);
+  const { s, p } = params(20);
+  const borrow = q.fees.borrow, platOpen = q.fees.holders;
+  const win = q.at(1.1), bw = q.notional * 1.1 * 0.001;
+  const L = q.ifLiquidated, rest = L.traderKeeps + (L.issuers - borrow) + L.platform;
+  const bl = Math.min(rest * 0.15, q.notional * (1 - q.liqMove) * 0.005), r2 = (rest - bl) * (1 - OUTCOME.liq);
+  return {
+    win: { issuers: win.issuers - bw * p, platform: platOpen + win.platform - bw * OUTCOME.gain, validator: 0.1 + bw },
+    liq: { issuers: borrow + r2 * s, platform: platOpen + (rest - bl) * OUTCOME.liq, validator: 0.1 + bl },
+  };
+})();
 
 // Example hedge for the anatomy picture: $100 at 5× on a Major coin (same math as the ticket).
 const EX = quote(100, 5, 1, 0.0005, 10_000_000, 0.015);
@@ -248,9 +285,14 @@ export function WhitepaperPage() {
     <main id="main" className="page wp-page">
       <header className="page-head">
         <div>
+          <div className="wp-print-only"><Logo /></div>
           <p className="eyebrow gold">Whitepaper</p>
           <h1>BackX: put your capital to work</h1>
         </div>
+        <button type="button" className="btn btn-ghost wp-pdf" onClick={savePdf}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
+          Download PDF
+        </button>
       </header>
 
       <Reveal className="wp-stats" label="Key numbers">
@@ -377,6 +419,13 @@ export function WhitepaperPage() {
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
             <p className="hint">After a liquidation, issuers also take a share of what is left (50–90 % depending on the multiplication). Rewards stream in over 24 hours so a deposit made just before a large reward cannot take what earlier issuers earned.</p>
+            <p><b>Issuers earn the most.</b> Their capital makes multiplication possible, so they take the largest share of every outcome. A validator's bonus never takes more than 15 % of what is left, and the platform takes a small share. Example: $100 at 20× on a large coin.</p>
+            <div className="wp-table four wide" role="table" aria-label="Who gets what from $100 at 20x">
+              <div className="wp-row wp-head" role="row"><span role="columnheader">Outcome</span><span role="columnheader" className="r">Issuers</span><span role="columnheader" className="r">Platform</span><span role="columnheader" className="r">Validator</span></div>
+              {([['▲ Price rises 10 %, take-profit', SPLIT.win], ['▼ Liquidated', SPLIT.liq]] as const).map(([w, x]) => (
+                <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell" className="r num gold">{usd(x.issuers)}</span><span role="cell" className="r num">{usd(x.platform)}</span><span role="cell" className="r num">{usd(x.validator)}</span></div>
+              ))}
+            </div>
           </section>
 
           <section id="agents">

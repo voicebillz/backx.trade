@@ -96,6 +96,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (admins only until launch: everyone else sees a greyed-out "Coming soon" placeholder, `WhitepaperSite.tsx`; visual gate only, the text ships in the chunk; nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
   Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; app header box; removed from the Whitepaper 2026-10-25, whitepaper has no Draft badge).
+  Whitepaper "Download PDF" (owner 2026-10-25): the browser's print / save-as-PDF in the current theme (print CSS in app.css,
+  `@page` background = `--bg`, chrome hidden, every animated figure forced to its final state), so the PDF is always current.
+  Rewards section shows "Issuers earn the most" with a live per-$100 split at 20× (issuers > platform > validator).
   Vercel: `cleanUrls` is on, so SPA rewrites must point to `/` (not `/index.html`, which 404s on refresh).
   Intro video: `brand/marketing/backx-intro-4k.mp4` + `-1080p.mp4`, source `brand/video/` (recipe: beat grid, real Mixkit SFX; no music, calm bubble/swish motion sounds, −16 LUFS).
 - Launch chains (owner 2026-10-23, `LAUNCH_CHAIN_IDS` in server/src/chains.js): Robinhood Chain, BNB Chain, Base, Arbitrum;

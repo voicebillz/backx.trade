@@ -795,7 +795,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-bar i { display: block; height: 100%; background: var(--ink-3); border-radius: 3px; }
 .wp-row.ours .wp-bar i { background: var(--brand); }
 .wp-bar i.early { background: var(--price-up); }
-@media (max-width: 899px) {
+@media screen and (max-width: 899px) {
   .wp-grid { grid-template-columns: 1fr; gap: 12px; }
   .wp-toc { position: static; }
   .wp-toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1212,7 +1212,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-table .wp-row { grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr)); }
 .wp-table.three .wp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
 .wp-table.three.wide .wp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, .8fr); }
-@media (max-width: 640px) {
+@media screen and (max-width: 640px) {
   .wp-table .wp-row > span:nth-child(2) { grid-column: auto; order: 0; }
   .wp-table .wp-row.wp-head > span:nth-child(2) { display: block; }
   .wp-table .wp-row { gap: 8px; padding: 10px; font-size: 12px; }
@@ -1446,3 +1446,20 @@ html:root { --privy-color-icon-muted: var(--brand); }
 @container (max-width: 760px) { .coin-stats > :nth-child(n+4) { display: none; } }
 @container (max-width: 600px) { .coin-stats > :nth-child(n+3) { display: none; } }
 @container (max-width: 460px) { .coin-stats { display: none; } }
+
+/* Whitepaper → PDF (owner 2026-10-25): "Download PDF" prints the page in the current theme's colours, chrome hidden. */
+.wp-print-only { display: none; }
+.wp-page > .page-head { align-items: center; }
+@media print {
+  @page { size: A4; margin: 12mm 0; background: var(--bg); }
+  html, body, #root, .home, .app { background: var(--bg) !important; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .topbar, .h-header, .skip, .wp-pdf, .wp-toc, .mobile-bar, .h-footer, footer { display: none !important; }
+  .wp-print-only { display: block; margin-bottom: 8px; }
+  .wp-page { padding: 0 14mm !important; max-width: none !important; }
+  .wp-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .wp-fig, .wp-table, .wp-row, .wp-callout, .wp-stats, .wp-flow, .callsheet tr { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .sheet-scroll { overflow: visible !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+.wp-pdf { gap: 6px; }
