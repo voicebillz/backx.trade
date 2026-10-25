@@ -321,7 +321,7 @@ export function WhitepaperPage() {
           <section id="hedge">
             <h2>Hedge</h2>
             <p>You choose a coin, an amount and a multiplication (1× to the coin's cap). The amount you type is what you pay: fees and validator gas come out of it, and the rest is your margin. Your position is margin × multiplication; the part above your margin is lent by the issuers' reserve.</p>
-            <p>Each position has a liquidation price, shown before you open. If the price falls to it, the position is closed early so the lent capital goes back to the issuers first. You can also set a take-profit limit, filled by a validator.</p>
+            <p>Each position has a liquidation price, shown before you open. If the price falls to it, the position is closed early so the lent capital goes back to the issuers first. You can also set a take-profit and a stop-loss, both filled by a validator.</p>
             <HedgeAnatomy />
           </section>
 
@@ -345,7 +345,7 @@ export function WhitepaperPage() {
 
           <section id="orders">
             <h2>Orders</h2>
-            <p>Buy and sell orders live on-chain. A <b>buy order</b> opens a hedge when the price reaches your level (below it to buy a dip, above it for a breakout); a <b>sell order</b> opens a short the same way. Your USDC waits in the contract until a validator fills the order; you can cancel any time, and an expired order goes back to you. A short order also waits until coins are issued, so you can place it before anyone has. Take-profits close positions the same way, at most 1 % worse than your price.</p>
+            <p>Buy and sell orders live on-chain. A <b>buy order</b> opens a hedge when the price reaches your level (below it to buy a dip, above it for a breakout); a <b>sell order</b> opens a short the same way. Your USDC waits in the contract until a validator fills the order; you can cancel any time, and an expired order goes back to you. A short order also waits until coins are issued, so you can place it before anyone has. Take-profits and stop-losses close positions the same way, at most 1 % worse than the price when they trigger.</p>
           </section>
 
           <section id="execution">
@@ -364,7 +364,7 @@ export function WhitepaperPage() {
 
           <section id="validators">
             <h2>Validators</h2>
-            <p>Anyone can be a validator: a person, a bot or an AI agent, on every chain BackX runs on. Validators liquidate positions, fill take-profits, close shorts at their roof and fill buy and sell orders. There is no allow list and nothing depends on BackX servers: if ours stop, everyone else keeps the market running. Everything they do is visible on-chain.</p>
+            <p>Anyone can be a validator: a person, a bot or an AI agent, on every chain BackX runs on. Validators liquidate positions, fill take-profits and stop-losses, close shorts at their roof and fill buy and sell orders. There is no allow list and nothing depends on BackX servers: if ours stop, everyone else keeps the market running. Everything they do is visible on-chain.</p>
             <p><b>What a validator earns.</b> Every position puts its gas fee aside when it opens; whoever settles it gets it. On top comes an accuracy bonus, largest when the execution lands right at the trigger price and falling to zero 1 % past it. The fastest, most accurate validator earns the most, which is exactly what keeps issuers safe.</p>
             <RewardCurve />
             <div className="wp-table three" role="table" aria-label="Validator bonus by distance">

@@ -6,6 +6,7 @@ export const managerAbi = parseAbi([
   'event Opened(uint256 indexed id, address indexed owner, uint8 m, uint256 stake, uint256 lent, uint256 amount, uint256 limitValue)',
   'event Closed(uint256 indexed id, address indexed by, uint8 kind, uint256 toTrader, uint256 toIssuers, uint256 covered, uint256 writtenOff)',
   'event LimitSet(uint256 indexed id, uint256 limitValue)',
+  'event StopSet(uint256 indexed id, uint256 stopValue)',
   'event OrderPlaced(uint256 indexed orderId, address indexed owner, uint8 m, uint256 amount, uint256 trigger, bool above, uint256 expiry)',
   'event OrderFilled(uint256 indexed orderId, uint256 indexed positionId, address indexed by)',
   'event OrderCancelled(uint256 indexed orderId)',

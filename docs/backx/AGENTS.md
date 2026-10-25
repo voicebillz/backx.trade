@@ -24,6 +24,7 @@ Download CSV button; source `web/src/lib/agentCalls.ts`, regenerate the CSV from
 | Entry order (limit buy / sell) | `hedge.placeOrder(m, amount, trigger, above, expiry, takeProfit, slipBps)` (slipBps 0 = 0.5 %) | `short.placeOrder(…)`: also waits for issued coins |
 | Cancel order | `cancelOrder(orderId)` | same |
 | Move take-profit | `setLimit(id, price)` (0 = none) | `setLimit(id, price)` (0 = back to the roof) |
+| Stop-loss | `setStop(id, price)` below today's price (0 = none) | `setStop(id, price)` above today's price (0 = none) |
 | Close | `hedge.close(id, minUsdOut)` | `short.close(id, maxUsdIn)` |
 | Read | `positions(id)`, `threshold(id)`, `isLiquidatable(id)`, `isLimitReached(id)` | same; `limitValue` starts at the roof |
 

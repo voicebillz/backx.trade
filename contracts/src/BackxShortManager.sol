@@ -62,7 +62,7 @@ contract BackxShortManager is BackxManagerBase {
         positions[id] = Position({
             owner: owner_, m: m, openedAt: uint40(block.timestamp), gas: uint64(gas), stake: SafeCast.toUint128(stake),
             lent: SafeCast.toUint128(q), amount: SafeCast.toUint128(stake + proceeds), lentUsd: SafeCast.toUint128(notional),
-            limitValue: 0, stressUsd: SafeCast.toUint128(stress)
+            limitValue: 0, stressUsd: SafeCast.toUint128(stress), stopValue: 0
         });
         if (_triggered(positions[id])) revert WouldLiquidate();
         _setLimit(id, positions[id], limitPrice);
@@ -85,6 +85,21 @@ contract BackxShortManager is BackxManagerBase {
         emit LimitSet(id, v);
     }
 
+    /// @notice Set, move or cancel (0) the stop-loss: bought back once the coins cost this price or more.
+    function setStop(uint256 id, uint256 stopPrice) external {
+        Position storage pos = positions[id];
+        if (pos.owner != msg.sender) revert NotOwner();
+        uint256 v = stopPrice == 0 ? 0 : Math.mulDiv(pos.lent, stopPrice, 1e18);
+        if (v != 0 && v <= oracle.usdValue(token, pos.lent)) revert BadLimit(); // a stop buys back above today's price
+        pos.stopValue = SafeCast.toUint128(v);
+        emit StopSet(id, v);
+    }
+
+    /// Take-profit (or roof) or stop-loss reached at this oracle buy-back cost.
+    function _exitHit(Position memory pos, uint256 value) internal pure returns (bool) {
+        return (pos.limitValue != 0 && value <= pos.limitValue) || (pos.stopValue != 0 && value >= pos.stopValue);
+    }
+
     // ---- validators --------------------------------------------------------------------------------
 
     /// Close: your own. Liquidation: price up to the threshold. Take-profit or roof: the oracle says buying the q
@@ -100,7 +115,7 @@ contract BackxShortManager is BackxManagerBase {
             return (pos, type(uint256).max);
         }
         uint256 value = oracle.usdValue(token, pos.lent);
-        if (pos.owner == address(0) || pos.limitValue == 0 || value > pos.limitValue) revert LimitNotReached();
+        if (pos.owner == address(0) || !_exitHit(pos, value)) revert LimitNotReached();
         // From today's price, not the limit: a late roof / take-profit fill cannot hand the move to a sandwich.
         return (pos, value * (BPS + limitSlipBps) / BPS);
     }
@@ -112,7 +127,7 @@ contract BackxShortManager is BackxManagerBase {
 
     function isLimitReached(uint256 id) external view override returns (bool) {
         Position memory pos = positions[id];
-        return pos.owner != address(0) && pos.limitValue != 0 && oracle.usdValue(token, pos.lent) <= pos.limitValue;
+        return pos.owner != address(0) && _exitHit(pos, oracle.usdValue(token, pos.lent));
     }
 
     /// @notice Liquidation threshold: the buy-back cost (USD) at which the short is liquidated.
@@ -161,7 +176,7 @@ contract BackxShortManager is BackxManagerBase {
         stressUsd -= pos.stressUsd;
         Params memory pr = _params[pos.m];
         uint256 value = oracle.usdValue(token, pos.lent); // oracle cost of the q coins
-        uint256 target = kind == K_LIQ ? _threshold(pos) : pos.limitValue;
+        uint256 target = kind == K_LIQ ? _threshold(pos) : pos.stopValue != 0 && value >= pos.stopValue ? pos.stopValue : pos.limitValue;
         uint256 cost = adapter.quoteExactOut(address(usd), token, pos.lent);
         if (kind == K_LIQ) maxUsdIn = value * (BPS + liqMaxGapBps) / BPS;
 

@@ -23,6 +23,7 @@ export const AGENT_CALLS: AgentCall[] = [
   { group: 'Trade', step: 'Sell (short) now', contract: 'Short', call: 'open(amount, m, minUsdOut, takeProfit)', returns: 'position id · roof set' },
   { group: 'Trade', step: 'Read a position', contract: 'Hedge / Short', call: 'positions(id) · threshold(id)', returns: 'size, margin, limit · liquidation value' },
   { group: 'Trade', step: 'Move take-profit', contract: 'Hedge / Short', call: 'setLimit(id, price)', returns: 'short: 0 = back to the roof' },
+  { group: 'Trade', step: 'Set stop-loss', contract: 'Hedge / Short', call: 'setStop(id, price)', returns: '0 = none' },
   { group: 'Trade', step: 'Close', contract: 'Hedge / Short', call: 'close(id, limit)', returns: 'USDC to you · gas back' },
   { group: 'Orders', step: 'Place a buy / sell order', contract: 'Hedge / Short', call: 'placeOrder(m, amount, trigger, above, expiry, takeProfit, slipBps)', returns: 'order id · USDC escrowed' },
   { group: 'Orders', step: 'Read an order', contract: 'Hedge / Short', call: 'orders(orderId) · isOrderFillable(orderId)', returns: 'order · fillable now?' },

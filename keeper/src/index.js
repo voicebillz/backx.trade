@@ -43,7 +43,8 @@ async function indexTo(head) {
       const m = l.address.toLowerCase(), id = l.args.id;
       if (l.eventName === 'Opened') open.get(m)?.add(id);
       else if (l.eventName === 'Closed') { open.get(m)?.delete(id); withLimit.get(m)?.delete(id); }
-      else if (l.eventName === 'LimitSet') { if (l.args.limitValue > 0n) withLimit.get(m)?.add(id); else withLimit.get(m)?.delete(id); }
+      // Take-profit or stop-loss: watched until the position closes (isLimitReached checks both on-chain).
+      else if (l.eventName === 'LimitSet' || l.eventName === 'StopSet') { if ((l.args.limitValue ?? l.args.stopValue) > 0n) withLimit.get(m)?.add(id); }
       else if (l.eventName === 'OrderPlaced') orders.get(m)?.add(l.args.orderId);
       else if (l.eventName === 'OrderFilled' || l.eventName === 'OrderCancelled') orders.get(m)?.delete(l.args.orderId);
     }

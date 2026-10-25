@@ -1479,3 +1479,19 @@ html:root { --privy-color-icon-muted: var(--brand); }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .wp-pdf { gap: 6px; }
+
+/* Ticket TP / SL (owner 2026-10-25): percent on the margin or a price, quick picks, potential profit / loss */
+.tpsl { display: grid; gap: 6px; }
+.tpsl-label { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-top: 4px; }
+.tpsl-label:first-child { margin-top: 0; }
+.tpsl-inputs { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 6px; }
+.input-wrap.sm input { min-width: 0; }
+.input-wrap .prefix.up { color: var(--price-up); }
+.input-wrap .prefix.down { color: var(--price-down); }
+.tpsl-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tpsl-chips .chip-btn { text-align: center; padding-left: 0; padding-right: 0; }
+.tpsl-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-3); min-height: 24px; }
+.tpsl-foot b { font-weight: 500; margin-left: 4px; }
+.tpsl-clear { font-size: 12px; color: var(--ink-3); min-height: 24px; padding: 0 2px; }
+.tpsl-clear:hover { color: var(--ink); }
+.ticket .tpsl-chips.sl .chip-btn.on { color: var(--price-down); border-color: var(--price-down); }

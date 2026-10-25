@@ -376,6 +376,56 @@ contract LimitTest is Base {
         assertEq(sm.stressUsd(), 0);
     }
 
+    function test_hedge_stopLoss_sellsBeforeLiquidation() public {
+        uint256 id = _hedge(100 * USD, 5); // liquidation near −12 %
+        vm.prank(trader);
+        hm.setStop(id, 1_900 * USD); // stop at −5 %
+        _move(-300);
+        assertFalse(hm.isLimitReached(id));
+        _move(-600);
+        assertTrue(hm.isLimitReached(id));
+        assertFalse(hm.isLiquidatable(id));
+        uint256 before = usd.balanceOf(trader);
+        vm.prank(validator);
+        hm.executeLimit(id);
+        uint256 got = usd.balanceOf(trader) - before;
+        assertGt(got, 50 * USD, "the stop kept most of the margin");
+        assertLt(got, 100 * USD);
+        assertEq(usdVault.lent(), 0, "principal back first");
+        assertGt(hm.claimable(validator), USD / 10 - 1, "validator paid");
+    }
+
+    function test_short_stopLoss_buysBackOnRise() public {
+        uint256 id = _short(100 * USD, 5);
+        vm.prank(trader);
+        sm.setStop(id, 2_100 * USD); // stop at +5 %
+        _move(300);
+        assertFalse(sm.isLimitReached(id));
+        _move(600);
+        assertTrue(sm.isLimitReached(id));
+        vm.prank(validator);
+        sm.executeLimit(id);
+        assertEq(tokenVault.lent(), 0, "exactly q coins back");
+        assertEq(_pos(sm, id).owner, address(0));
+    }
+
+    function test_stop_rules() public {
+        uint256 h = _hedge(100 * USD, 5);
+        uint256 s = _short(100 * USD, 5);
+        vm.startPrank(trader);
+        vm.expectRevert(BackxManagerBase.BadLimit.selector); // a hedge stop must be below today's price
+        hm.setStop(h, 2_100 * USD);
+        vm.expectRevert(BackxManagerBase.BadLimit.selector); // a short stop must be above today's price
+        sm.setStop(s, 1_900 * USD);
+        hm.setStop(h, 1_900 * USD);
+        hm.setStop(h, 0); // cancel
+        vm.stopPrank();
+        assertEq(_pos(hm, h).stopValue, 0);
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(BackxManagerBase.NotOwner.selector);
+        hm.setStop(h, 1_900 * USD);
+    }
+
     function test_limit_spikeAloneCannotFill() public {
         vm.prank(trader);
         uint256 id = hm.open(100 * USD, 5, 0, 2_200 * USD);

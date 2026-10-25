@@ -82,6 +82,8 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         uint128 lentUsd;      // USD value lent at open (open interest)
         uint128 limitValue;   // hedge: USD the coins must fetch. short: USD the q coins may cost (≥ roof). 0 = none
         uint128 stressUsd;    // this position's share of the worst-case gap
+        uint128 stopValue;    // stop-loss (owner 2026-10-25). hedge: sell once the coins fetch ≤ this. short: buy back once
+                              // the q coins cost ≥ this. 0 = none. Filled by validators like a take-profit.
     }
 
     /// @notice Entry order (buy for Hedge, sell for Short): USDC is escrowed now, a validator opens the position
@@ -143,6 +145,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     event Opened(uint256 indexed id, address indexed owner, uint8 m, uint256 stake, uint256 lent, uint256 amount, uint256 limitValue);
     event Closed(uint256 indexed id, address indexed by, uint8 kind, uint256 toTrader, uint256 toIssuers, uint256 covered, uint256 writtenOff);
     event LimitSet(uint256 indexed id, uint256 limitValue);
+    event StopSet(uint256 indexed id, uint256 stopValue);
     event OrderPlaced(uint256 indexed orderId, address indexed owner, uint8 m, uint256 amount, uint256 trigger, bool above, uint256 expiry);
     event OrderFilled(uint256 indexed orderId, uint256 indexed positionId, address indexed by);
     event OrderCancelled(uint256 indexed orderId);

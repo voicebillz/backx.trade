@@ -38,7 +38,9 @@ interface Props {
 const MARKET_CHAIN = 'Robinhood Chain';
 const signed = (n: number) => (n >= 0 ? '+' : '−') + usd(Math.abs(n));
 const pct = (f: number) => (f >= 0 ? '+' : '−') + Math.abs(f * 100).toFixed(1) + '%';
-const STEPS = [0.1, 0.25, 0.5, 1];
+// Quick picks as a return on the margin (owner 2026-10-25, like ROE): take profit up, stop loss down.
+const TP_STEPS = [25, 50, 100, 200];
+const SL_STEPS = [10, 15, 25, 50];
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
 const clean = (v: string) => v.replace(/[^0-9.]/g, '');
 const coinAmt = (n: number) => (n >= 1000 ? n.toFixed(0) : n >= 1 ? n.toFixed(4) : n.toPrecision(4));
@@ -76,11 +78,14 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
   // Limit order (switch) and take-profit. Cleared on a new coin or side.
   const [limitOn, setLimitOn] = useState(false);
   const [entry, setEntry] = useState('');
-  const [tpOn, setTpOn] = useState(false);
+  const [tpOn, setTpOn] = useState(false); // TP/SL switch
   const [tp, setTp] = useState('');
+  const [tpPct, setTpPct] = useState('');
+  const [sl, setSl] = useState('');
+  const [slPct, setSlPct] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [selling, setSelling] = useState<DemoPosition | null>(null);
-  useEffect(() => { setEntry(''); setTp(''); }, [market.id, side]);
+  useEffect(() => { setEntry(''); setTp(''); setTpPct(''); setSl(''); setSlPct(''); }, [market.id, side]);
   const cap = buy ? market.maxM : market.shortMaxM; // what the coin supports at all
   const multOn = m >= 2;
   const held = DEMO_POSITIONS.filter((p) => p.sym === market.symbol && p.side === side).map((p) => ({ ...p, mark: market.price }));
@@ -108,8 +113,22 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
     : null;
   const ratio = hasTp && !tpErr ? tpNum / base : null;
   const preview = ratio ? q.at(ratio * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
+  // Percent fields are a return on the margin: a price move of pct / m (sign by side). Either field drives the other.
+  const mm = Math.max(1, Math.min(m, max)), dir = buy ? 1 : -1;
+  const fromPct = (pct: number, up: boolean) => roundPrice(base * (1 + (up ? 1 : -1) * dir * pct / 100 / mm));
+  const toPct = (p: number, up: boolean) => Math.round((p / base - 1) * (up ? 1 : -1) * dir * mm * 1000) / 10;
+  const slNum = parseFloat(sl);
+  const hasSl = tpOn && sl !== '' && Number.isFinite(slNum);
+  const slErr = !hasSl ? null
+    : slNum <= 0 ? 'Enter a price above 0'
+    : buy && slNum >= base ? `Below ${price(base)}`
+    : !buy && slNum <= base ? `Above ${price(base)}`
+    : !q.noLiquidation && (buy ? slNum <= liqPriceOf() : slNum >= liqPriceOf()) ? `Liquidation comes first at ${price(liqPriceOf())}`
+    : null;
+  const slOut = hasSl && !slErr ? q.at((slNum / base) * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
+  function liqPriceOf() { return buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove); }
   const liqPrice = buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove);
-  const invalid = !(amount > 0) || tooBig || !!entryErr || !!tpErr;
+  const invalid = !(amount > 0) || tooBig || !!entryErr || !!tpErr || !!slErr;
 
   return (
     <aside className={'panel ticket' + (buy ? '' : ' is-short')} aria-label="Order ticket">
@@ -188,23 +207,48 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
           : entryNote && <span className={entryNote.warn ? 'field-warn' : 'hint'}>{entryNote.text}</span>}
       </Toggle>
 
-      <Toggle label="Take profit" on={tpOn} onChange={(v) => { setTpOn(v); if (!v) setTp(''); }}>
-        <div className="input-wrap">
-          <span className="prefix">$</span>
-          <input id={id + 'tp'} inputMode="decimal" className="num" placeholder={(buy ? 'Above ' : 'Below ') + price(base)} aria-label="Take profit price"
-            value={tp} onChange={(e) => setTp(clean(e.target.value))} aria-invalid={!!tpErr} />
+      <Toggle label="TP / SL" on={tpOn} onChange={(v) => { setTpOn(v); if (!v) { setTp(''); setTpPct(''); setSl(''); setSlPct(''); } }}>
+        <div className="tpsl">
+          <span className="tpsl-label">Take profit</span>
+          <div className="tpsl-inputs">
+            <div className="input-wrap sm"><span className="prefix up">+</span>
+              <input inputMode="decimal" className="num" placeholder="0" aria-label="Take profit, percent on your margin" value={tpPct}
+                onChange={(e) => { const v = clean(e.target.value); setTpPct(v); setTp(v ? String(fromPct(parseFloat(v), true)) : ''); }} />
+              <span className="prefix unit">%</span></div>
+            <div className="input-wrap sm"><span className="prefix">$</span>
+              <input id={id + 'tp'} inputMode="decimal" className="num" placeholder="TP price" aria-label="Take profit price" value={tp} aria-invalid={!!tpErr}
+                onChange={(e) => { const v = clean(e.target.value); setTp(v); setTpPct(v ? String(toPct(parseFloat(v), true)) : ''); }} /></div>
+          </div>
+          <div className="chips tpsl-chips" role="group" aria-label="Quick take profit">
+            {TP_STEPS.filter((f) => buy || base * (1 - f / 100 / mm) > base * (1 - roof)).map((f) => (
+              <button key={f} type="button" className={'chip-btn' + (tpPct === String(f) ? ' on' : '')} onClick={() => { setTpPct(String(f)); setTp(String(fromPct(f, true))); }}>+{f}%</button>
+            ))}
+          </div>
+          {tpErr ? <span className="field-err">{tpErr}</span> : (
+            <div className="tpsl-foot"><span>Potential profit <b className={'num' + (preview ? ' up' : '')}>{preview ? signed(preview.trader) : '—'}</b></span>
+              {tp && <button type="button" className="tpsl-clear" onClick={() => { setTp(''); setTpPct(''); }}>Clear</button>}</div>
+          )}
+
+          <span className="tpsl-label">Stop loss</span>
+          <div className="tpsl-inputs">
+            <div className="input-wrap sm"><span className="prefix down">−</span>
+              <input inputMode="decimal" className="num" placeholder="0" aria-label="Stop loss, percent of your margin" value={slPct}
+                onChange={(e) => { const v = clean(e.target.value); setSlPct(v); setSl(v ? String(fromPct(parseFloat(v), false)) : ''); }} />
+              <span className="prefix unit">%</span></div>
+            <div className="input-wrap sm"><span className="prefix">$</span>
+              <input inputMode="decimal" className="num" placeholder="SL price" aria-label="Stop loss price" value={sl} aria-invalid={!!slErr}
+                onChange={(e) => { const v = clean(e.target.value); setSl(v); setSlPct(v ? String(toPct(parseFloat(v), false)) : ''); }} /></div>
+          </div>
+          <div className="chips tpsl-chips sl" role="group" aria-label="Quick stop loss">
+            {SL_STEPS.filter((f) => q.noLiquidation || f / 100 / mm < q.liqMove).map((f) => (
+              <button key={f} type="button" className={'chip-btn' + (slPct === String(f) ? ' on' : '')} onClick={() => { setSlPct(String(f)); setSl(String(fromPct(f, false))); }}>−{f}%</button>
+            ))}
+          </div>
+          {slErr ? <span className="field-err">{slErr}</span> : (
+            <div className="tpsl-foot"><span>Potential loss <b className={'num' + (slOut ? ' down' : '')}>{slOut ? signed(slOut.trader) : '—'}</b></span>
+              {sl && <button type="button" className="tpsl-clear" onClick={() => { setSl(''); setSlPct(''); }}>Clear</button>}</div>
+          )}
         </div>
-        <div className="chips" role="group" aria-label="Quick take profit">
-          {STEPS.filter((f) => buy || f < roof).map((f) => {
-            const v = roundPrice(base * (buy ? 1 + f : 1 - f));
-            return (
-              <button key={f} type="button" className={'chip-btn' + (hasTp && tpNum === v ? ' on' : '')} onClick={() => setTp(String(v))}>
-                {buy ? '+' : '−'}{f * 100}%
-              </button>
-            );
-          })}
-        </div>
-        {tpErr && <span className="field-err">{tpErr}</span>}
       </Toggle>
 
       <dl className="kv">
@@ -249,6 +293,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
               {!q.noLiquidation && <div><dt>Liquidation</dt><dd className="num down">{`${price(liqPrice)} ${buy ? '−' : '+'}${(q.liqMove * 100).toFixed(1)}%`}</dd></div>}
               {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} −{roof * 100}%</dd></div>}
               {hasTp && !tpErr && <div><dt>Take profit</dt><dd className="num">{price(tpNum)}</dd></div>}
+              {hasSl && !slErr && <div><dt>Stop loss</dt><dd className="num">{price(slNum)}</dd></div>}
               <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas * (isOrder ? 2 : 1))}</dd></div>
             </dl>
             {lacking

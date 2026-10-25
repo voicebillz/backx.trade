@@ -113,7 +113,7 @@ abstract contract Base is Test {
     }
 
     function _pos(BackxManagerBase m, uint256 id) internal view returns (BackxManagerBase.Position memory p) {
-        (p.owner, p.m, p.openedAt, p.gas, p.stake, p.lent, p.amount, p.lentUsd, p.limitValue, p.stressUsd) = m.positions(id);
+        (p.owner, p.m, p.openedAt, p.gas, p.stake, p.lent, p.amount, p.lentUsd, p.limitValue, p.stressUsd, p.stopValue) = m.positions(id);
     }
 
     /// Smallest adverse move (in 0.01 % steps from entry) at which the position becomes liquidatable.
