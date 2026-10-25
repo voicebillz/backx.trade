@@ -95,7 +95,13 @@ The owner is not a developer: explain briefly, in Norwegian.
   (dark/light) and candle colours live here (no longer in the header), plus the terminal layout: 10
   presets + side panel / bottom panel (Moving markets, Positions, Off), ticket left/right, coin header on/off; chart and
   ticket are mandatory. Desktop (≥1200 px): drag panel edges and corners (Resizer in Terminal.tsx, arrow keys too);
-  saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown only). Preset previews are
+  saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown only). Chart toolbar (owner 2026-10-25):
+  share (copies/shares the coin's page), "fx Indicators" (24 indicators in `lib/indicators.ts`, computed in the browser:
+  overlays on the price pane, volume on its own scale, oscillators one pane each; saved in `backx.indicators`; legend
+  with remove), camera snapshot (Download image Ctrl+Alt+S / Copy image Ctrl+Shift+S, PNG with coin · timeframe header).
+  `.chart` resets the app's table styles (the chart lays out panes as a table). Each coin has its own address
+  `/trade/<symbol>` (router `marketPath`/`showMarket`, title "ETH · Ethereum · BackX", Back returns to the last coin;
+  vercel.json rewrites /trade/* on the app and redirects it from backx.trade). Preset previews are
   real screenshots, `web/public/layouts/0-9.webp` (640 px): retake them when the terminal changes. Panels are CSS
   containers: Moving markets, Positions, coin header and ticket drop columns/details as they get narrow (never overlap);
   the chart refits its candles on every resize. Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.

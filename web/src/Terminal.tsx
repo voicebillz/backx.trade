@@ -14,7 +14,7 @@ import { availableToLend, coinsToLend, maxHedgeMFor, maxShortMFor } from './lib/
 import { useTheme, usePriceColors } from './lib/theme';
 import { LIMITS, gridOf, useLayout, type Layout, type PanelKind } from './lib/layout';
 import { useTicker } from './lib/useTicker';
-import { useRoute, navigate } from './lib/router';
+import { useRoute, currentSlug, marketSlug, showMarket } from './lib/router';
 import { WhitepaperPage } from './pages/WhitepaperPage';
 import { useAuth } from './lib/auth';
 import { useBalances, usdcOf } from './lib/useBalances';
@@ -50,14 +50,38 @@ export default function Terminal() {
   const moving = useMovingMarkets();
   const [market, setMarket] = useState<Market | null>(null);
 
-  // Start on ETH (from the suggestions), falling back to the top mover.
+  // The coin comes from the address (/trade/eth); without one, start on ETH, falling back to the top mover.
+  const [slug, setSlug] = useState(currentSlug);
   useEffect(() => {
-    if (market) return;
-    searchMarkets('').then((r) => setMarket((cur) => cur ?? r.items.find((m) => m.symbol === 'ETH') ?? r.items[0] ?? null)).catch(() => {});
-  }, [market]);
-  useEffect(() => { if (!market && moving.items[0]) setMarket(moving.items[0]); }, [market, moving.items]);
+    const on = () => setSlug(currentSlug());
+    addEventListener('popstate', on);
+    return () => removeEventListener('popstate', on);
+  }, []);
+  useEffect(() => {
+    if (market && (!slug || marketSlug(market.symbol) === slug)) return;
+    const hit = slug ? moving.items.find((m) => marketSlug(m.symbol) === slug) : undefined;
+    if (hit) { setMarket(hit); return; }
+    searchMarkets(slug ?? '').then((r) => {
+      const found = slug ? r.items.find((m) => marketSlug(m.symbol) === slug) : r.items.find((m) => m.symbol === 'ETH');
+      setMarket((cur) => found ?? cur ?? r.items[0] ?? null);
+    }).catch(() => {});
+  }, [slug, market, moving.items]);
+  useEffect(() => { if (!market && !slug && moving.items[0]) setMarket(moving.items[0]); }, [market, slug, moving.items]);
+  // Keep the address and the tab title on the coin while trading.
+  useEffect(() => {
+    if (!market || route !== 'trade') return;
+    showMarket(market.symbol, false);
+    document.title = `${market.symbol} · ${market.name} · BackX`;
+  }, [market, route]);
 
-  const selectMarket = useCallback((m: Market) => { setMarket(m); navigate('trade'); }, []);
+  // Picking a coin (list, search) goes to its own address; from another page it also opens Trade.
+  const openMarket = useCallback((m: Market) => {
+    setMarket(m);
+    showMarket(m.symbol);
+    dispatchEvent(new PopStateEvent('popstate'));
+    scrollTo(0, 0);
+  }, []);
+  const selectMarket = openMarket;
 
   return (
     <div className="app">
@@ -66,7 +90,7 @@ export default function Terminal() {
         route={route} theme={theme} onTheme={setTheme} priceColors={priceColors} onPriceColors={setPriceColors}
         onSelectMarket={selectMarket} balances={balances}
       />
-      {route === 'trade' && <Trade market={market} moving={moving} onSelect={setMarket} theme={theme} priceColors={priceColors} usdc={me ? usdcOf(balances.data) : null} />}
+      {route === 'trade' && <Trade market={market} moving={moving} onSelect={openMarket} theme={theme} priceColors={priceColors} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'issue' && <IssuePage markets={moving.items} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'whitepaper' && <WhitepaperPage />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}

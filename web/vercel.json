@@ -6,6 +6,14 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/trade",
+      "destination": "/"
+    },
+    {
+      "source": "/trade/:path*",
+      "destination": "/"
+    },
+    {
       "source": "/issue",
       "destination": "/"
     },
@@ -110,6 +118,50 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/trade/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/trade/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/trade",
+      "has": [
+        {
+          "type": "host",
+          "value": "backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/trade",
+      "permanent": false
+    },
+    {
+      "source": "/trade/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/trade/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/trade",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.backx.trade"
+        }
+      ],
+      "destination": "https://app.backx.trade/trade",
+      "permanent": false
+    },
     {
       "source": "/issue",
       "has": [

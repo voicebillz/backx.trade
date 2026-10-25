@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CandlestickSeries, ColorType, CrosshairMode, LineStyle, createChart,
-  type IChartApi, type IPriceLine, type ISeriesApi, type UTCTimestamp,
+  CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle, createChart,
+  type IChartApi, type IPriceLine, type ISeriesApi, type SeriesType, type UTCTimestamp,
 } from 'lightweight-charts';
 import { demoCandles, type Market } from '../lib/markets';
+import { INDICATORS, INDICATOR_IDS } from '../lib/indicators';
 import type { Theme, PriceColors } from '../lib/theme';
 import { Dropdown } from './Dropdown';
+import { IndicatorPicker } from './IndicatorPicker';
+import { SnapshotButton } from './SnapshotButton';
+import { ShareButton } from './ShareButton';
 
 const FRAMES = [
   { id: '1m', label: '1 min', sec: 60 },
@@ -35,6 +39,15 @@ interface Props {
 }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+/** A token colour at some opacity (tokens are hex). */
+const alpha = (name: string, a: number) => {
+  const h = css(name).replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return css(name);
+  return `rgba(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)}, ${a})`;
+};
+const IND_KEY = 'backx.indicators';
+/** "Moving Average (SMA 20)" → "SMA 20" for the legend; names without a short form stay as they are. */
+const shortName = (n: string) => { const m = /\(([^)]*[A-Za-z][^)]*)\)/.exec(n); return m ? m[1] : n; };
 
 export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = null, sl = null, limit = false }: Props) {
   const el = useRef<HTMLDivElement>(null);
@@ -47,6 +60,15 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
   });
   useEffect(() => { try { localStorage.setItem('backx.frame', frame); } catch { /* storage off */ } }, [frame]);
   const [ready, setReady] = useState(false);
+  // Indicators (owner 2026-10-25): chosen in the fx picker, saved per browser.
+  const [active, setActive] = useState<string[]>(() => {
+    try { const v = JSON.parse(localStorage.getItem(IND_KEY) || '[]'); if (Array.isArray(v)) return v.filter((x) => INDICATOR_IDS.has(x)); } catch { /* storage off */ }
+    return [];
+  });
+  useEffect(() => { try { localStorage.setItem(IND_KEY, JSON.stringify(active)); } catch { /* storage off */ } }, [active]);
+  const indSeries = useRef<ISeriesApi<SeriesType>[]>([]);
+  const sec = FRAMES.find((f) => f.id === frame)!.sec;
+  const candles = useMemo(() => demoCandles(market, 240, sec), [market, sec]);
 
   // Create once.
   useEffect(() => {
@@ -71,7 +93,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
       raf = requestAnimationFrame(() => c.timeScale().fitContent());
     });
     ro.observe(el.current);
-    return () => { ro.disconnect(); cancelAnimationFrame(raf); c.remove(); chart.current = null; series.current = null; lines.current = []; };
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); c.remove(); chart.current = null; series.current = null; lines.current = []; indSeries.current = []; };
   }, []);
 
   // Theme and price colors come from CSS tokens.
@@ -83,6 +105,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
       layout: { background: { type: ColorType.Solid, color: css('--panel') }, textColor: css('--ink-3'), fontFamily: css('--mono'), fontSize: 11 },
       grid: { vertLines: { color: css('--line') }, horzLines: { color: css('--line') } },
     });
+    c.applyOptions({ layout: { panes: { separatorColor: css('--line'), separatorHoverColor: alpha('--ink-3', 0.3), enableResize: true } } });
     s.applyOptions({ upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down });
   }, [theme, priceColors, ready]);
 
@@ -90,12 +113,50 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
   useEffect(() => {
     const s = series.current;
     if (!s) return;
-    const sec = FRAMES.find((f) => f.id === frame)!.sec;
     const precision = market.price >= 1 ? 2 : market.price >= 0.01 ? 5 : 8;
     s.applyOptions({ priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision } });
-    s.setData(demoCandles(market, 240, sec).map((d) => ({ ...d, time: d.time as UTCTimestamp })));
+    s.setData(candles.map((d) => ({ time: d.time as UTCTimestamp, open: d.open, high: d.high, low: d.low, close: d.close })));
     chart.current?.timeScale().fitContent();
-  }, [market, frame, ready]);
+  }, [candles, ready]);
+
+  // Indicators: overlays on the price pane (volume on its own scale at the bottom), the rest one pane each below.
+  useEffect(() => {
+    const c = chart.current;
+    if (!c) return;
+    indSeries.current.forEach((x) => c.removeSeries(x));
+    indSeries.current = [];
+    for (let p = c.panes().length - 1; p > 0; p--) c.removePane(p);
+    let pane = 0;
+    const up = alpha('--price-up', 0.45), down = alpha('--price-down', 0.45);
+    for (const ind of INDICATORS.filter((i) => active.includes(i.id))) {
+      const idx = ind.overlay ? 0 : ++pane;
+      for (const plot of ind.plots(candles)) {
+        const time = (t: number) => t as UTCTimestamp;
+        if (plot.kind === 'hist') {
+          const volume = ind.id === 'vol';
+          const s = c.addSeries(HistogramSeries, {
+            priceLineVisible: false, lastValueVisible: !volume, title: volume ? '' : plot.name,
+            ...(volume ? { priceScaleId: 'vol', priceFormat: { type: 'volume' } } : {}),
+          }, idx);
+          if (volume) s.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+          const byTime = new Map(candles.map((k) => [k.time, k]));
+          s.setData(plot.data.map((d) => {
+            const k = byTime.get(d.time)!;
+            return { time: time(d.time), value: d.value, color: (volume ? k.close >= k.open : d.value >= 0) ? up : down };
+          }));
+          indSeries.current.push(s);
+        } else {
+          const s = c.addSeries(LineSeries, {
+            color: css(plot.color), lineWidth: 1, lineStyle: plot.dashed ? LineStyle.Dashed : LineStyle.Solid,
+            priceLineVisible: false, lastValueVisible: !ind.overlay, crosshairMarkerVisible: false, title: ind.overlay ? '' : plot.name,
+          }, idx);
+          s.setData(plot.data.map((d) => ({ time: time(d.time), value: d.value })));
+          indSeries.current.push(s);
+        }
+      }
+    }
+    c.panes().forEach((p, i) => { if (i > 0) p.setHeight(96); });
+  }, [active, candles, theme, priceColors, ready]);
 
   // Entry, liquidation, take-profit and stop-loss preview lines for the ticket.
   useEffect(() => {
@@ -119,12 +180,27 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
     });
   }, [entry, liqPrice, tp, sl, limit, theme, ready]);
 
+  const toggle = (id: string) => setActive((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
+  const frameLabel = FRAMES.find((f) => f.id === frame)!.label;
   return (
     <section className="panel chart-panel" aria-label={`${market.symbol} price chart`}>
       <div className="chart-toolbar">
         <Dropdown label="Timeframe" value={frame} options={FRAME_OPTIONS} onChange={setFrame} compact />
+        <ShareButton symbol={market.symbol} name={market.name} />
+        <IndicatorPicker active={active} onToggle={toggle} />
         <span className="chart-note">Demo data</span>
+        <SnapshotButton chart={chart} title={`${market.symbol} · ${frameLabel}`} />
       </div>
+      {active.length > 0 && (
+        <div className="chart-legend" aria-label="Indicators on the chart">
+          {INDICATORS.filter((i) => active.includes(i.id)).map((i) => (
+            <span key={i.id} className="chart-legend-item">
+              <i style={{ background: `var(${i.plots(candles.slice(-1))[0]?.color ?? '--ink-3'})` }} aria-hidden="true" />{shortName(i.name)}
+              <button type="button" onClick={() => toggle(i.id)} aria-label={`Remove ${i.name}`}>✕</button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="chart" ref={el} />
     </section>
   );

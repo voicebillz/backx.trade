@@ -60,7 +60,7 @@ export async function searchMarkets(q: string, signal?: AbortSignal) {
   return api<{ items: Market[]; suggested: boolean }>(`/api/markets/search?q=${encodeURIComponent(q)}`, { signal });
 }
 
-export interface Candle { time: number; open: number; high: number; low: number; close: number }
+export interface Candle { time: number; open: number; high: number; low: number; close: number; volume?: number }
 
 /** Deterministic random walk so the demo chart is stable between reloads. */
 export function demoCandles(m: Market, count = 240, stepSec = 300): Candle[] {
@@ -75,7 +75,9 @@ export function demoCandles(m: Market, count = 240, stepSec = 300): Candle[] {
     const open = close * (1 + (rnd() - 0.5) * vol * 2 - (m.change24h / 100) / count);
     const high = Math.max(open, close) * (1 + rnd() * vol);
     const low = Math.min(open, close) * (1 - rnd() * vol);
-    out.push({ time: end - i * stepSec, open, high, low, close });
+    // Demo volume: bigger on bigger moves, in coin units.
+    const volume = (m.volume24h / 86400) * stepSec / Math.max(m.price, 1e-12) * (0.4 + rnd() * 1.2) * (1 + Math.abs(close / open - 1) / vol);
+    out.push({ time: end - i * stepSec, open, high, low, close, volume });
     close = open;
   }
   return out.reverse();
