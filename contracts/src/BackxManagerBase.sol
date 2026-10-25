@@ -8,6 +8,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {BackxReserveVault} from "./BackxReserveVault.sol";
 import {BackxReserveSecurityFund} from "./BackxReserveSecurityFund.sol";
 import {ISwapAdapter} from "./interfaces/ISwapAdapter.sol";
@@ -51,11 +52,12 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     }
 
     struct Fees {
-        uint16 holdersBps;      // of the margin → fee collector ($GAZZ / treasury routing)
-        uint16 rsfStakeBps;     // of the margin → Reserve Security Fund
+        uint16 platformBps;     // of the margin when issuers lend → fee collector (the Treasury, $GAZZ holders' share)
+        uint16 rsfStakeBps;     // of the margin when issuers lend → Reserve Security Fund
         uint16 rsfLentBps;      // of the amount lent → Reserve Security Fund
         uint16 borrowBps;       // of the amount lent → issuers (claimable USDC)
         uint16 oracleDevBps;    // max distance between pool execution and the oracle at open
+        uint16 spotBps;         // of the margin on a 1x hedge (nothing lent, no fund fee) → fee collector
     }
 
     /// @notice Validator pay. gasUsd is escrowed per position at open and paid to whoever settles it.
@@ -86,6 +88,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         uint8 m;
         bool above;           // fill when price ≥ trigger (else ≤)
         uint40 expiry;
+        uint16 slipBps;       // worst fill vs the oracle the owner accepts (default 0.5 %, at most limitSlipBps)
         uint128 amount;       // everything the trader pays, incl. both gas fees
         uint128 trigger;      // USD base units per 1e18 coin base units
         uint128 limitPrice;   // take-profit for the new position (0 = none)
@@ -200,7 +203,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         nextOrderId = 1;
         _oneUsd = 10 ** IERC20Metadata(address(a.usd)).decimals();
         validation = Validation({gasUsd: uint64(_oneUsd / 10), liqBonusBps: 50, fillBonusBps: 10, accuracyBps: 100});
-        fees = Fees({holdersBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200});
+        fees = Fees({platformBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200, spotBps: 30});
         // e, s from docs/backx/sim/sim3.py (v3); p = 10 % flat since v4. Packed: 2 bytes per m (m = 1..30), in bps.
         for (uint256 m = 1; m <= MAX_M; m++) {
             uint256 extra = m > 10 ? 2 * (m - 10) : 0; // +0.02 % per step past 10×
@@ -216,7 +219,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     }
 
     function _setConfig(Config memory c) internal {
-        if (c.maxM > MAX_M || c.stressBps < 2_000 || c.stressBps > 50_000 || c.liqMarginBps > 2_000 || c.roofBps > 9_500) {
+        if (c.maxM > MAX_M || c.stressBps < 2_000 || c.stressBps > 50_000 || c.liqMarginBps > 2_000 || c.roofBps > 9_500 || c.roofBps < _minRoofBps()) {
             revert BadParams();
         }
         config = c;
@@ -231,7 +234,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     }
 
     function setFees(Fees calldata f) external onlyOwner {
-        if (f.holdersBps > 300 || f.rsfStakeBps > 200 || f.rsfLentBps > 50 || f.borrowBps > 100 || f.oracleDevBps > 1000) {
+        if (f.platformBps > 300 || f.rsfStakeBps > 200 || f.rsfLentBps > 50 || f.borrowBps > 100 || f.oracleDevBps > 1000 || f.spotBps > 100) {
             revert BadParams();
         }
         fees = f;
@@ -252,7 +255,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     }
 
     function setGuards(uint16 liqMaxGap, uint16 twapConfirm, uint16 limitSlip, uint16 stressCover, uint16 maxCover) external onlyOwner {
-        if (liqMaxGap < 50 || liqMaxGap > 5_000 || twapConfirm > 100 || limitSlip < 10 || limitSlip > 500) revert BadParams();
+        if (liqMaxGap < 50 || liqMaxGap > 1_000 || twapConfirm > 100 || limitSlip < 10 || limitSlip > 500) revert BadParams();
         if ((stressCover != 0 && (stressCover < 2_000 || stressCover > BPS)) || maxCover > BPS) revert BadParams();
         (liqMaxGapBps, twapConfirmBps, limitSlipBps, stressCoverBps, maxCoverBps) = (liqMaxGap, twapConfirm, limitSlip, stressCover, maxCover);
     }
@@ -332,14 +335,17 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     /// `minOut`: Hedge = min coins bought, Short = min USD from selling the borrowed coins (0 = oracle − limitSlip).
     /// `limitPrice`: take-profit in USD base units per 1e18 coin (Hedge above today's price, Short below; 0 = none).
     function open(uint256 amount, uint8 m, uint256 minOut, uint256 limitPrice) external nonReentrant whenNotPaused returns (uint256) {
-        return this.selfOpen(msg.sender, msg.sender, amount, m, minOut, limitPrice);
+        return this.selfOpen(msg.sender, msg.sender, amount, m, minOut, limitPrice, limitSlipBps);
     }
 
     /// @dev Only this contract (open and order fills), so the opening code exists once in the bytecode. Both callers
     /// hold the re-entrancy guard; `payer` is the trader (open) or this contract (an order's escrow).
-    function selfOpen(address owner_, address payer, uint256 amount, uint8 m, uint256 minOut, uint256 limitPrice) external returns (uint256) {
+    function selfOpen(address owner_, address payer, uint256 amount, uint8 m, uint256 minOut, uint256 limitPrice, uint16 slipBps)
+        external
+        returns (uint256)
+    {
         if (msg.sender != address(this)) revert OnlySelf();
-        return _open(owner_, payer, amount, m, minOut, limitPrice);
+        return _open(owner_, payer, amount, m, minOut, limitPrice, slipBps);
     }
 
     // ---- claims: validators, agents, anyone with a balance here --------------------------------------
@@ -359,6 +365,17 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         totalClaimable -= amt;
         usd.safeTransfer(to, amt);
         emit Claimed(msg.sender, to, amt);
+    }
+
+    /// Trader payout. Own close: straight to the wallet. Settled by a validator: sent if the token accepts it, else kept
+    /// claimable, so an owner the token refuses (e.g. a blacklisted address) can never block a liquidation.
+    function _payOwner(address owner_, uint256 amt, bool own) internal {
+        if (amt == 0) return;
+        if (own) return usd.safeTransfer(owner_, amt);
+        (bool ok, bytes memory ret) = address(usd).call(abi.encodeCall(IERC20.transfer, (owner_, amt)));
+        if (ok && (ret.length == 0 || abi.decode(ret, (bool)))) return;
+        claimable[owner_] += amt;
+        totalClaimable += amt;
     }
 
     /// Pays the validator its escrowed gas plus an accuracy bonus (both in USDC, claimable).
@@ -384,7 +401,9 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
 
     /// @notice Escrows `amount` USDC (everything included: the filler's gas, the position's gas and every fee).
     /// A validator opens the position for you when the condition holds; until then you can cancel for a full refund.
-    function placeOrder(uint8 m, uint256 amount, uint256 trigger, bool above, uint40 expiry, uint256 limitPrice)
+    /// `slipBps`: the worst fill vs the oracle you accept (0 = 0.5 %, at most limitSlipBps), so a filler cannot
+    /// sandwich more than that (security review 2026-10-25).
+    function placeOrder(uint8 m, uint256 amount, uint256 trigger, bool above, uint40 expiry, uint256 limitPrice, uint16 slipBps)
         external
         nonReentrant
         whenNotPaused
@@ -393,11 +412,15 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         if (!config.enabled) revert MarketOff();
         if (m == 0 || m > config.maxM) revert BadM();
         if (expiry <= block.timestamp || amount <= 2 * uint256(validation.gasUsd)) revert BadParams();
+        if (slipBps == 0) slipBps = 50;
+        if (slipBps > limitSlipBps) revert BadParams();
+        // A take-profit on the wrong side of the entry could never fill: refuse it now, not at every fill attempt.
+        if (limitPrice != 0 && trigger != 0 && !_tpFits(trigger, limitPrice)) revert BadLimit();
         usd.safeTransferFrom(msg.sender, address(this), amount);
         orderId = nextOrderId++;
         orders[orderId] = Order({
-            owner: msg.sender, m: m, above: above, expiry: expiry, amount: uint128(amount),
-            trigger: uint128(trigger), limitPrice: uint128(limitPrice)
+            owner: msg.sender, m: m, above: above, expiry: expiry, slipBps: slipBps, amount: SafeCast.toUint128(amount),
+            trigger: SafeCast.toUint128(trigger), limitPrice: SafeCast.toUint128(limitPrice)
         });
         emit OrderPlaced(orderId, msg.sender, m, amount, trigger, above, expiry);
     }
@@ -438,27 +461,33 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
             bonus = _accuracyBonus(maxB, price(), o.trigger);
         }
         _payValidator(v, orderId, K_FILL, gas, bonus);
-        id = this.selfOpen(o.owner, address(this), o.amount - gas - bonus, o.m, 0, o.limitPrice);
+        id = this.selfOpen(o.owner, address(this), o.amount - gas - bonus, o.m, 0, o.limitPrice, o.slipBps);
         emit OrderFilled(orderId, id, v);
     }
 
     // ---- shared math -------------------------------------------------------------------------------
 
+    /// Platform and fund fee rates on the margin: a 1x hedge (nothing lent) pays only spotBps (owner 2026-10-25).
+    function _rates(uint256 lentMult, Fees memory f) internal pure returns (uint256 platform, uint256 rsf) {
+        return lentMult == 0 ? (uint256(f.spotBps), 0) : (uint256(f.platformBps), uint256(f.rsfStakeBps));
+    }
+
     /// Margin X left from `amount` once every fee and the validator gas are paid:
-    /// amount = X + X·(holders + rsfStake) + lentMult·X·(borrow + rsfLent) + gas, rounded down.
+    /// amount = X + X·(platform + rsfStake) + lentMult·X·(borrow + rsfLent) + gas, rounded down.
     function _stakeFor(uint256 amount, uint256 lentMult, Fees memory f) internal view returns (uint256) {
         uint256 gas = validation.gasUsd;
         if (amount <= gas) revert NothingLeft();
-        uint256 x = (amount - gas) * BPS / (BPS + f.holdersBps + f.rsfStakeBps + lentMult * (f.borrowBps + f.rsfLentBps));
+        (uint256 pl, uint256 rs) = _rates(lentMult, f);
+        uint256 x = (amount - gas) * BPS / (BPS + pl + rs + lentMult * (f.borrowBps + f.rsfLentBps));
         if (x == 0) revert NothingLeft();
         return x;
     }
 
-    /// Pulls the trader's money (or uses an order's escrow) and pays the holders' and the fund's fees.
-    function _collect(address from, uint256 total, uint256 holders, uint256 rsf) internal {
+    /// Pulls the trader's money (or uses an order's escrow) and pays the platform's and the fund's fees.
+    function _collect(address from, uint256 total, uint256 platform, uint256 rsf) internal {
         if (from != address(this)) usd.safeTransferFrom(from, address(this), total);
-        usd.safeTransfer(feeCollector, holders);
-        usd.safeTransfer(address(fund), rsf);
+        if (platform > 0) usd.safeTransfer(feeCollector, platform);
+        if (rsf > 0) usd.safeTransfer(address(fund), rsf);
     }
 
     /// Tracks the worst-case gap; when the Safe has switched the gate on, the fund must cover it.
@@ -521,10 +550,16 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
 
     // ---- per side ------------------------------------------------------------------------------------
 
-    function _open(address owner_, address payer, uint256 amount, uint8 m, uint256 minOut, uint256 limitPrice)
+    function _open(address owner_, address payer, uint256 amount, uint8 m, uint256 minOut, uint256 limitPrice, uint16 slipBps)
         internal
         virtual
         returns (uint256 id);
+
+    /// Hedge: the take-profit is above the entry. Short: below it.
+    function _tpFits(uint256 entry, uint256 tp) internal pure virtual returns (bool);
+
+    /// Short: the profit roof can never be switched off (at least a 20 % fall). Hedge: no roof.
+    function _minRoofBps() internal pure virtual returns (uint16);
 
     function _canOpen(uint8 m, uint256 amount) internal view virtual returns (bool);
 

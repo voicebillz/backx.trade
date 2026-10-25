@@ -22,7 +22,7 @@ contract BackxHedgeManager is BackxManagerBase {
 
     // ---- open / close ------------------------------------------------------------------------------
 
-    function _open(address owner_, address payer, uint256 amount, uint8 m, uint256 minCoinsOut, uint256 limitPrice)
+    function _open(address owner_, address payer, uint256 amount, uint8 m, uint256 minCoinsOut, uint256 limitPrice, uint16 slipBps)
         internal
         override
         returns (uint256 id)
@@ -37,11 +37,12 @@ contract BackxHedgeManager is BackxManagerBase {
         if (notional > c.maxNotionalUsd) revert TooLarge();
         if (openUsd + lentUsd > c.maxOpenUsd) revert OpenInterestFull();
         openUsd += lentUsd;
-        uint256 holders = stake * f.holdersBps / BPS;
-        uint256 rsf = stake * f.rsfStakeBps / BPS + lentUsd * f.rsfLentBps / BPS;
+        (uint256 plBps, uint256 rsBps) = _rates(uint256(m) - 1, f);
+        uint256 platform = stake * plBps / BPS;
+        uint256 rsf = stake * rsBps / BPS + lentUsd * f.rsfLentBps / BPS;
         uint256 borrow = lentUsd * f.borrowBps / BPS;
         uint256 gas = validation.gasUsd;
-        _collect(payer, stake + holders + rsf + borrow + gas, holders, rsf);
+        _collect(payer, stake + platform + rsf + borrow + gas, platform, rsf);
         // Worst case in one jump of stressBps: L·c − X·(1 − c) of the principal is not covered by the coins.
         uint256 stress = _gap(lentUsd * c.stressBps, stake * (BPS - (c.stressBps > BPS ? BPS : c.stressBps)));
         _addStress(stress);
@@ -49,7 +50,7 @@ contract BackxHedgeManager is BackxManagerBase {
             _toIssuers(borrow);
             vault.lend(lentUsd);
         }
-        if (minCoinsOut == 0) minCoinsOut = oracle.tokenAmount(token, notional) * (BPS - limitSlipBps) / BPS;
+        if (minCoinsOut == 0) minCoinsOut = oracle.tokenAmount(token, notional) * (BPS - slipBps) / BPS;
         uint256 coins = _swapIn(address(usd), token, notional, minCoinsOut);
         if (oracle.usdValue(token, coins) * BPS < notional * (BPS - f.oracleDevBps)) revert OracleMismatch();
 
@@ -93,8 +94,10 @@ contract BackxHedgeManager is BackxManagerBase {
             if (pos.owner == address(0) || pos.m == 1 || !_triggered(pos)) revert NotLiquidatable();
             return (pos, 0);
         }
-        if (pos.owner == address(0) || pos.limitValue == 0 || oracle.usdValue(token, pos.amount) < pos.limitValue) revert LimitNotReached();
-        return (pos, uint256(pos.limitValue) * (BPS - limitSlipBps) / BPS);
+        uint256 value = oracle.usdValue(token, pos.amount);
+        if (pos.owner == address(0) || pos.limitValue == 0 || value < pos.limitValue) revert LimitNotReached();
+        // From today's price, not the limit: a late fill cannot hand the price move to a sandwich (review 2026-10-25).
+        return (pos, value * (BPS - limitSlipBps) / BPS);
     }
 
     function isLiquidatable(uint256 id) external view override returns (bool) {
@@ -180,9 +183,12 @@ contract BackxHedgeManager is BackxManagerBase {
             }
             _toIssuers(toIssuers);
         } else {
-            // Gap: everything goes to the issuers, the fund covers what it may, the rest is written off.
+            // Gap: everything goes to the issuers. The fund covers only what the oracle confirms is missing (not a
+            // loss a sandwich created inside the liqMaxGap band, review 2026-10-25); the rest is written off.
             uint256 shortfall = pos.lent - out;
-            covered = _cover(shortfall, pos.lentUsd);
+            uint256 floor = value * (BPS - liqMaxGapBps / 2) / BPS; // swap cost, at most half the band below the oracle
+            uint256 confirmed = floor < pos.lent ? pos.lent - floor : 0;
+            covered = _cover(Math.min(shortfall, confirmed), pos.lentUsd);
             writtenOff = shortfall - covered;
             usd.forceApprove(address(vault), out + covered);
             vault.repay(out + covered, 0);
@@ -190,7 +196,15 @@ contract BackxHedgeManager is BackxManagerBase {
         }
         if (kind == K_CLOSE) toTrader += pos.gas; // you settled it yourself: your gas comes back
         else _payValidator(v, id, kind, pos.gas, bonus);
-        if (toTrader > 0) usd.safeTransfer(pos.owner, toTrader);
+        _payOwner(pos.owner, toTrader, kind == K_CLOSE);
         emit Closed(id, v, kind, toTrader, toIssuers, covered, writtenOff);
+    }
+
+    function _tpFits(uint256 entry, uint256 tp) internal pure override returns (bool) {
+        return tp > entry;
+    }
+
+    function _minRoofBps() internal pure override returns (uint16) {
+        return 0;
     }
 }

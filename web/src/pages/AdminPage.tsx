@@ -869,7 +869,8 @@ function Contracts() {
 
 function DeployCore({ item, chain, onClose }: { item: CItem; chain: CChain; onClose: () => void }) {
   const isFactory = item.key === 'factory';
-  const [cfg, setCfg] = useState({ feeCollector: item.config?.feeCollector ?? '' });
+  const treasury = chain.items?.find((i) => i.key === 'treasury')?.address ?? '';
+  const [cfg, setCfg] = useState({ feeCollector: item.config?.feeCollector ?? treasury });
   const [state, setState] = useState<{ batch?: unknown; safeUrl?: string; address?: string; missing?: string[]; fields?: Record<string, string>; err?: string; live?: boolean }>({});
   const [busy, setBusy] = useState(false);
 
@@ -918,7 +919,7 @@ function DeployCore({ item, chain, onClose }: { item: CItem; chain: CChain; onCl
         ) : isFactory && !state.batch ? (
           <form onSubmit={(e) => { e.preventDefault(); void prepare(); }}>
             <p className="muted small">The factory is set up once per chain (the Safe can change it later). Reserve currency: {chain.stable?.symbol}. Liquidations and fills are open to every validator; each position escrows its own gas, so no validator address is needed.</p>
-            <Field id="cf-feeCollector" label="Fee collector" hint="Receives the holders fee (gazz.fun / treasury split is open)" error={state.fields?.feeCollector}>
+            <Field id="cf-feeCollector" label="Fee collector" hint={cfg.feeCollector.toLowerCase() === treasury.toLowerCase() ? 'Our Treasury: all platform fees, $GAZZ holders\' share paid from there' : 'Not our Treasury: check the address'} error={state.fields?.feeCollector}>
               <input id="cf-feeCollector" className="num" value={cfg.feeCollector} onChange={(e) => setCfg({ feeCollector: e.target.value.trim() })} placeholder="0x…" autoComplete="off" spellCheck={false} />
             </Field>
             <button className="btn btn-gold btn-block" disabled={busy || !ADDR.test(cfg.feeCollector)}>{busy ? 'Preparing…' : 'Prepare Safe transaction'}</button>

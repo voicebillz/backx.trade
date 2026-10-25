@@ -38,8 +38,11 @@
 - **Liquidity Pool (DEX)**: issuing into DEX liquidity pools (PancakeSwap Infinity / Uniswap v4) is planned, not live.
 - **Speed**: Robinhood Chain has ~250 ms blocks; BackX targets about 0.5 s for a trade or a liquidation (launch
   targets from a flash-crash simulation, not measurements). Liquidations use a fast reference price (Pyth).
-- **$GAZZ**: the core token of BackX and part of the gazz.fun ecosystem. A 2 % holders fee on every position goes
-  on-chain to gazz.fun, so BackX shares revenue with the ecosystem's holders. Contract on Robinhood Chain:
+- **Fees**: a 1× hedge pays a 0.3 % platform fee (nothing is borrowed); with multiplication and on shorts the platform
+  fee is 2 % of the margin plus a 0.25 % borrow fee to issuers and a small Reserve Security Fund fee. Platform fees go
+  on-chain to the BackX Treasury (USDC, one per chain, owned by the BackX Safe).
+- **$GAZZ**: the core token of BackX and part of the gazz.fun ecosystem. 25 % of what the Treasury receives belongs to
+  $GAZZ holders and is paid out on-chain. Contract on Robinhood Chain:
   0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Not a promise of returns.
 
 ## Terminology

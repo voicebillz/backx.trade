@@ -21,4 +21,16 @@ contract MockERC20 is ERC20 {
     function burn(address from, uint256 amount) external {
         _burn(from, amount);
     }
+
+    /// Security tests: a blacklisted address cannot receive (like USDC's blacklist).
+    mapping(address => bool) public blocked;
+
+    function setBlocked(address a, bool on) external {
+        blocked[a] = on;
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        require(!blocked[to], "blacklisted");
+        super._update(from, to, value);
+    }
 }

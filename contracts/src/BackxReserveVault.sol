@@ -58,6 +58,9 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     uint64 public queueTail;
     uint256 public queuedShares;
     uint8 public constant AUTO_PROCESS = 3;
+    /// @notice Queue payouts the token refused to send, kept for their owner (withdrawOwed). Not principal.
+    mapping(address => uint256) public owedTo;
+    uint256 public owedTotal;
 
     event ManagerSet(address manager);
     event MaxUtilSet(uint16 bps);
@@ -109,7 +112,8 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     }
 
     function setVestPeriod(uint32 secs) external onlyOwner {
-        if (secs > 7 days) revert BadValue();
+        // At least 1 h (security review 2026-10-25): a deposit made just before a large reward must not take it.
+        if (secs > 7 days || secs < 1 hours) revert BadValue();
         vestPeriod = secs; // applies from the next reward
         emit VestPeriodSet(secs);
     }
@@ -125,8 +129,8 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     /// @notice Principal sitting in the vault (rewards excluded when they are the same token).
     function idle() public view returns (uint256) {
         uint256 b = IERC20(asset()).balanceOf(address(this));
-        if (address(rewardToken) == asset()) b = b > rewardHeld ? b - rewardHeld : 0;
-        return b;
+        uint256 held = owedTotal + (address(rewardToken) == asset() ? rewardHeld : 0);
+        return b > held ? b - held : 0;
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -267,7 +271,8 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     /// @notice Take out `shares` (all or part). Whatever is free now is paid at once; the rest is reserved and paid
     /// to msg.sender automatically as money comes back. Your rewards so far stay claimable.
     function requestRedeem(uint256 shares) external returns (uint256 id) {
-        if (shares == 0) revert BadValue();
+        // Dust requests that owe nothing would sit at the head of the queue forever (security review 2026-10-25).
+        if (shares == 0 || _convertToAssets(shares, Math.Rounding.Floor) == 0) revert BadValue();
         _transfer(msg.sender, address(this), shares);
         id = queueTail++;
         requests[id] = Request(msg.sender, SafeCast.toUint128(shares));
@@ -284,7 +289,16 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         queuedShares -= r.shares;
         _transfer(address(this), msg.sender, r.shares);
         emit WithdrawCancelled(id, msg.sender, r.shares);
-        _skipEmpty();
+        _skipEmpty(MAX_SKIP);
+    }
+
+    /// @notice Queue payouts that could not be sent (e.g. the token refused the transfer), waiting for their owner.
+    function withdrawOwed(address to) external returns (uint256 amt) {
+        amt = owedTo[msg.sender];
+        if (amt == 0) return 0;
+        owedTo[msg.sender] = 0;
+        owedTotal -= amt;
+        IERC20(asset()).safeTransfer(to, amt);
     }
 
     /// @notice Pay up to `maxItems` waiting requests from idle assets. Anyone can call it.
@@ -292,34 +306,52 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         return _processQueue(maxItems);
     }
 
+    // Security review 2026-10-25: queue work inside a settlement (repay, deposit) is bounded and can never revert it.
+    // Cancelled slots are skipped at most MAX_SKIP per call (spam cannot make a settlement run out of gas), and a
+    // payout the token refuses is kept for its owner (withdrawOwed) instead of blocking everyone behind it.
+    uint256 internal constant MAX_SKIP = 32;
+
     function _processQueue(uint256 maxItems) internal returns (uint256 done) {
-        _skipEmpty();
-        while (done < maxItems && queueHead < queueTail) {
+        uint256 budget = MAX_SKIP;
+        budget -= _skipEmpty(budget);
+        while (done < maxItems && queueHead < queueTail && requests[queueHead].shares != 0) {
             uint256 id = queueHead;
             Request memory r = requests[id];
-            uint256 i = idle();
-            if (i == 0) break;
             uint256 owed = _convertToAssets(r.shares, Math.Rounding.Floor);
+            uint256 i = idle();
+            if (owed != 0 && i == 0) break;
             uint256 pay = owed < i ? owed : i;
             uint256 burn = pay == owed ? r.shares : _convertToShares(pay, Math.Rounding.Ceil);
             if (burn > r.shares) burn = r.shares;
-            if (pay == 0) break;
+            if (burn == 0) break;
             requests[id].shares = r.shares - uint128(burn);
             queuedShares -= burn;
             _burn(address(this), burn);
-            IERC20(asset()).safeTransfer(r.owner, pay);
+            if (pay > 0 && !_tryTransfer(r.owner, pay)) {
+                owedTo[r.owner] += pay;
+                owedTotal += pay;
+            }
             bool complete = burn == r.shares;
             emit WithdrawPaid(id, r.owner, pay, burn, complete);
             emit Withdraw(address(this), r.owner, r.owner, pay, burn);
             unchecked { ++done; }
             if (!complete) break;
             queueHead++;
-            _skipEmpty();
+            if (budget == 0) break;
+            budget -= _skipEmpty(budget);
         }
     }
 
-    function _skipEmpty() internal {
-        while (queueHead < queueTail && requests[queueHead].shares == 0) queueHead++;
+    /// Skips at most `budget` cancelled slots; returns how many.
+    function _skipEmpty(uint256 budget) internal returns (uint256 n) {
+        uint64 h = queueHead;
+        while (n < budget && h < queueTail && requests[h].shares == 0) { unchecked { ++h; ++n; } }
+        queueHead = h;
+    }
+
+    function _tryTransfer(address to, uint256 amt) internal returns (bool) {
+        (bool ok, bytes memory ret) = asset().call(abi.encodeCall(IERC20.transfer, (to, amt)));
+        return ok && (ret.length == 0 || abi.decode(ret, (bool)));
     }
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {

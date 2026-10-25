@@ -3,7 +3,9 @@
 > **Gjeldende modell: v4** (eier 2026-10-18, `sim/sim4.py`, kontraktene, `web/src/lib/hedge.ts`):
 > - **Beløpet du skriver inn er det du betaler** (oppdatert 2026-10-19). Gebyrer og keeper-gas trekkes fra det, resten
 >   er marginen, og posisjonen er **m × margin** ($100 på 5× = $96,41 margin, $482 posisjon).
-> - Holders (gazz.fun) 2 % av innsatsen, uendret. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
+> - **Plattformgebyr** (2026-10-25, før «holders»): 2 % av marginen når issuers låner ut (multiplikasjon og short),
+>   **0,3 % på 1× hedge** (`spotBps`, ingen RSF og ingen lån). Alt går til **BackX Treasury** (én per kjede, samme
+>   adresse, eid av Safe); 25 % av det tilhører $GAZZ-holdere (`holderBps`, maks 50 %, adressen kommer fra eier). Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
 >   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
 > - **Keeper-gas** (2026-10-19): et fast beløp per posisjon (standard $0,10, `keeperGasUsd`, maks $5) betales ved åpning
 >   rett til keeper-walleten. Settes til ca. 2× gassen for én lukking/likvidering: halvparten dekker gassen, halvparten

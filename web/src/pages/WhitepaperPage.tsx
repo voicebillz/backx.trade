@@ -372,7 +372,8 @@ export function WhitepaperPage() {
                 ['Short issuers (the coin)', 'Borrow fee 0.25 % of what is lent + 10 % of shorters\' gains, in USDC', 'Reserve'],
                 ['Validators', 'Each position\'s gas + accuracy bonus', 'Manager'],
                 ['Reserve Security Fund', '0.5 % of the margin + 0.03 % of what is lent', 'Crises only'],
-                ['gazz.fun holders', '2 % of the margin', 'Sent at open'],
+                ['BackX Treasury', '2 % of the margin with multiplication, 0.3 % on a 1× hedge', 'Sent at open'],
+                ['$GAZZ holders', '25 % of what the Treasury receives', 'Treasury'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
             <p className="hint">After a liquidation, issuers also take a share of what is left (50–90 % depending on the multiplication). Rewards stream in over 24 hours so a deposit made just before a large reward cannot take what earlier issuers earned.</p>
@@ -387,17 +388,26 @@ export function WhitepaperPage() {
 
           <section id="fees">
             <h2>Fees &amp; revenue</h2>
-            <p>Fees are baked into the amount a trader pays and shown as one figure, plus validator gas. They fund the issuers (borrow fee and a share of gains), the Reserve Security Fund, the validators, and the platform. Issuers get the biggest rewards; platform revenue flows back to GAZZFUN and its holders.</p>
+            <p>Fees are baked into the amount a trader pays and shown as one figure, plus validator gas. They fund the issuers (borrow fee and a share of gains), the Reserve Security Fund, the validators, and the platform. Issuers get the biggest rewards.</p>
+            <div className="wp-table three wide" role="table" aria-label="Platform fee">
+              <div className="wp-row wp-head" role="row"><span role="columnheader">Position</span><span role="columnheader">Platform fee</span><span role="columnheader" className="r">Other fees</span></div>
+              {[
+                ['Hedge 1×', '0.3 % of the amount', 'None, nothing is borrowed'],
+                ['Hedge with multiplication', '2 % of the margin', 'Borrow 0.25 % + fund'],
+                ['Short', '2 % of the margin', 'Borrow 0.25 % + fund'],
+              ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
+            </div>
+            <p><b>Treasury.</b> Every platform fee goes on-chain to the BackX Treasury, one contract per chain at the same address everywhere, owned by the BackX Safe and holding USDC. A quarter of what it receives belongs to $GAZZ holders and is paid out by a public call anyone can make; the rest pays for running BackX (validators, servers, audits, development). Only the Safe can withdraw the platform part, and never the holders' part.</p>
           </section>
 
           <section id="gazz">
             <h2>$GAZZ</h2>
             <p><b>$GAZZ is the core token of BackX.</b> BackX is built inside the gazz.fun ecosystem, and $GAZZ ties the two together: it is the token future staking on BackX is built around, and the one that ecosystem holders share in.</p>
-            <p><b>Revenue shared with the ecosystem.</b> Every hedge pays a holders fee of 2 % of the trader's margin, sent on-chain to gazz.fun. BackX shares its revenue with the gazz.fun ecosystem holders this way, so platform activity flows back to the community that backs it, alongside what issuers earn.</p>
-            <Reveal className="wp-fig wp-flow" label="How revenue reaches gazz.fun holders">
-              <div className="wp-flow-step"><span className="wp-flow-n num">1</span><div><b>Hedge opens</b><small>fees come out of the amount the trader pays</small></div></div>
-              <div className="wp-flow-step"><span className="wp-flow-n num">2</span><div><b>2 % to gazz.fun</b><small>holders fee, sent by the contract</small></div></div>
-              <div className="wp-flow-step"><span className="wp-flow-n num">3</span><div><b>Ecosystem holders</b><small>share in BackX revenue</small></div></div>
+            <p><b>Revenue shared with holders.</b> Every hedge and short pays a platform fee into the BackX Treasury, and 25 % of it belongs to $GAZZ holders. The share is set in the Treasury contract (at most half) and paid out on-chain, so platform activity flows back to the community that backs it, alongside what issuers earn.</p>
+            <Reveal className="wp-fig wp-flow" label="How revenue reaches $GAZZ holders">
+              <div className="wp-flow-step"><span className="wp-flow-n num">1</span><div><b>Position opens</b><small>fees come out of the amount the trader pays</small></div></div>
+              <div className="wp-flow-step"><span className="wp-flow-n num">2</span><div><b>Platform fee to the Treasury</b><small>USDC, on every chain</small></div></div>
+              <div className="wp-flow-step"><span className="wp-flow-n num">3</span><div><b>25 % to $GAZZ holders</b><small>paid out on-chain, the rest runs BackX</small></div></div>
             </Reveal>
             <p>Contract on Robinhood Chain: <span className="num wp-ca">0x08a5d78a4bc7754e8aff87b4509e007baeb685f3</span>. How the share is split among holders and how staking works will be published before launch. Holding $GAZZ is not a promise of returns.</p>
           </section>

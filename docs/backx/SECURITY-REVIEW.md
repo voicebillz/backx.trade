@@ -29,6 +29,21 @@ Sjekket og **i orden** (med test der det gir mening):
 - Pause stopper bare nye posisjoner. Lukking og likvidering virker alltid.
 - Nok USDC i reserven styrer maks multiplikator. Kontrakten låner aldri ut mer enn 90 % av reserven.
 
+## 1b. Gjennomgang 2026-10-25 (v2: åpne validators, ordre, short, belønninger)
+
+Full gjennomgang av settle, kjøp, salg, limit, ordre, hedge, short og issuers. Alt under er fikset i koden og har
+egne tester (`test/Security.t.sol`, `Review20261025Test`).
+
+| Funn | Alvor | Fiks |
+|---|---|---|
+| Uttakskøen kunne fylles med tusenvis av tomme forespørsler, så hver lukking brukte all gass (og en svartelistet issuer først i køen stoppet alt). | Høy | Køen jobbes i små, avgrensede steg (`MAX_SKIP` 32); en betaling som feiler, settes til side (`owedTo`), og eieren henter den selv med `withdrawOwed(to)`. Forespørsler som er verdt 0 avvises. |
+| Short-likvidering valgte vei (vanlig/gap) ut fra pool-prisen, som kan dyttes. | Høy | Oraklet bestemmer om det er et gap; vanlig vei reverterer hvis kjøpet koster mer enn oraklet tillater. |
+| En validator kunne fylle en take-profit sent og la traderen få den dårligste prisen. | Middels | Take-profit fylles mot oraklets verdi minus maks avvik, ikke mot limit-prisen. |
+| Ordre hadde ingen grense for prisglidning. | Middels | `placeOrder(…, slipBps)`: standard 0,5 %, aldri mer enn markedets grense. Take-profit må ligge på riktig side av trigger. |
+| Fondet kunne betale for swap-kostnad i et sandwich-angrep. | Middels | Fondet dekker bare det oraklet bekrefter, med høyst halve prisbåndet som swap-kostnad. |
+| En svartelistet trader kunne blokkere sin egen likvidering. | Lav | Utbetaling som feiler, blir stående som `claimable` i stedet for å stoppe likvideringen. |
+| Safe kunne sette enkelte grenser for lavt (taket på short, vest-tid). | Lav | Gulv: short-tak minst 20 %, vest-tid minst 1 t, liqMaxGap maks 10 %. |
+
 ## 2. Hvor trygge er issuers nå?
 
 Issuers kan bare tape hvis prisen faller **videre** forbi likvideringspunktet **før** salget går gjennom, mer enn

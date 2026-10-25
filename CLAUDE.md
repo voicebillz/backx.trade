@@ -67,7 +67,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   per 24 h (fund; Safe can tune 5–100 %, never off). The admin portal never deploys with a server key: it builds
   the createMarket transaction as a Safe Transaction Builder file, the Safe signs, the portal reads the factory to
   record the new addresses.
-- Admin "Contracts" (`/admin/contracts`, owner 2026-10-22): per chain the five core contracts (vault, fund, hedge manager,
+- Admin "Contracts" (`/admin/contracts`, owner 2026-10-22): per chain the core contracts (vault, fund, hedge manager, Treasury,
   short manager, factory implementations) + the Market Factory proxy (needs only the fee collector). Deploy = Safe Transaction Builder file calling the CREATE2
   deployer 0x4e59…956c (salt `backx.v1`), so addresses are known in advance and identical on every chain; the portal
   reads the chain to mark them deployed (`core_contracts` table, bookkeeping only) and hides the button. Init code lives
@@ -109,8 +109,13 @@ The owner is not a developer: explain briefly, in Norwegian.
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).
 - Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
 - Fee model v4 (owner 2026-10-18/19): the amount the trader types IS what they pay; fees and validator gas come out of it
-  (contract `_stakeFor`, web `marginFor`), the rest is the margin X and the position is m × X (holders 2 % of X to
-  gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % of X + 0.03 % of lent), issuers' share of a gain p = 10 %.
+  (contract `_stakeFor`, web `marginFor`), the rest is the margin X and the position is m × X (platform 2 % of X,
+  borrow 0.25 % of lent to issuers, RSF 0.5 % of X + 0.03 % of lent), issuers' share of a gain p = 10 %.
+  1× hedge (owner 2026-10-25, borrows nothing): only the platform fee `spotBps` 0.3 % of X + gas, no RSF/borrow.
+  Treasury (owner 2026-10-25, `BackxTreasury`, CREATE2 via Admin → Contracts, same address every chain, Safe-owned,
+  not upgradeable) is the feeCollector of every market: all platform fees in USDC. holderBps (deploy 25 %, max 50 %,
+  OPEN: owner to confirm) belongs to $GAZZ holders, paid by a public `distribute(token)` to `holderRewards` (address
+  OPEN, owner gives it later; until set the share accrues in holdersOwed). Only the Safe `withdraw`s the rest.
   Validator gas: flat `validation.gasUsd` per position (default $0.10, max $5, ≈ 2× one close), escrowed in the position
   and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot

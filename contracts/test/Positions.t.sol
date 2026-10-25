@@ -43,8 +43,14 @@ contract HedgeTest is Base {
     }
 
     function test_hedge_1x_noLoan_noLiquidation_issuersZero() public {
+        uint256 fundBefore = hedgeFund.balance();
         uint256 id = _hedge(100 * USD, 1);
         assertEq(_pos(hm, id).lent, 0);
+        // Owner 2026-10-25: a 1x hedge pays only the low platform fee (0.3 %) + gas, no fund fee.
+        uint256 x = _pos(hm, id).stake;
+        assertEq(x, (100 * USD - USD / 10) * 10_000 / 10_030, "margin after 0.3 %");
+        assertEq(usd.balanceOf(feeCollector), x * 30 / 10_000, "platform fee to the Treasury");
+        assertEq(hedgeFund.balance(), fundBefore, "no fund fee when nothing is lent");
         _move(-5_000);
         assertFalse(hm.isLiquidatable(id), "1x never liquidates");
         _move(2_000);
@@ -288,7 +294,7 @@ contract GuardsTest is Base {
         vm.prank(makeAddr("stranger"));
         hm.liquidate(id); // open validators: anyone can liquidate a due position
         vm.expectRevert(); // only the Safe configures
-        hm.setFees(BackxManagerBase.Fees(0, 0, 0, 0, 0));
+        hm.setFees(BackxManagerBase.Fees(0, 0, 0, 0, 0, 0));
         vm.expectRevert(BackxManagerBase.OnlySelf.selector);
         hm.selfSettle(1, 1, address(this), 0);
     }
@@ -310,7 +316,7 @@ contract GuardsTest is Base {
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setParams(30, BackxManagerBase.Params(100, 9000, 3000, 70)); // e below 5 %
         vm.expectRevert(BackxManagerBase.BadParams.selector);
-        hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200)); // holders above 3 %
+        hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200, 30)); // platform above 3 %
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100)); // gas above $5
         vm.expectRevert(BackxManagerBase.BadParams.selector);
@@ -412,7 +418,7 @@ contract OrderTest is Base {
 
     function test_hedge_buyTheDip() public {
         vm.prank(trader);
-        uint256 oid = hm.placeOrder(5, 100 * USD, 1_900 * USD, false, uint40(block.timestamp + 1 days), 0);
+        uint256 oid = hm.placeOrder(5, 100 * USD, 1_900 * USD, false, uint40(block.timestamp + 1 days), 0, 0);
         assertEq(usd.balanceOf(address(hm)), 100 * USD, "escrowed");
         assertFalse(hm.isOrderFillable(oid));
         vm.prank(validator);
@@ -434,7 +440,7 @@ contract OrderTest is Base {
         tokenVault.redeem(tokenVault.balanceOf(issuer), issuer, issuer);
         vm.stopPrank();
         vm.prank(trader); // no coins issued yet: place the order, it fills when there are
-        uint256 oid = sm.placeOrder(3, 100 * USD, 0, false, uint40(block.timestamp + 7 days), 0);
+        uint256 oid = sm.placeOrder(3, 100 * USD, 0, false, uint40(block.timestamp + 7 days), 0, 0);
         assertFalse(sm.isOrderFillable(oid), "nothing to borrow yet");
         vm.prank(issuer);
         tokenVault.deposit(10 * COIN, issuer);
@@ -450,7 +456,7 @@ contract OrderTest is Base {
     function test_cancelAndExpiry() public {
         uint256 before = usd.balanceOf(trader);
         vm.prank(trader);
-        uint256 oid = hm.placeOrder(2, 100 * USD, 2_500 * USD, true, uint40(block.timestamp + 1 hours), 0);
+        uint256 oid = hm.placeOrder(2, 100 * USD, 2_500 * USD, true, uint40(block.timestamp + 1 hours), 0, 0);
         vm.prank(makeAddr("stranger"));
         vm.expectRevert(BackxManagerBase.NotOwner.selector);
         hm.cancelOrder(oid);

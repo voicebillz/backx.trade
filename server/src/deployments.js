@@ -30,14 +30,26 @@ export const selector = (sig) => '0x' + sel(sig);
 const FACTORY_INIT = sel('initialize(address,address,address,address,address,address,address)');
 const MARKET_COUNT = '0x' + sel('marketCount()');
 
-/** The implementations: identical on every chain, so they get the same address everywhere. */
+/** Holders' share of platform fees at deploy (25 %, the Safe can change it up to 50 % with setHolders). */
+const TREASURY_HOLDER_BPS = 2_500;
+
+/** The implementations and the Treasury: identical on every chain, so they get the same address everywhere. */
 export const IMPLS = [
   { key: 'vaultImpl', artifact: 'BackxReserveVault', label: 'Issue Reserve', role: 'Issuers\' capital: USDC for hedges, the coin itself for shorts (ERC-4626, withdrawal queue, claimable USDC rewards).' },
   { key: 'fundImpl', artifact: 'BackxReserveSecurityFund', label: 'Reserve Security Fund', role: 'Crisis cover when a crash cannot be liquidated in time, with per-payment and daily caps.' },
   { key: 'hedgeImpl', artifact: 'BackxHedgeManager', label: 'Hedge Manager', role: 'Opens, closes and liquidates hedges; open validators, take-profits, buy orders, claims.' },
   { key: 'shortImpl', artifact: 'BackxShortManager', label: 'Short Manager', role: 'Borrow-and-sell shorts with a profit roof; open validators, take-profits, sell orders, claims.' },
   { key: 'factoryImpl', artifact: 'BackxMarketFactory', label: 'Market Factory (code)', role: 'Code behind the factory proxy (UUPS).' },
-].map((c) => ({ ...c, kind: 'implementation', initcode: ART[c.artifact].initcode, runtimeSize: ART[c.artifact].runtimeSize, address: create2Address(ART[c.artifact].initcode) }));
+  // Platform Treasury (owner 2026-10-25): the fee collector of every market on the chain. Constructor (Safe, holders'
+  // share in bps), so the same address on every chain. Not upgradeable.
+  { key: 'treasury', artifact: 'BackxTreasury', kind: 'core', args: padAddr(SAFE) + pad(TREASURY_HOLDER_BPS), label: 'Treasury',
+    role: 'All platform fees in USDC. The $GAZZ holders\' share is paid out by anyone calling distribute; only the Safe withdraws the rest.' },
+].map((c) => {
+  const initcode = ART[c.artifact].initcode + (c.args ?? '');
+  return { kind: 'implementation', ...c, initcode, runtimeSize: ART[c.artifact].runtimeSize, address: create2Address(initcode) };
+});
+/** The Treasury's address (same on every chain): the default fee collector for the factory. */
+export const TREASURY = IMPLS.find((c) => c.key === 'treasury').address;
 
 /** ERC1967Proxy(factoryImpl, initialize(safe, usd, vault, fund, hedge, short, feeCollector)). */
 export function factoryInitcode(usdAddr, cfg) {

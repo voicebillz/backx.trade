@@ -28,7 +28,7 @@ contract BackxShortManager is BackxManagerBase {
 
     // ---- open / close ------------------------------------------------------------------------------
 
-    function _open(address owner_, address payer, uint256 amount, uint8 m, uint256 minUsdOut, uint256 limitPrice)
+    function _open(address owner_, address payer, uint256 amount, uint8 m, uint256 minUsdOut, uint256 limitPrice, uint16 slipBps)
         internal
         override
         returns (uint256 id)
@@ -42,11 +42,11 @@ contract BackxShortManager is BackxManagerBase {
         if (notional > c.maxNotionalUsd) revert TooLarge();
         if (openUsd + notional > c.maxOpenUsd) revert OpenInterestFull();
         openUsd += notional;
-        uint256 holders = stake * f.holdersBps / BPS;
+        uint256 platform = stake * f.platformBps / BPS;
         uint256 rsf = stake * f.rsfStakeBps / BPS + notional * f.rsfLentBps / BPS;
         uint256 borrow = notional * f.borrowBps / BPS;
         uint256 gas = validation.gasUsd;
-        _collect(payer, stake + holders + rsf + borrow + gas, holders, rsf);
+        _collect(payer, stake + platform + rsf + borrow + gas, platform, rsf);
         _toIssuers(borrow); // the coin's issuers earn USDC, claimable
         // Worst case in one jump of stressBps: buying q back costs N·(1 + c) but the position holds ≈ X + N.
         uint256 stress = _gap(notional * c.stressBps, stake * BPS);
@@ -54,7 +54,7 @@ contract BackxShortManager is BackxManagerBase {
 
         uint256 q = oracle.tokenAmount(token, notional);
         vault.lend(q);
-        if (minUsdOut == 0) minUsdOut = notional * (BPS - limitSlipBps) / BPS;
+        if (minUsdOut == 0) minUsdOut = notional * (BPS - slipBps) / BPS;
         uint256 proceeds = _swapIn(token, address(usd), q, minUsdOut);
         if (proceeds * BPS < notional * (BPS - f.oracleDevBps)) revert OracleMismatch();
 
@@ -99,8 +99,10 @@ contract BackxShortManager is BackxManagerBase {
             if (pos.owner == address(0) || !_triggered(pos)) revert NotLiquidatable();
             return (pos, type(uint256).max);
         }
-        if (pos.owner == address(0) || pos.limitValue == 0 || oracle.usdValue(token, pos.lent) > pos.limitValue) revert LimitNotReached();
-        return (pos, uint256(pos.limitValue) * (BPS + limitSlipBps) / BPS);
+        uint256 value = oracle.usdValue(token, pos.lent);
+        if (pos.owner == address(0) || pos.limitValue == 0 || value > pos.limitValue) revert LimitNotReached();
+        // From today's price, not the limit: a late roof / take-profit fill cannot hand the move to a sandwich.
+        return (pos, value * (BPS + limitSlipBps) / BPS);
     }
 
     function isLiquidatable(uint256 id) external view override returns (bool) {
@@ -168,8 +170,11 @@ contract BackxShortManager is BackxManagerBase {
         uint256 covered;
         uint256 writtenOff;
         uint256 bonus;
-        if (cost <= pos.amount) {
-            if (cost > maxUsdIn) revert Underwater();
+        // Liquidation: the ORACLE decides whether there is a gap, never the pool (a pushed spot price must not steer a
+        // healthy liquidation into the fund or take the trader's rest; review 2026-10-25).
+        bool gap = kind == K_LIQ ? maxUsdIn > pos.amount : cost > pos.amount;
+        if (!gap) {
+            if (cost > maxUsdIn) revert Underwater(); // the pool is off the oracle (or past your limit): try again
             uint256 paid = _swapOut(address(usd), token, pos.lent, Math.min(pos.amount, maxUsdIn));
             uint256 rest = pos.amount - paid;
             if (kind == K_LIQ) {
@@ -185,12 +190,21 @@ contract BackxShortManager is BackxManagerBase {
             _toIssuers(toIssuers);
         } else {
             if (kind != K_LIQ) revert Underwater(); // past zero: validators settle it
-            // Gap: the fund adds what the oracle says is missing (within its guardrails), then ONE purchase buys
-            // the coins, never more than liqMaxGap worse than the oracle. Short of q: written off in coins.
-            uint256 need = maxUsdIn > pos.amount ? maxUsdIn - pos.amount : 0;
-            covered = _cover(need, pos.lentUsd);
+            // Gap: the fund adds what the oracle confirms is missing (within its guardrails), then ONE purchase
+            // buys the coins, never more than liqMaxGap worse than the oracle. Short of q: written off in coins.
+            // Swap cost included, but never more than half the liqMaxGap band above the oracle.
+            uint256 fair = Math.min(cost, value * (BPS + liqMaxGapBps / 2) / BPS);
+            covered = _cover(fair > pos.amount ? fair - pos.amount : 0, pos.lentUsd);
             uint256 budget = pos.amount + covered;
-            uint256 got = _swapIn(address(usd), token, budget, oracle.tokenAmount(token, budget) * (BPS - liqMaxGapBps) / BPS);
+            uint256 got;
+            if (budget >= cost) {
+                // Enough to buy back every coin lent: buy exactly that (budget ≤ the oracle band), the rest back to the fund.
+                uint256 left = budget - _swapOut(address(usd), token, pos.lent, budget);
+                if (left > 0) usd.safeTransfer(address(fund), left);
+                got = pos.lent;
+            } else {
+                got = _swapIn(address(usd), token, budget, oracle.tokenAmount(token, budget) * (BPS - liqMaxGapBps) / BPS);
+            }
             uint256 back = got > pos.lent ? pos.lent : got;
             writtenOff = pos.lent - back; // in coins
             IERC20(token).forceApprove(address(vault), got);
@@ -199,7 +213,16 @@ contract BackxShortManager is BackxManagerBase {
         }
         if (kind == K_CLOSE) toTrader += pos.gas;
         else _payValidator(v, id, kind, pos.gas, bonus);
-        if (toTrader > 0) usd.safeTransfer(pos.owner, toTrader);
+        _payOwner(pos.owner, toTrader, kind == K_CLOSE);
         emit Closed(id, v, kind, toTrader, toIssuers, covered, writtenOff);
+    }
+
+    function _tpFits(uint256 entry, uint256 tp) internal pure override returns (bool) {
+        return tp < entry;
+    }
+
+    /// The roof can be tuned per market but never switched off: at least a 20 % fall closes a short.
+    function _minRoofBps() internal pure override returns (uint16) {
+        return 2_000;
     }
 }

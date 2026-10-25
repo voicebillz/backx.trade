@@ -21,7 +21,7 @@ Download CSV button; source `web/src/lib/agentCalls.ts`, regenerate the CSV from
 | Max multiplication for an amount now | `hedge.maxMFor(amount)` | `short.maxMFor(amount)` (0 = no coins issued yet) |
 | Open now | `hedge.open(amount, m, minCoinsOut, takeProfit)` | `short.open(amount, m, minUsdOut, takeProfit)` |
 | Single settle (reverts with the reason) | `liquidate(id)`, `executeLimit(id)`, `fillOrder(orderId)` | same |
-| Entry order (limit buy / sell) | `hedge.placeOrder(m, amount, trigger, above, expiry, takeProfit)` | `short.placeOrder(…)`: also waits for issued coins |
+| Entry order (limit buy / sell) | `hedge.placeOrder(m, amount, trigger, above, expiry, takeProfit, slipBps)` (slipBps 0 = 0.5 %) | `short.placeOrder(…)`: also waits for issued coins |
 | Cancel order | `cancelOrder(orderId)` | same |
 | Move take-profit | `setLimit(id, price)` (0 = none) | `setLimit(id, price)` (0 = back to the roof) |
 | Close | `hedge.close(id, minUsdOut)` | `short.close(id, maxUsdIn)` |
