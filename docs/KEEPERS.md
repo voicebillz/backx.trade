@@ -1,4 +1,4 @@
-# Keepers: 50 keepers on 4 hosts (owner 2026-10-23)
+# Keepers: 10 per chain on 5 servers (owner 2026-10-23, servers 2026-10-25)
 
 A keeper watches the Position Managers on Robinhood Chain and sends `liquidateBatch` / `executeLimitBatch` when a
 position is due. Code: `keeper/` (Node, viem, no BackX dependency). Why several: `docs/backx/LIVENESS.md`.
@@ -22,19 +22,29 @@ Arbitrum, BNB on BNB Chain). Multicall3 exists on all four.
   the Safe). Only the richest acts, so 50 keepers never all send at once. Defaults: low 0.0015, target 0.005,
   cap 0.02 ETH.
 
-## Hosts (free tiers, checked 2026-10-23; terms change, check before relying on them)
-| Host | Always free? | Keepers | Ranks |
+## Servers: 5 servers × 2 keepers per chain (owner 2026-10-25; free terms checked 2026-10-25, they change)
+| Slot | Host | Free? | Ranks on every chain |
 |---|---|---|---|
-| Railway (already paid for the API) | Paid | 13 processes in one service | 0, 4, 8, … |
-| Oracle Cloud Always Free, Ampere A1 (2 OCPU / 12 GB since June 2026) + 2 AMD micro VMs | Yes | 13 | 1, 5, 9, … |
-| Google Cloud e2-micro (us-west1 / us-central1 / us-east1, 1 VM) | Yes | 12 | 2, 6, 10, … |
-| A fourth provider (e.g. AWS free credits, Hetzner, a second Oracle account in another region) | Credits / cheap | 12 | 3, 7, 11, … |
+| 1 | Railway (already paid for the API), Docker image service, no public domain | Paid | 0, 5 |
+| 2 | Oracle Cloud Always Free, Ampere A1 (2 OCPU / 12 GB since June 2026) | Always | 1, 6 |
+| 3 | Google Cloud e2-micro (us-west1 / us-central1 / us-east1) | Always | 2, 7 |
+| 4 | Northflank Sandbox (2 always-on services, card check) | Yes | 3, 8 |
+| 5 | Microsoft Azure B2pts v2 (750 h/month) | 12 months | 4, 9 |
 
-Ranks are interleaved so the first four ranks sit on four different providers: losing a whole provider costs at
-most one rank step. Honest note: 50 processes on 4 providers are 4 independent failure domains; the extra
-processes add separate keys and RPC orderings, not 50× safety. Give each host a different first RPC.
-Cloudflare Workers cron (5 triggers, 1/min on the free plan) and GitHub Actions schedules are too slow for
-liquidations; use them only as a last "is anything stuck?" alarm.
+Ranks are interleaved so the first five ranks sit on five providers: losing one provider costs one rank step.
+Not used: Koyeb (free instance sleeps after 1 h), Render (sleeps), Fly.io (no free plan). Cloudflare Workers cron and
+GitHub Actions schedules run at most once a minute: too slow for liquidations, fine as a "stuck?" alarm.
+
+How a server is set up (step by step with copy buttons in Admin → Contracts):
+1. One image for all: `ghcr.io/voicebillz/backx-keeper:latest` (amd64 + arm64, `.github/workflows/keeper-image.yml`,
+   rebuilt on every change under `keeper/`). Make the package public once; it holds no secrets.
+2. `docker run --rm IMAGE node src/setup.js --server oci --slot 2 --of 5 --keepers 10 --chains 4663,56,8453,42161`
+   creates this server's keepers (a gas key + report key each, id `oci-<chain>-<rank>`) and prints
+   `KEEPER_SET=…` (secret, only on that server) and the public lines for `KEEPERS` on Railway.
+   Optional env for setup: `RPC_<chainId>`, `MANAGERS_<chainId>`, `START_BLOCK_<chainId>`, `SWEEP_TO`.
+3. Run `IMAGE` (default command `node src/multi.js`) with `KEEPER_SET`: it starts one keeper process per entry,
+   restarts a crashed one with back-off (5 s → 2 min), and idles while a chain has no MANAGERS yet.
+4. Fund via Admin → Keepers; check "▲ Up" there.
 
 ## Set up one keeper
 1. `cd keeper && npm ci && npm run keygen -- oci-1-05` prints:

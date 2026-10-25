@@ -31,14 +31,17 @@ The owner is not a developer: explain briefly, in Norwegian.
   Only exception: the front-page hero has a hint of navy as a flat top-to-bottom linear gradient (owner 2026-10-22).
 
 ## Login and money (locked)
-- Privy login without wallets: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
+- Privy login: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
   (Apple once our Apple OAuth credentials exist; owner 2026-10-18). Own Privy app for backx, not gazz.fun's.
-  No external wallets, no WalletConnect, no "Connect wallet". Each method must also be on in the Privy dashboard.
+  External wallets ON (owner 2026-10-25, for agents): `wallet` login + WalletConnect in Privy's modal (detected,
+  MetaMask, Robinhood Wallet, Rainbow, WalletConnect). The external wallet is only the login: every account still gets
+  its own embedded wallet (`createOnLogin: 'all-users'`), which the session, deposits and ADMIN_WALLETS use.
+  WalletConnect hosts are in the CSP. Each method must also be on in the Privy dashboard.
 - Each user has their own Privy embedded wallet. Deposits go straight to it. No Relay, no bank, no escrow.
 - Withdrawals: user types the recipient address. Never a fixed recipient.
 
 ## Security
-- Web CSP is enforced in `web/vercel.json` (Privy base policy minus WalletConnect, plus Telegram login, Google Fonts and `api.backx.trade`).
+- Web CSP is enforced in `web/vercel.json` (Privy base policy incl. WalletConnect, plus Telegram login, Google Fonts and `api.backx.trade`).
   No inline scripts, no `unsafe-eval`. New external hosts (RPC, price feeds) must be added to `connect-src` deliberately.
   `X-Frame-Options: DENY` + `frame-ancestors 'none'`. Re-test the CSP after every Privy SDK upgrade.
 - Never commit `.env`, keys or keypair files. `VITE_*` ends up in the browser: no secrets there.
@@ -112,6 +115,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   r × 2 blocks later after a simulation re-check), chain-only, several RPCs, self-balancing gas (richest tops up the
   poorest, excess above the cap swept to the Safe). Optional signed ed25519 heartbeat to `POST /keeper/heartbeat`
   (outside /api, KEEPERS env on Railway); Admin → Keepers shows health, balances, latency and builds a Safe file to fund them.
+  Servers (owner 2026-10-25): 5 servers × 2 keepers per chain (Railway, Oracle Always Free, GCP e2-micro, Northflank
+  Sandbox, Azure 12 mo), ranks interleaved (server s runs s−1 and s+4). One image `ghcr.io/voicebillz/backx-keeper`
+  (built by .github/workflows/keeper-image.yml), `src/setup.js` makes a server's keys → KEEPER_SET (secret, that server
+  only) + public KEEPERS lines, `src/multi.js` runs them. Step-by-step recipe: Admin → Contracts (AdminKeeperRecipe).
 - Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
   `requestRedeem(shares)`, the shares are parked in the vault and reserved, and every settlement point (`repay`, a new
   deposit, `processQueue`) pays the queue first, FIFO, part-payments, straight to the wallet that asked. Reserved money

@@ -6,4 +6,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 USER node
-CMD ["node", "src/index.js"]
+# One container per server runs every keeper in KEEPER_SET (src/setup.js); a single keeper still works with
+# `node src/index.js` and the per-keeper env.
+CMD ["node", "src/multi.js"]

@@ -1190,3 +1190,14 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .best-form .input-wrap { width: 140px; }
 .best-row td { background: var(--brand-bg); }
 .best-badge { margin-left: 8px; }
+
+/* Admin → Contracts: keeper server recipe */
+.recipe h2 { margin: 0 0 8px; font-size: 16px; }
+.recipe-steps { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 14px; }
+.recipe-steps ul { margin: 6px 0 0; padding-left: 18px; }
+.recipe-tabs { margin: 8px 0 4px; display: flex; flex-wrap: wrap; gap: 3px; }
+.recipe-tabs button { padding: 0 12px; min-height: 44px; }
+.recipe-code { position: relative; margin: 8px 0; }
+.recipe-code pre { margin: 0; padding: 10px 76px 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised);
+  font-family: var(--mono, ui-monospace, monospace); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+.recipe-code .btn-mini { position: absolute; top: 6px; right: 6px; min-height: 32px; }

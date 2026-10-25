@@ -5,8 +5,11 @@ web/src/lib/emailAuthContext.tsx, privyBridge.tsx, cashGuard.js). Del 1 er det
 som skal tas med. Del 2 er det backx skal gjøre **bedre** enn gazz.fun. Del 3 er
 sjekklisten før lansering.
 
-backx har **kun social login** (Privy) og **brukerens egen embedded wallet**.
-Ingen eksterne wallets, ingen signatur-login. Det fjerner en hel klasse feil.
+backx har social login (Privy) og **brukerens egen embedded wallet**.
+Endret 2026-10-25 (eier, for agenter): man kan også logge inn med egen ekstern wallet (MetaMask, WalletConnect …)
+via Privy. Den eksterne walleten er kun innloggingen: alle kontoer får likevel sin egen embedded wallet
+(`createOnLogin: 'all-users'`), og serveren bruker bare den (lest fra Privys API, `wallet_client_type: privy`)
+til sesjon, innskudd og admin-sjekk. WalletConnect-vertene står bevisst i CSP-en.
 
 ---
 

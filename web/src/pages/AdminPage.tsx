@@ -1,6 +1,7 @@
 import { AdminBranding } from './AdminBranding';
 import { AdminKeepers } from './AdminKeepers';
 import { AdminBestChain } from './AdminBestChain';
+import { AdminKeeperRecipe } from './AdminKeeperRecipe';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../lib/api';
 import { go, href, type Route } from '../lib/router';
@@ -858,6 +859,8 @@ function Contracts() {
           {data?.sourceCommit && <p className="hint">Contract code from commit <span className="num">{data.sourceCommit}</span>. Same code = same address on every chain.</p>}
         </section>
       )}
+
+      <AdminKeeperRecipe />
 
       {deploying && chain && <DeployCore item={deploying} chain={chain} onClose={() => { setDeploying(null); load(); }} />}
     </>

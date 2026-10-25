@@ -26,13 +26,16 @@ export default function PrivyBridge(props: Props) {
     <PrivyProvider
       appId={props.appId}
       config={{
-        // No external wallets (docs/backx/SECURITY-AUTH.md): every method ends in the user's own embedded wallet.
-        // Each method must also be switched on in the Privy dashboard. Apple returns once our own
+        // External wallets (owner 2026-10-25): agents and traders can log in with their own wallet (MetaMask,
+        // Coinbase, Rainbow, any WalletConnect wallet). The external wallet is only the login: every account still
+        // gets its own embedded wallet (createOnLogin 'all-users'), which the backx session, deposits and admin
+        // checks use. Each method must also be switched on in the Privy dashboard. Apple returns once our own
         // Apple OAuth credentials are set up there.
-        loginMethods: ['email', 'sms', 'google', 'twitter', 'discord', 'twitch', 'telegram', 'farcaster', 'passkey'],
+        loginMethods: ['email', 'sms', 'google', 'twitter', 'discord', 'twitch', 'telegram', 'farcaster', 'passkey', 'wallet'],
+        externalWallets: { walletConnect: { enabled: true } },
         embeddedWallets: {
-          ethereum: { createOnLogin: 'users-without-wallets' },
-          solana: { createOnLogin: 'users-without-wallets' },
+          ethereum: { createOnLogin: 'all-users' },
+          solana: { createOnLogin: 'all-users' },
         },
         // Chains the wallet can send on. MEV protection: Ethereum and BNB Chain transactions go to private
         // RPCs (MEV Blocker, PancakeSwap MEV Guard), never the public mempool where bots sandwich swaps.
@@ -43,7 +46,8 @@ export default function PrivyBridge(props: Props) {
           addRpcUrlOverrideToChain(bsc, 'https://bscrpc.pancakeswap.finance'),
         ],
         defaultChain: mainnet,
-        appearance: { theme: '#0A0A0A', accentColor: '#FFD100', logo: '/backx-logo.png', walletChainType: 'ethereum-only' },
+        appearance: { theme: '#0A0A0A', accentColor: '#FFD100', logo: '/backx-logo.png', walletChainType: 'ethereum-only',
+          walletList: ['detected_ethereum_wallets', 'metamask', 'robinhood_wallet', 'rainbow', 'wallet_connect'] },
       }}
     >
       <Session {...props} />
@@ -66,7 +70,9 @@ function Session({ checked, me, onSession, onState }: Props) {
   // Once per Privy user per page load: never loops on 401/409 (that got gazz.fun rate limited).
   useEffect(() => {
     if (!ready || !authenticated || !user || !checked || me) return;
-    const wallet = user.wallet?.walletClientType === 'privy' ? user.wallet.address : null;
+    // The embedded wallet, also when the user logged in with an external one (user.wallet is then the external).
+    const embedded = user.linkedAccounts.find((a) => a.type === 'wallet' && 'walletClientType' in a && a.walletClientType === 'privy' && (!('chainType' in a) || a.chainType === 'ethereum'));
+    const wallet = embedded && 'address' in embedded ? embedded.address : null;
     if (!wallet) { setConnecting(true); return; } // Privy is still creating it
     if (attempted.current === user.id) return;
     attempted.current = user.id;
@@ -122,7 +128,8 @@ function Session({ checked, me, onSession, onState }: Props) {
   }, [authenticated, logout]);
 
   const linked: LinkedLogin[] = (user?.linkedAccounts ?? [])
-    .filter((a) => a.type !== 'wallet' && a.type !== 'smart_wallet')
+    // Logins, plus external wallets used to log in (the embedded wallet is not a login).
+    .filter((a) => a.type !== 'smart_wallet' && !(a.type === 'wallet' && 'walletClientType' in a && a.walletClientType === 'privy'))
     .map((a) => {
       const detail = 'address' in a && typeof a.address === 'string' ? a.address
         : 'number' in a && typeof a.number === 'string' ? a.number

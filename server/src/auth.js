@@ -65,7 +65,8 @@ async function privyAccount(did) {
   // Base58, 32–44 chars. Case matters on Solana, so it is stored as is.
   const solanaAddress = sol && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(sol.address) ? sol.address : null;
   const logins = (user.linked_accounts || [])
-    .filter((a) => typeof a.type === 'string' && !/wallet/.test(a.type))
+    // External wallets (MetaMask, WalletConnect …) count as a login method "wallet"; the embedded wallet does not.
+    .filter((a) => typeof a.type === 'string' && (a.type === 'wallet' ? a.wallet_client_type !== 'privy' : !/wallet/.test(a.type)))
     .sort((a, b) => (b.latest_verified_at || 0) - (a.latest_verified_at || 0));
   // google_oauth → google, phone → phone, passkey → passkey. Short, fixed vocabulary.
   const method = logins[0] ? logins[0].type.replace(/_oauth$/, '').slice(0, 32) : null;

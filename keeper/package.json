@@ -3,7 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=24.22.1" },
-  "scripts": { "start": "node src/index.js", "keygen": "node src/keygen.js" },
-  "dependencies": { "viem": "2.39.3" }
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "keygen": "node src/keygen.js",
+    "setup": "node src/setup.js",
+    "multi": "node src/multi.js"
+  },
+  "dependencies": {
+    "viem": "2.39.3"
+  }
 }
