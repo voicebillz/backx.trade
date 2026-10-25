@@ -1262,6 +1262,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .callsheet thead th { position: sticky; top: 0; z-index: 1; background: var(--raised); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
 .callsheet tr > :first-child { border-left: 0; }
 .callsheet tr > :last-child { border-right: 0; }
+.callsheet tr.off { display: none; }
 .callsheet tbody tr:hover td { background: var(--brand-bg); }
 .sheet-n { width: 36px; text-align: right !important; color: var(--ink-3); background: var(--raised); }
 .callsheet code { font-family: var(--mono, ui-monospace, monospace); font-size: 12px; color: var(--ink); overflow-wrap: anywhere; }
@@ -1468,7 +1469,16 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .wp-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .wp-fig, .wp-table, .wp-row, .wp-callout, .wp-stats, .wp-flow, .callsheet tr { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
-  .sheet-scroll { overflow: visible !important; }
+  /* Agent call list: the whole list, no scroll box, wrapped to the page width */
+  .sheet-fig { overflow: visible !important; }
+  .sheet-bar { display: none !important; }
+  .sheet-scroll { overflow: visible !important; max-height: none !important; }
+  .callsheet { min-width: 0 !important; table-layout: fixed; font-size: 8pt; }
+  .callsheet col.c-n { width: 7%; } .callsheet col.c-step { width: 24%; } .callsheet col.c-con { width: 14%; } .callsheet col.c-call { width: 33%; } .callsheet col.c-ret { width: 22%; }
+  .callsheet td, .callsheet th { padding: 4px 6px; overflow-wrap: anywhere; }
+  .callsheet code { white-space: normal; overflow-wrap: anywhere; font-size: 7.5pt; }
+  .callsheet thead th { position: static; }
+  .callsheet tr.off { display: table-row; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .wp-pdf { gap: 6px; }

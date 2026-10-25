@@ -4,7 +4,8 @@ import { AGENT_CALLS, CALL_GROUPS, agentCallsCsv, type CallGroup } from '../lib/
 /** Spreadsheet-style call list for AI agents: row numbers, gridlines, a group filter and a CSV download. */
 export function AgentCallSheet() {
   const [group, setGroup] = useState<CallGroup | 'All'>('All');
-  const rows = AGENT_CALLS.map((c, i) => ({ ...c, n: i + 1 })).filter((c) => group === 'All' || c.group === group);
+  // Every row is rendered; the group filter only hides rows on screen, so a printed / PDF copy always has the full list.
+  const rows = AGENT_CALLS.map((c, i) => ({ ...c, n: i + 1, off: group !== 'All' && c.group !== group }));
 
   const download = () => {
     const url = URL.createObjectURL(new Blob([agentCallsCsv()], { type: 'text/csv;charset=utf-8' }));
@@ -27,12 +28,13 @@ export function AgentCallSheet() {
       </div>
       <div className="sheet-scroll" tabIndex={0} aria-label="Agent call list, scrolls sideways">
         <table className="callsheet">
+          <colgroup><col className="c-n" /><col className="c-step" /><col className="c-con" /><col className="c-call" /><col className="c-ret" /></colgroup>
           <thead>
             <tr><th className="sheet-n" scope="col">#</th><th scope="col">Step</th><th scope="col">Contract</th><th scope="col">Call</th><th scope="col">Returns</th></tr>
           </thead>
           <tbody>
             {rows.map((c) => (
-              <tr key={c.n}>
+              <tr key={c.n} className={c.off ? 'off' : undefined}>
                 <td className="sheet-n num">{c.n}</td>
                 <td><span className={'sheet-tag g-' + c.group.toLowerCase()}>{c.group}</span>{c.step}</td>
                 <td className="muted">{c.contract}</td>
