@@ -4,7 +4,7 @@ Run after every contract change:  forge build && python3 script/export-artifacts
 The portal deploys with CREATE2 (deterministic deployer), so the address follows from this exact init code."""
 import json, hashlib, os, subprocess
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-NAMES = ["BackxReserveVault", "BackxReserveSecurityFund", "BackxHedgeManager", "BackxShortManager", "BackxMarketFactory", "BackxTreasury", "BackxHolderRewards", "ERC1967Proxy"]
+NAMES = ["BackxReserveVault", "BackxReserveSecurityFund", "BackxHedgeManager", "BackxShortManager", "BackxMarketFactory", "BackxTreasury", "ERC1967Proxy"]
 out = {}
 for n in NAMES:
     j = json.load(open(os.path.join(ROOT, "out", f"{n}.sol", f"{n}.json")))
