@@ -12,6 +12,7 @@ import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
 import { maxNotional, quote, shortQuote, shortTier, type Side } from './lib/hedge';
 import { availableToLend, coinsToLend, maxHedgeMFor, maxShortMFor } from './lib/reserves';
 import { useTheme, usePriceColors } from './lib/theme';
+import { LIMITS, gridOf, useLayout, type Layout, type PanelKind } from './lib/layout';
 import { useTicker } from './lib/useTicker';
 import { useRoute, navigate } from './lib/router';
 import { WhitepaperPage } from './pages/WhitepaperPage';
@@ -91,6 +92,21 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
   const [m, setM] = useState(5);
   const [side, setSide] = useState<Side>('hedge');
   const [swapFor, setSwapFor] = useState<string | null>(null);
+  // Terminal layout (header gear): saved layout + a live override while a panel edge is being dragged.
+  const { layout, set: saveLayout } = useLayout();
+  const [drag, setDrag] = useState<Partial<Layout> | null>(null);
+  const dragging = drag !== null;
+  const L: Layout = { ...layout, ...drag };
+  const base = useRef(layout);
+  const L0 = () => base.current;
+  const startDrag = (apply: (dx: number, dy: number) => Partial<Layout>) => {
+    base.current = layout;
+    return {
+      move: (dx: number, dy: number) => setDrag(clampLayout(apply(dx, dy))),
+      end: (dx: number, dy: number) => { saveLayout(clampLayout(apply(dx, dy))); setDrag(null); },
+    };
+  };
+  const panel = (k: PanelKind) => k === 'markets' ? <MarketList {...moving} selected={market?.id ?? null} onSelect={onSelect} /> : k === 'positions' ? <BottomPanel /> : null;
   const [sheet, setSheet] = useState(false);
   const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
@@ -121,12 +137,19 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
 
   return (
     <>
-      <main id="main" className="terminal">
-        <MarketList {...moving} selected={market?.id ?? null} onSelect={onSelect} />
+      <main id="main" className={'terminal custom' + (L.side === 'none' ? ' no-side' : '') + (L.bottom === 'none' ? ' no-bottom' : '') + (dragging ? ' resizing' : '')} style={gridOf(L)}>
+        {L.side !== 'none' && (
+          <div className="slot slot-side">
+            {panel(L.side)}
+            <Resizer edge={L.ticketSide === 'right' ? 'r' : 'l'} start={startDrag} apply={(dx) => ({ sideW: L0().sideW + (L.ticketSide === 'right' ? dx : -dx) })} />
+            {L.bottom !== 'none' && <Resizer edge={L.ticketSide === 'right' ? 'br' : 'bl'} start={startDrag}
+              apply={(dx, dy) => ({ sideW: L0().sideW + (L.ticketSide === 'right' ? dx : -dx), bottomH: L0().bottomH - dy })} />}
+          </div>
+        )}
         <div className="center">
           {market && q ? (
             <>
-              <CoinHeader market={market} live={live} dir={dir} tick={tick} />
+              {L.header && <CoinHeader market={market} live={live} dir={dir} tick={tick} />}
               <PriceChart market={market} theme={theme} priceColors={priceColors} entry={market.price} liqPrice={q.noLiquidation ? null : q.liqPrice} />
             </>
           ) : (
@@ -136,8 +159,18 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
             </>
           )}
         </div>
-        <div className="ticket-col">{ticket ?? <div className="panel ticket sk-chart" aria-busy="true" />}</div>
-        <BottomPanel />
+        <div className="ticket-col slot">
+          {ticket ?? <div className="panel ticket sk-chart" aria-busy="true" />}
+          <Resizer edge={L.ticketSide === 'right' ? 'l' : 'r'} start={startDrag} apply={(dx) => ({ ticketW: L0().ticketW + (L.ticketSide === 'right' ? -dx : dx) })} />
+          {L.bottom !== 'none' && <Resizer edge={L.ticketSide === 'right' ? 'bl' : 'br'} start={startDrag}
+            apply={(dx, dy) => ({ ticketW: L0().ticketW + (L.ticketSide === 'right' ? -dx : dx), bottomH: L0().bottomH - dy })} />}
+        </div>
+        {L.bottom !== 'none' && (
+          <div className="slot slot-bottom">
+            {panel(L.bottom)}
+            <Resizer edge="t" start={startDrag} apply={(_dx, dy) => ({ bottomH: L0().bottomH - dy })} />
+          </div>
+        )}
       </main>
 
       {/* Mobile: sticky Buy / Sell buttons open the ticket as a bottom sheet on that side. */}
@@ -176,5 +209,39 @@ function TicketSheet({ onClose, children }: { onClose: () => void; children: Rea
         <div className="sheet-body">{children}</div>
       </div>
     </div>
+  );
+}
+
+const clampLayout = (p: Partial<Layout>): Partial<Layout> => {
+  const c = (v: number | undefined, [lo, hi]: readonly [number, number]) => (v === undefined ? undefined : Math.min(hi, Math.max(lo, Math.round(v))));
+  const out: Partial<Layout> = {};
+  if (p.sideW !== undefined) out.sideW = c(p.sideW, LIMITS.sideW);
+  if (p.ticketW !== undefined) out.ticketW = c(p.ticketW, LIMITS.ticketW);
+  if (p.bottomH !== undefined) out.bottomH = c(p.bottomH, LIMITS.bottomH);
+  return out;
+};
+
+type Drag = { move: (dx: number, dy: number) => void; end: (dx: number, dy: number) => void };
+
+/** Drag handle on a panel edge or corner (desktop): the grid follows live, the size is saved on release.
+ *  Arrow keys move it 16 px for keyboard users. */
+function Resizer({ edge, start, apply }: { edge: 'l' | 'r' | 't' | 'bl' | 'br'; start: (a: (dx: number, dy: number) => Partial<Layout>) => Drag; apply: (dx: number, dy: number) => Partial<Layout> }) {
+  const d = useRef<{ x: number; y: number; h: Drag } | null>(null);
+  const corner = edge === 'bl' || edge === 'br';
+  const key = (e: { key: string; preventDefault: () => void }) => {
+    const step = 16;
+    const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+    const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+    if (!dx && !dy) return;
+    e.preventDefault();
+    start(apply).end(dx, dy);
+  };
+  return (
+    <div className={'rz rz-' + edge} role="separator" tabIndex={0} aria-label={corner ? 'Resize panels' : 'Resize panel'}
+      aria-orientation={edge === 't' ? 'horizontal' : 'vertical'} onKeyDown={key}
+      onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); d.current = { x: e.clientX, y: e.clientY, h: start(apply) }; }}
+      onPointerMove={(e) => { const s = d.current; if (s) s.h.move(e.clientX - s.x, e.clientY - s.y); }}
+      onPointerUp={(e) => { const s = d.current; d.current = null; if (s) s.h.end(e.clientX - s.x, e.clientY - s.y); }}
+      onPointerCancel={() => { const s = d.current; d.current = null; if (s) s.h.end(0, 0); }} />
   );
 }

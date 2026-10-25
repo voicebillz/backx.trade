@@ -82,7 +82,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   (portal; "Opens at launch" until contracts are live). Missing USDC or coin → "Swap" opens SwapOverlay in the same
   window with that coin preselected on the first launch chain that routes it; Back returns. Swap chains: Ethereum, Base,
   BNB Chain, Arbitrum. Coin logos: CoinIcon falls back to the listed market image (LISTED_LOGO). No under-texts (owner):
-  keep only errors, warnings and numbers. App header: home icon (no text) before Trade → front page. Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
+  keep only errors, warnings and numbers. App header: home icon (no text) before Trade → front page.
+  Terminal layout (owner 2026-10-25, `lib/layout.ts`, `components/LayoutPanel.tsx`): gear right of the profile opens 10
+  presets + side panel / bottom panel (Moving markets, Positions, Off), ticket left/right, coin header on/off; chart and
+  ticket are mandatory. Desktop (≥1200 px): drag panel edges and corners (Resizer in Terminal.tsx, arrow keys too);
+  saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown + quick buttons). Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
   Until launch: "Coming soon" badge (header stats unblurred, owner 2026-10-25); DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (admins only until launch: everyone else sees a greyed-out "Coming soon" placeholder, `WhitepaperSite.tsx`; visual gate only, the text ships in the chunk; nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).

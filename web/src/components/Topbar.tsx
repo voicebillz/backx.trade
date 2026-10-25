@@ -1,4 +1,5 @@
 import { SITE_URL } from '../lib/host';
+import { LayoutButton } from './LayoutPanel';
 import { Logo } from './Logo';
 import { Dropdown } from './Dropdown';
 import { MarketSearch } from './MarketSearch';
@@ -74,6 +75,7 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
               <Avatar seed={me.avatarSeed} src={me.avatarUrl} size={32} />
               {me.isAdmin && <span className="pfp-badge" title="Admin">A</span>}
             </a>
+            <LayoutButton />
           </>
         ) : (
           <button className="btn btn-primary" onClick={signIn} disabled={!canSignIn}>Sign in</button>

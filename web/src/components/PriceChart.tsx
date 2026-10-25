@@ -5,13 +5,22 @@ import {
 } from 'lightweight-charts';
 import { demoCandles, type Market } from '../lib/markets';
 import type { Theme, PriceColors } from '../lib/theme';
+import { Dropdown } from './Dropdown';
 
 const FRAMES = [
-  { id: '1m', sec: 60 },
-  { id: '5m', sec: 300 },
-  { id: '1h', sec: 3600 },
-  { id: '1d', sec: 86400 },
+  { id: '1m', label: '1 min', sec: 60 },
+  { id: '5m', label: '5 min', sec: 300 },
+  { id: '15m', label: '15 min', sec: 900 },
+  { id: '30m', label: '30 min', sec: 1800 },
+  { id: '1h', label: '1 hour', sec: 3600 },
+  { id: '4h', label: '4 hours', sec: 14400 },
+  { id: '1d', label: '1 day', sec: 86400 },
+  { id: '1w', label: '1 week', sec: 604800 },
+  { id: '1M', label: '1 month', sec: 2592000 },
 ] as const;
+type FrameId = (typeof FRAMES)[number]['id'];
+const QUICK: FrameId[] = ['1m', '5m', '1h', '1d'];
+const FRAME_OPTIONS = FRAMES.map((f) => ({ value: f.id as FrameId, label: f.label }));
 
 interface Props {
   market: Market;
@@ -28,7 +37,11 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
   const chart = useRef<IChartApi | null>(null);
   const series = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const lines = useRef<IPriceLine[]>([]);
-  const [frame, setFrame] = useState<(typeof FRAMES)[number]['id']>('5m');
+  const [frame, setFrame] = useState<FrameId>(() => {
+    try { const v = localStorage.getItem('backx.frame'); if (FRAMES.some((f) => f.id === v)) return v as FrameId; } catch { /* storage off */ }
+    return '5m';
+  });
+  useEffect(() => { try { localStorage.setItem('backx.frame', frame); } catch { /* storage off */ } }, [frame]);
   const [ready, setReady] = useState(false);
 
   // Create once.
@@ -82,12 +95,13 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
 
   return (
     <section className="panel chart-panel" aria-label={`${market.symbol} price chart`}>
-      <div className="chart-toolbar" role="tablist" aria-label="Timeframe">
-        {FRAMES.map((f) => (
-          <button key={f.id} role="tab" aria-selected={frame === f.id} className={frame === f.id ? 'active' : ''} onClick={() => setFrame(f.id)}>
-            {f.id}
-          </button>
-        ))}
+      <div className="chart-toolbar">
+        <div className="chart-quick" role="group" aria-label="Quick timeframe">
+          {QUICK.map((id) => (
+            <button key={id} aria-pressed={frame === id} className={frame === id ? 'active' : ''} onClick={() => setFrame(id)}>{id}</button>
+          ))}
+        </div>
+        <Dropdown label="Timeframe" value={frame} options={FRAME_OPTIONS} onChange={setFrame} compact />
         <span className="chart-note">Demo data</span>
       </div>
       <div className="chart" ref={el} />
