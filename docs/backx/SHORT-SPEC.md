@@ -153,3 +153,16 @@ Prinsipper som gjelder (som Hedge):
 3. Short-maks per coin ved lansering (tabell §6 er utgangspunkt).
 4. Permissionless likvidering eller kun vår validator (felles med Hedge).
 5. Squeeze-tak: maks samlet short per coin som andel av pool-dybde.
+
+## Redesign proposal 2026-10-25: borrow-and-sell with a profit roof (sim: `sim/short_roof.py`)
+- Trader pays A; fees come out first, the rest is the margin X. q = m·X / P coins are borrowed from the token
+  reserve and sold; every swap cost (both ways) is the trader's, so issuers always get exactly q coins back.
+- Collateral C = X + sale proceeds stays in the contract. Price up → liquidation when C ≤ (1 + margin) × buy-back cost.
+- Profit roof per tier (price fall that auto-closes the short): Major 80 %, Large 70 %, Mid 60 %, Small 50 %.
+  The gain is paid from C, never from issuers; the roof closes while the coin still has liquidity to buy back.
+- Issuers earn the borrow fee + 10 % of the trader's gain, in USDC, claimable.
+- Pump sim (+20…+300 % in 5…120 s, conditioned on a pump through the trigger): with the hedge margins (1.5–4 %)
+  a 0.5 s validator still leaves 6–55 % of liquidations a little short of coins (avg 0.3–1.3 % of lent); a 3 s or
+  TWAP-speed sale is far worse. Short margins must be higher than hedge margins. Proposed: Major 5 % (max 3×),
+  Large 7 % (3×), Mid 10 % (2×), Small 15 % (1×): at 0.5 s avg shortfall 0.00–0.36 % of lent, covered by the RSF.
+  This needs the fast oracle (Pyth) as trigger; with a 60 s TWAP shorts are not safe for issuers.
