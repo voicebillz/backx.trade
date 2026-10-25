@@ -40,15 +40,12 @@ function render(chart: IChartApi, info: SnapInfo): Promise<Blob | null> {
   const w1 = g.measureText('backx').width;
   g.fillStyle = GREY; g.fillText('.trade', 132 + w1, 86);
 
-  // Coin, timeframe, price and 24 h change on the right.
+  // Price and 24 h change on the right (no coin or timeframe label, owner 2026-10-25).
   g.textAlign = 'right';
   g.font = `600 34px ${mono}`; g.fillStyle = WHITE; g.fillText(info.price, S - 48, 70);
   const up = info.change24h >= 0;
   const chg = `${up ? '+' : '−'}${Math.abs(info.change24h).toFixed(2)}% 24h`;
   g.font = `500 20px ${mono}`; g.fillStyle = up ? (css('--price-up') || '#22C38E') : (css('--price-down') || '#F2555F'); g.fillText(chg, S - 48, 108);
-  const priceW = Math.max(g.measureText(chg).width, (g.font = `600 34px ${mono}`, g.measureText(info.price).width));
-  g.font = `700 30px ${sans}`; g.fillStyle = WHITE; g.fillText(info.symbol, S - 48 - priceW - 28, 70);
-  g.font = `400 18px ${sans}`; g.fillStyle = GREY; g.fillText(`${info.name} · ${info.frame}`, S - 48 - priceW - 28, 106);
   g.textAlign = 'left';
 
   // The chart in a rounded card.

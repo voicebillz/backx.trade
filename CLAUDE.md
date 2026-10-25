@@ -99,7 +99,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   share (copies/shares the coin's page), "fx Indicators" (24 indicators in `lib/indicators.ts`, computed in the browser:
   overlays on the price pane, volume on its own scale, oscillators one pane each; saved in `backx.indicators`; legend
   with remove), camera snapshot (Download image Ctrl+Alt+S / Copy image Ctrl+Shift+S): a square 1200×1200 share image
-  for X etc. (black frame, yellow logo tile + backx.trade, coin · name · timeframe · price · 24 h change, the chart
+  for X etc. (black frame, yellow logo tile + backx.trade, price · 24 h change (no coin or timeframe label), the chart
   re-laid out to the square in a rounded card, motto and UTC time below).
   `.chart` resets the app's table styles (the chart lays out panes as a table). Each coin has its own address
   `/trade/<symbol>` (router `marketPath`/`showMarket`, title "ETH · Ethereum · BackX", Back returns to the last coin;
