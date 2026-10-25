@@ -1337,25 +1337,25 @@ html:root { --privy-color-icon-muted: var(--brand); }
 }
 .terminal.resizing { user-select: none; cursor: grabbing; }
 .gear-btn { width: 40px; height: 40px; flex: none; }
-.lay-modal { width: min(720px, calc(100% - 32px)); max-height: 90vh; overflow-y: auto; display: grid; gap: 12px; }
+.lay-modal { width: min(980px, calc(100% - 32px)); max-height: 92vh; overflow-y: auto; display: grid; gap: 16px; }
 .lay-modal h2 { margin: 0; font-size: 18px; }
-.lay-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.lay-card { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-2); min-height: 44px; }
-.lay-card.on { border-color: var(--brand); color: var(--ink); }
-.lay-card:hover { border-color: var(--ink-3); }
-.lay-thumb { display: grid; gap: 2px; aspect-ratio: 16 / 10; }
-.lay-thumb i { display: block; border-radius: 2px; background: var(--line); min-width: 0; min-height: 0; }
-.lay-thumb .a-markets { grid-area: markets; } .lay-thumb .a-center { grid-area: center; background: var(--panel); border: 1px solid var(--line); position: relative; }
-.lay-thumb .a-ticket { grid-area: ticket; background: color-mix(in srgb, var(--action) 40%, var(--line)); }
-.lay-thumb .a-bottom { grid-area: bottom; }
-.lay-thumb .k-positions { background: color-mix(in srgb, var(--brand) 35%, var(--line)); }
-.lay-thumb .a-center b { position: absolute; left: 0; right: 0; top: 0; height: 18%; background: var(--line); }
+.lay-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.lay-card { display: grid; gap: 8px; padding: 6px 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); text-align: left; transition: border-color 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.lay-card:hover { border-color: var(--ink-3); transform: translateY(-1px); }
+.lay-card.on { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.lay-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.lay-shot { position: relative; display: block; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); aspect-ratio: 640 / 341; }
+.lay-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lay-check { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #0A0A0A; font-size: 12px; font-weight: 700; }
+.lay-name { padding: 0 4px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.lay-card.on .lay-name { color: var(--ink); }
+.lay-custom { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.lay-custom > .label { margin: 0; }
+@media (max-width: 699px) { .lay-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+@media (prefers-reduced-motion: reduce) { .rz::after, .lay-card { transition: none; } .lay-card:hover { transform: none; } }
+.ticket-col.slot > .panel { overflow-y: auto; }
+.ticket-col .ticket > .btn-block { position: sticky; bottom: 0; flex: none; box-shadow: 0 8px 0 var(--panel); }
 .lay-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lay-seg { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius); background: var(--raised); }
 .lay-seg button { min-height: 36px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .lay-seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
-@media (max-width: 699px) { .lay-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (prefers-reduced-motion: reduce) { .rz::after { transition: none; } }
-.ticket-col.slot > .panel { overflow-y: auto; }
-.lay-thumb { width: 100%; overflow: hidden; }
-.ticket-col .ticket > .btn-block { position: sticky; bottom: 0; flex: none; box-shadow: 0 8px 0 var(--panel); }

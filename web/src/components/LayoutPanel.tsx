@@ -1,19 +1,8 @@
 import { useEffect, useState } from 'react';
-import { PRESETS, thumbOf, useLayout, type Layout, type PanelKind } from '../lib/layout';
+import { PRESETS, useLayout, type Layout, type PanelKind } from '../lib/layout';
 
 const KIND_LABEL: Record<PanelKind, string> = { markets: 'Moving markets', positions: 'Positions', none: 'Off' };
 const same = (a: Layout, b: Layout) => (Object.keys(a) as (keyof Layout)[]).every((k) => a[k] === b[k]);
-
-function Thumb({ l }: { l: Layout }) {
-  return (
-    <div className="lay-thumb" style={thumbOf(l)} aria-hidden="true">
-      {l.side !== 'none' && <i className={'a-markets k-' + l.side} />}
-      <i className="a-center">{l.header && <b />}</i>
-      <i className="a-ticket" />
-      {l.bottom !== 'none' && <i className={'a-bottom k-' + l.bottom} />}
-    </div>
-  );
-}
 
 function Seg<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
@@ -50,18 +39,27 @@ export function LayoutButton() {
           <div className="modal lay-modal" role="dialog" aria-modal="true" aria-label="Terminal layout" onClick={(e) => e.stopPropagation()}>
             <button className="icon-btn modal-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
             <h2>Terminal layout</h2>
-            <div className="lay-grid">
-              {PRESETS.map((p) => (
-                <button key={p.name} className={'lay-card' + (same(p.layout, layout) ? ' on' : '')} aria-pressed={same(p.layout, layout)} onClick={() => set(p.layout)}>
-                  <Thumb l={p.layout} />
-                  <span>{p.name}</span>
-                </button>
-              ))}
+            <div className="lay-grid" role="radiogroup" aria-label="Preset layouts">
+              {PRESETS.map((p, i) => {
+                const on = same(p.layout, layout);
+                return (
+                  <button key={p.name} role="radio" aria-checked={on} className={'lay-card' + (on ? ' on' : '')} onClick={() => set(p.layout)}>
+                    <span className="lay-shot">
+                      <img src={`/layouts/${i}.webp`} alt="" width="640" height="341" loading="lazy" decoding="async" />
+                      {on && <span className="lay-check" aria-hidden="true">✓</span>}
+                    </span>
+                    <span className="lay-name">{p.name}</span>
+                  </button>
+                );
+              })}
             </div>
-            <Seg label="Side panel" value={layout.side} options={kinds} onChange={(v) => set({ side: v })} />
-            <Seg label="Bottom panel" value={layout.bottom} options={kinds} onChange={(v) => set({ bottom: v })} />
-            <Seg label="Ticket" value={layout.ticketSide} options={[['left', 'Left'], ['right', 'Right']]} onChange={(v) => set({ ticketSide: v })} />
-            <Seg label="Coin header" value={layout.header ? 'on' : 'off'} options={[['on', 'On'], ['off', 'Off']]} onChange={(v) => set({ header: v === 'on' })} />
+            <div className="lay-custom">
+              <p className="label">Customize</p>
+              <Seg label="Side panel" value={layout.side} options={kinds} onChange={(v) => set({ side: v })} />
+              <Seg label="Bottom panel" value={layout.bottom} options={kinds} onChange={(v) => set({ bottom: v })} />
+              <Seg label="Ticket" value={layout.ticketSide} options={[['left', 'Left'], ['right', 'Right']]} onChange={(v) => set({ ticketSide: v })} />
+              <Seg label="Coin header" value={layout.header ? 'on' : 'off'} options={[['on', 'On'], ['off', 'Off']]} onChange={(v) => set({ header: v === 'on' })} />
+            </div>
             <button className="btn btn-ghost btn-sm" onClick={() => set(PRESETS[0].layout)}>Reset to standard</button>
           </div>
         </div>

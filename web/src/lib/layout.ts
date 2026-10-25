@@ -19,6 +19,7 @@ export const LIMITS = { sideW: [200, 520], ticketW: [280, 460], bottomH: [140, 5
 
 const STD: Layout = { ticketSide: 'right', side: 'markets', bottom: 'positions', header: true, sideW: 280, ticketW: 320, bottomH: 240 };
 
+// Preview images: public/layouts/<index>.webp, real screenshots of each preset (regenerate when the terminal changes).
 export const PRESETS: { name: string; layout: Layout }[] = [
   { name: 'Standard', layout: STD },
   { name: 'Mirrored', layout: { ...STD, ticketSide: 'left' } },
@@ -92,16 +93,3 @@ export function gridOf(l: Layout) {
   } as Record<string, string>;
 }
 
-/** Same grid as gridOf, in proportions, for the small preset previews. */
-export function thumbOf(l: Layout) {
-  const hasSide = l.side !== 'none', hasBottom = l.bottom !== 'none';
-  const cols: [string, number][] = l.ticketSide === 'right'
-    ? [...(hasSide ? [['markets', l.sideW] as [string, number]] : []), ['center', 900], ['ticket', l.ticketW]]
-    : [['ticket', l.ticketW], ['center', 900], ...(hasSide ? [['markets', l.sideW] as [string, number]] : [])];
-  const top = cols.map((c) => c[0]).join(' ');
-  return {
-    gridTemplateColumns: cols.map((c) => `${c[1]}fr`).join(' '),
-    gridTemplateRows: hasBottom ? `620fr ${l.bottomH}fr` : '1fr',
-    gridTemplateAreas: hasBottom ? `"${top}" "${cols.map(() => 'bottom').join(' ')}"` : `"${top}"`,
-  };
-}
