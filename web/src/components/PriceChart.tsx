@@ -27,11 +27,14 @@ interface Props {
   priceColors: PriceColors;
   entry: number;
   liqPrice: number | null; // null at 1×: nothing to liquidate
+  /** Take-profit and stop-loss from the ticket (null = not set). */
+  tp?: number | null;
+  sl?: number | null;
 }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Props) {
+export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = null, sl = null }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const series = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -92,7 +95,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
     chart.current?.timeScale().fitContent();
   }, [market, frame, ready]);
 
-  // Entry + liquidation preview lines for the ticket.
+  // Entry, liquidation, take-profit and stop-loss preview lines for the ticket.
   useEffect(() => {
     const s = series.current;
     if (!s) return;
@@ -100,8 +103,19 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
     lines.current = [
       s.createPriceLine({ price: entry, color: css('--ink-3'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Entry' }),
       ...(liqPrice != null ? [s.createPriceLine({ price: liqPrice, color: css('--down'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Liq.' })] : []),
+      ...(tp != null ? [s.createPriceLine({ price: tp, color: css('--up'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'TP' })] : []),
+      ...(sl != null ? [s.createPriceLine({ price: sl, color: css('--warning'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'SL' })] : []),
     ];
-  }, [entry, liqPrice, theme, ready]);
+    // Keep every line in view: the price scale stretches to include them.
+    const marks = [entry, liqPrice, tp, sl].filter((v): v is number => v != null && v > 0);
+    s.applyOptions({
+      autoscaleInfoProvider: (base: () => { priceRange: { minValue: number; maxValue: number } } | null) => {
+        const r = base();
+        if (!r || !marks.length) return r;
+        return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...marks), maxValue: Math.max(r.priceRange.maxValue, ...marks) } };
+      },
+    });
+  }, [entry, liqPrice, tp, sl, theme, ready]);
 
   return (
     <section className="panel chart-panel" aria-label={`${market.symbol} price chart`}>

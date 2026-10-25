@@ -20,6 +20,8 @@ interface Props {
   /** Buy opens a position on that side (you also buy into a short), Sell closes one you hold. */
   action: Action;
   onAction: (a: Action) => void;
+  /** Valid take-profit / stop-loss prices (null = none), drawn on the chart. */
+  onExits?: (e: { tp: number | null; sl: number | null }) => void;
   /** Highest multiplication right now: the coin's cap, limited by what issuers can lend (contract maxMFor). */
   maxM: number;
   /** Short only: no coins issued yet, so it can only be placed as an order that fills once they are. */
@@ -60,7 +62,7 @@ function Toggle({ on, onChange, label, aside, children }: { on: boolean; onChang
 }
 
 /** Long | Short flip on top, Buy | Sell below: open a position now or as a limit order, or sell one you hold (owner 2026-10-25). */
-export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM, noCoins, available, stake, onStake, m, onM, q, onSwap }: Props) {
+export function OrderTicket({ market, usdc, side, onSide, action, onAction, onExits, maxM, noCoins, available, stake, onStake, m, onM, q, onSwap }: Props) {
   const id = useId();
   const buy = side === 'hedge';
   const max = maxM;
@@ -129,6 +131,9 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
   function liqPriceOf() { return buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove); }
   const liqPrice = buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove);
   const invalid = !(amount > 0) || tooBig || !!entryErr || !!tpErr || !!slErr;
+  const tpLine = action === 'buy' && hasTp && !tpErr ? tpNum : null;
+  const slLine = action === 'buy' && hasSl && !slErr ? slNum : null;
+  useEffect(() => { onExits?.({ tp: tpLine, sl: slLine }); }, [tpLine, slLine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <aside className={'panel ticket' + (buy ? '' : ' is-short')} aria-label="Order ticket">

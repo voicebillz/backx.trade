@@ -82,7 +82,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   Trade ticket (owner 2026-10-25): Long | Short flip at the top (UI says Long; contracts and docs keep "Hedge"), Buy | Sell
   tabs below, multiplication dial always on from 1× (`MultRoller`: values slide under a centre mark, drag/scroll/tap/keys;
   hidden only when the coin's cap is 1×), TP/SL switch (take profit and stop loss as % on the margin or a price, quick picks
-  +25/50/100/200 % and −10/15/25/50 %, potential profit/loss; contracts `setStop(id, price)`, `stopValue`, filled by
+  +25/50/100/200 % and −10/15/25/50 %, potential profit/loss, drawn on the chart as TP (--up) and SL (--warning)
+  lines next to Entry and Liq.; the price scale stretches to keep every line in view; contracts `setStop(id, price)`, `stopValue`, filled by
   validators through executeLimit like a take-profit; ShortManager is ~23.6 KB, ~1 KB left under EIP-170), "Limit order" switch (price required;
   warns above/below/at/far from today's price), take-profit (short: not past the roof), Buy/Sell opens a confirm overlay
   (portal; "Opens at launch" until contracts are live). Missing USDC or coin → "Swap" opens SwapOverlay in the same
