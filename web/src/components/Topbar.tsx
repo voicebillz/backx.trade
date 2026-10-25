@@ -1,3 +1,4 @@
+import { SITE_URL } from '../lib/host';
 import { Logo } from './Logo';
 import { Dropdown } from './Dropdown';
 import { MarketSearch } from './MarketSearch';
@@ -41,6 +42,9 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
       <Logo />
       <MarketSearch onSelect={onSelectMarket} />
       <nav className="nav" aria-label="Main">
+        <a href={SITE_URL} className="nav-home" aria-label="Home" title="Home">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h5v-6h4v6h5V9.5" /></svg>
+        </a>
         <a href={href('trade')} onClick={go('trade')} className={route === 'trade' ? 'active' : ''} aria-current={route === 'trade' ? 'page' : undefined}>Trade</a>
         <a href={href('issue')} onClick={go('issue')} className={route === 'issue' ? 'active' : ''} aria-current={route === 'issue' ? 'page' : undefined}>Issue</a>
         <a href={href('swap')} onClick={go('swap')} className={route === 'swap' ? 'active' : ''} aria-current={route === 'swap' ? 'page' : undefined}>Swap</a>

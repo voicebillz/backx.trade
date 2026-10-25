@@ -1,15 +1,17 @@
 import { useEffect, useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Market } from '../lib/markets';
 import { price, usd, usdCompact } from '../lib/format';
 import { FEES, KEEPER_GAS, LIMIT_SLIP, maxNotional, shortTier, type Quote, type Side } from '../lib/hedge';
 import type { usdcOf } from '../lib/useBalances';
 import { MultiplierSlider } from './MultiplierSlider';
+import { CoinIcon } from './CoinIcon';
 
 interface Props {
   market: Market;
   /** The user's USDC (null when signed out). Every position is paid in USDC. */
   usdc: ReturnType<typeof usdcOf> | null;
-  /** Buy = Hedge (price up, USDC lent), Sell = Short (price down, the coin itself lent). */
+  /** Hedge = Buy (price up, USDC lent), Short = Sell (price down, the coin itself lent). */
   side: Side;
   onSide: (s: Side) => void;
   /** Highest multiplication right now: the coin's cap, limited by what issuers can lend (contract maxMFor). */
@@ -23,78 +25,92 @@ interface Props {
   m: number;
   onM: (m: number) => void;
   q: Quote;
+  /** Open the swap overlay to get a coin (USDC when the wallet has too little). */
+  onSwap: (symbol: string) => void;
 }
 
-/** Where markets live today. Per-market chains come from the listed assets once contracts are live. */
 const MARKET_CHAIN = 'Robinhood Chain';
 const signed = (n: number) => (n >= 0 ? '+' : '−') + usd(Math.abs(n));
 const pct = (f: number) => (f >= 0 ? '+' : '−') + Math.abs(f * 100).toFixed(1) + '%';
-/** Quick take-profit targets in the trade's direction. */
 const STEPS = [0.1, 0.25, 0.5, 1];
-/** Same precision as the price shown, so a chip fills a clean number. */
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
 const clean = (v: string) => v.replace(/[^0-9.]/g, '');
 
-/** Buy (Hedge) and Sell (Short) in one ticket, now or as an order at a price (owner 2026-10-25). */
-export function OrderTicket({ market, usdc, side, onSide, maxM, noCoins, available, stake, onStake, m, onM, q }: Props) {
+/** Hedge (Buy) and Short (Sell) in one ticket: now or as a limit order, with take-profit (owner 2026-10-25). */
+export function OrderTicket({ market, usdc, side, onSide, maxM, noCoins, available, stake, onStake, m, onM, q, onSwap }: Props) {
   const id = useId();
   const buy = side === 'hedge';
   const max = maxM;
+  const amount = parseFloat(stake) || 0;
   const lentMult = buy ? Math.max(m, 1) - 1 : Math.max(m, 1);
   const byReserve = max < (buy ? market.maxM : market.shortMaxM);
-  // The amount typed is what the user pays; the position is m × (amount − fees). Max position → max amount.
   const feeRate = FEES.holders + FEES.rsfStake + lentMult * (FEES.borrow + FEES.rsfLent);
   const maxStake = Math.floor((maxNotional(market.depth) / Math.max(m, 1)) * (1 + feeRate) + KEEPER_GAS);
-  const tooBig = (parseFloat(stake) || 0) > maxStake;
+  const tooBig = amount > maxStake;
   const maxByUsdc = usdc ? Math.floor(usdc.total * 100) / 100 : 0;
-  const lacking = usdc != null && (parseFloat(stake) || 0) > usdc.total + 1e-9;
+  const lacking = usdc != null && amount > usdc.total + 1e-9;
   const elsewhere = usdc?.parts.filter((p) => p.chainName !== MARKET_CHAIN) ?? [];
   const roof = buy ? 0 : shortTier(market.maxM).roof;
 
-  // Entry price (order) and take-profit (limit). Cleared on a new coin or side.
+  // Limit order (switch) and take-profit. Cleared on a new coin or side.
+  const [limitOn, setLimitOn] = useState(false);
   const [entry, setEntry] = useState('');
-  const [limit, setLimit] = useState('');
-  useEffect(() => { setEntry(''); setLimit(''); }, [market.id, side]);
+  const [tp, setTp] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => { setEntry(''); setTp(''); }, [market.id, side]);
   const entryNum = parseFloat(entry);
-  const hasEntry = entry !== '' && Number.isFinite(entryNum) && entryNum > 0;
-  const isOrder = hasEntry || noCoins;
-  const base = hasEntry ? entryNum : market.price; // limits are measured from where the position opens
-  const limitNum = parseFloat(limit);
-  const hasLimit = limit !== '' && Number.isFinite(limitNum);
-  const limitErr = !hasLimit ? null
-    : limitNum <= 0 ? 'Enter a price above 0.'
-    : buy && limitNum <= base ? `Above ${price(base)}`
-    : !buy && limitNum >= base ? `Below ${price(base)}`
+  const isOrder = limitOn || noCoins;
+  const entryOk = limitOn && Number.isFinite(entryNum) && entryNum > 0;
+  const entryMove = entryOk ? entryNum / market.price - 1 : 0;
+  // Limit checks: a value is required; which side of the price it is on decides when it fills.
+  const entryErr = !limitOn ? null : entry === '' ? 'Enter a limit price' : !entryOk ? 'Enter a price above 0' : null;
+  const entryNote = !entryOk ? null
+    : Math.abs(entryMove) < 0.0005 ? { warn: true, text: 'At today\'s price: fills right away' }
+    : buy && entryMove > 0 ? { warn: true, text: `Above today's price (▲ ${pct(entryMove)}): fills when it rises to it` }
+    : !buy && entryMove < 0 ? { warn: true, text: `Below today's price (▼ ${pct(entryMove)}): fills when it falls to it` }
+    : Math.abs(entryMove) > 0.5 ? { warn: true, text: `Far from today's price (${pct(entryMove)})` }
+    : { warn: false, text: `Fills at ${price(entryNum)} (${buy ? '▼' : '▲'} ${pct(entryMove)})` };
+  const base = entryOk ? entryNum : market.price; // take-profit is measured from where the position opens
+  const tpNum = parseFloat(tp);
+  const hasTp = tp !== '' && Number.isFinite(tpNum);
+  const tpErr = !hasTp ? null
+    : tpNum <= 0 ? 'Enter a price above 0'
+    : buy && tpNum <= base ? `Above ${price(base)}`
+    : !buy && tpNum >= base ? `Below ${price(base)}`
+    : !buy && tpNum < base * (1 - roof) ? `The roof closes it at ${price(base * (1 - roof))}`
     : null;
-  const ratio = hasLimit && !limitErr ? limitNum / base : null;
-  // Worst fill the contract allows: the limit minus limitSlip (sale) or plus it (buy-back).
+  const ratio = hasTp && !tpErr ? tpNum / base : null;
   const preview = ratio ? q.at(ratio * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
-  const win = q.ifWin10;
+  const liqPrice = buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove);
   const verb = buy ? 'Buy' : 'Sell';
+  const invalid = !(amount > 0) || tooBig || !!entryErr || !!tpErr;
 
   return (
     <aside className="panel ticket" aria-label="Order ticket">
-      <div className="seg side-tabs" role="tablist" aria-label="Side">
-        <button role="tab" aria-selected={buy} className={buy ? 'active buy' : ''} onClick={() => onSide('hedge')}><span aria-hidden="true">▲</span> Buy</button>
-        <button role="tab" aria-selected={!buy} className={!buy ? 'active sell' : ''} onClick={() => onSide('short')}><span aria-hidden="true">▼</span> Sell</button>
-      </div>
+      <button type="button" role="switch" aria-checked={!buy} aria-label={buy ? 'Hedge (buy). Switch to Short (sell)' : 'Short (sell). Switch to Hedge (buy)'}
+        className={'side-switch' + (buy ? '' : ' short')} onClick={() => onSide(buy ? 'short' : 'hedge')}>
+        <span className="side-thumb" aria-hidden="true" />
+        <span className={'side-opt' + (buy ? ' on' : '')}>▲ Hedge · Buy</span>
+        <span className={'side-opt' + (!buy ? ' on' : '')}>▼ Short · Sell</span>
+      </button>
 
       <div className="field">
         <div className="field-head">
-          <label htmlFor={id + 'stake'} className="label">Amount (USDC)</label>
-          <span className="label">USDC <span className="num">{usdc ? usd(usdc.total) : '—'}</span></span>
+          <label htmlFor={id + 'stake'} className="label">Amount</label>
+          <span className="label"><CoinIcon symbol="USDC" size={12} /> <span className="num">{usdc ? usd(usdc.total) : '—'}</span></span>
         </div>
         <div className="input-wrap">
           <span className="prefix">$</span>
           <input id={id + 'stake'} inputMode="decimal" value={stake} onChange={(e) => onStake(clean(e.target.value))} className="num" />
-          <button className="max-btn" disabled={!usdc || maxByUsdc <= 0} title={usdc ? 'Largest amount your USDC covers, fees included' : 'Sign in to use your USDC'}
-            onClick={() => onStake(String(Math.min(maxByUsdc, maxStake)))}>Max</button>
+          <span className="prefix unit"><CoinIcon symbol="USDC" size={16} /> USDC</span>
+          <button className="max-btn" disabled={!usdc || maxByUsdc <= 0} onClick={() => onStake(String(Math.min(maxByUsdc, maxStake)))}>Max</button>
         </div>
         {tooBig && <span className="field-err">Max {usd(maxStake, 0)} at {m}×</span>}
-        {lacking && <span className="field-err">Not enough USDC</span>}
-        {!lacking && usdc && elsewhere.length > 0 && (
-          <span className="hint">Moves from {elsewhere.map((p) => p.chainName).join(', ')} when you open</span>
+        {lacking && (
+          <span className="field-err row-between">Not enough USDC
+            <button type="button" className="btn-mini" onClick={() => onSwap('USDC')}>Swap to USDC</button></span>
         )}
+        {!lacking && usdc && elsewhere.length > 0 && <span className="hint">Moves from {elsewhere.map((p) => p.chainName).join(', ')}</span>}
       </div>
 
       <div className="field">
@@ -103,55 +119,59 @@ export function OrderTicket({ market, usdc, side, onSide, maxM, noCoins, availab
           <span className="num m-value">{m}×</span>
         </div>
         <MultiplierSlider value={Math.min(m, max)} min={1} max={max} onChange={onM} />
-        {noCoins
-          ? <span className="hint">No {market.symbol} issued yet: your order fills when it is</span>
-          : byReserve && <span className="hint">Up to {max}× ({usdCompact(available)} free to lend)</span>}
+        {noCoins ? <span className="hint">No {market.symbol} issued yet: fills as an order</span>
+          : byReserve && <span className="hint">Up to {max}× · {usdCompact(available)} free</span>}
+      </div>
+
+      <div className="field">
+        <label className="switch-row limit-switch">
+          <input type="checkbox" checked={limitOn} onChange={(e) => { setLimitOn(e.target.checked); if (!e.target.checked) setEntry(''); }} />
+          <span className="switch" aria-hidden="true" />
+          <span className="label">Limit order</span>
+        </label>
+        {limitOn && (
+          <>
+            <div className="input-wrap">
+              <span className="prefix">$</span>
+              <input id={id + 'entry'} inputMode="decimal" className="num" placeholder={price(market.price)} aria-label={`${verb} at price`} autoFocus
+                value={entry} onChange={(e) => setEntry(clean(e.target.value))} aria-invalid={!!entryErr} />
+              <span className="prefix unit">{verb} at</span>
+            </div>
+            {entryErr ? <span className="field-err">{entryErr}</span>
+              : entryNote && <span className={entryNote.warn ? 'field-warn' : 'hint'}>{entryNote.text}</span>}
+          </>
+        )}
       </div>
 
       <div className="field">
         <div className="field-head">
-          <label htmlFor={id + 'entry'} className="label">{verb} at</label>
-          <span className="label">{hasEntry ? 'Order' : 'Optional · now'}</span>
-        </div>
-        <div className="input-wrap">
-          <span className="prefix">$</span>
-          <input id={id + 'entry'} inputMode="decimal" className="num" placeholder={price(market.price)}
-            value={entry} onChange={(e) => setEntry(clean(e.target.value))} />
-          {entry && <button className="max-btn" onClick={() => setEntry('')} aria-label="Clear order price">Clear</button>}
-        </div>
-      </div>
-
-      <div className="field">
-        <div className="field-head">
-          <label htmlFor={id + 'limit'} className="label">{buy ? 'Sell at (take profit)' : 'Buy back at (take profit)'}</label>
+          <label htmlFor={id + 'tp'} className="label">Take profit</label>
           <span className="label">Optional</span>
         </div>
         <div className="input-wrap">
           <span className="prefix">$</span>
-          <input id={id + 'limit'} inputMode="decimal" className="num" placeholder={(buy ? 'Above ' : 'Below ') + price(base)}
-            value={limit} onChange={(e) => setLimit(clean(e.target.value))} aria-invalid={!!limitErr} aria-describedby={limitErr ? id + 'limit-hint' : undefined} />
-          {limit && <button className="max-btn" onClick={() => setLimit('')} aria-label="Clear take profit">Clear</button>}
+          <input id={id + 'tp'} inputMode="decimal" className="num" placeholder={(buy ? 'Above ' : 'Below ') + price(base)}
+            value={tp} onChange={(e) => setTp(clean(e.target.value))} aria-invalid={!!tpErr} />
+          {tp && <button className="max-btn" onClick={() => setTp('')} aria-label="Clear take profit">Clear</button>}
         </div>
         <div className="chips" role="group" aria-label="Quick take profit">
           {STEPS.filter((f) => buy || f < roof).map((f) => {
             const v = roundPrice(base * (buy ? 1 + f : 1 - f));
             return (
-              <button key={f} type="button" className={'chip-btn' + (hasLimit && limitNum === v ? ' on' : '')} onClick={() => setLimit(String(v))}>
+              <button key={f} type="button" className={'chip-btn' + (hasTp && tpNum === v ? ' on' : '')} onClick={() => setTp(String(v))}>
                 {buy ? '▲ +' : '▼ −'}{f * 100}%
               </button>
             );
           })}
         </div>
-        {limitErr && <span id={id + 'limit-hint'} className="field-err">{limitErr}</span>}
+        {tpErr && <span className="field-err">{tpErr}</span>}
       </div>
 
       <dl className="kv">
         {q.noLiquidation ? (
           <div><dt>Liquidation</dt><dd className="num ok">None at 1×</dd></div>
-        ) : buy ? (
-          <div><dt>Liquidation</dt><dd className="num down">{price(base * (1 - q.liqMove))} <span className="liq-pct">▼ −{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
         ) : (
-          <div><dt>Liquidation</dt><dd className="num down">{price(base * (1 + q.liqMove))} <span className="liq-pct">▲ +{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
+          <div><dt>Liquidation</dt><dd className="num down">{price(liqPrice)} <span className="liq-pct">{buy ? '▼ −' : '▲ +'}{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
         )}
         {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} <span className="liq-pct">▼ −{roof * 100}%</span></dd></div>}
         <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
@@ -159,30 +179,37 @@ export function OrderTicket({ market, usdc, side, onSide, maxM, noCoins, availab
       </dl>
 
       <div className="waterfall">
-        {preview ? (
-          <>
-            <div className="label">At {price(limitNum)} ({buy ? '▲' : '▼'} {pct(limitNum / base - 1)})</div>
-            <div className="wf-row"><span>You</span><span className={'num ' + (preview.trader >= 0 ? 'up' : 'down')}>{signed(preview.trader)}</span></div>
-            <div className="wf-row"><span>Issuers</span><span className="num gold">+{usd(preview.issuers)}</span></div>
-          </>
-        ) : (
-          <>
-            <div className="label">{buy ? 'If it rises 10%' : 'If it falls 10%'}</div>
-            <div className="wf-row"><span>You</span><span className={'num ' + (win.trader >= 0 ? 'up' : 'down')}>{signed(win.trader)}</span></div>
-            <div className="wf-row"><span>Issuers</span><span className="num gold">+{usd(win.issuers)}</span></div>
-          </>
-        )}
-        {q.noLiquidation ? null : (
-          <>
-            <div className="label" style={{ marginTop: 8 }}>If liquidated</div>
-            <div className="wf-row"><span>You keep</span><span className="num">{usd(q.ifLiquidated.traderKeeps)}</span></div>
-          </>
-        )}
+        <div className="label">{preview ? `At ${price(tpNum)}` : buy ? 'If it rises 10%' : 'If it falls 10%'}</div>
+        <div className="wf-row"><span>You</span><span className={'num ' + ((preview ?? q.ifWin10).trader >= 0 ? 'up' : 'down')}>{signed((preview ?? q.ifWin10).trader)}</span></div>
+        <div className="wf-row"><span>Issuers</span><span className="num gold">+{usd((preview ?? q.ifWin10).issuers)}</span></div>
       </div>
 
-      <button className={'btn btn-block ' + (buy ? 'btn-primary' : 'btn-sell')} disabled>
-        {isOrder ? 'Place order · ' : ''}{verb} {market.symbol} {Math.min(m, max)}×{hasEntry ? ` at ${price(entryNum)}` : ''}
+      <button className={'btn btn-block ' + (buy ? 'btn-primary' : 'btn-sell')} disabled={invalid} onClick={() => setConfirm(true)}>
+        {isOrder ? 'Place order · ' : ''}{verb} {market.symbol} {Math.min(m, max)}×
       </button>
+
+      {confirm && createPortal(
+        <div className="sheet-scrim center confirm-overlay" onClick={() => setConfirm(false)}>
+          <div className="modal confirm-modal" role="dialog" aria-modal="true" aria-label="Confirm order" onClick={(e) => e.stopPropagation()}>
+            <button className="icon-btn modal-close" onClick={() => setConfirm(false)} aria-label="Close">✕</button>
+            <div className="modal-title"><CoinIcon symbol={market.symbol} src={market.image} size={32} />
+              <div><p className={'eyebrow ' + (buy ? 'up' : 'down')}>{buy ? '▲ Hedge · Buy' : '▼ Short · Sell'}{isOrder ? ' · Limit order' : ''}</p><h2>{market.symbol} {Math.min(m, max)}×</h2></div></div>
+            <dl className="kv confirm-kv">
+              <div><dt>You pay</dt><dd className="num"><CoinIcon symbol="USDC" size={14} /> {usd(amount)}</dd></div>
+              <div><dt>{isOrder ? `${verb} at` : 'Price now'}</dt><dd className="num">{entryOk ? price(entryNum) : price(market.price)}</dd></div>
+              <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
+              <div><dt>Liquidation</dt><dd className="num down">{q.noLiquidation ? 'None at 1×' : `${price(liqPrice)} ${buy ? '▼ −' : '▲ +'}${(q.liqMove * 100).toFixed(1)}%`}</dd></div>
+              {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} ▼ −{roof * 100}%</dd></div>}
+              {hasTp && !tpErr && <div><dt>Take profit</dt><dd className="num">{price(tpNum)}</dd></div>}
+              <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas * (isOrder ? 2 : 1))}</dd></div>
+            </dl>
+            {lacking
+              ? <button className="btn btn-block btn-gold" onClick={() => { setConfirm(false); onSwap('USDC'); }}><CoinIcon symbol="USDC" size={16} /> Get USDC · Swap</button>
+              : <button className={'btn btn-block ' + (buy ? 'btn-primary' : 'btn-sell')} disabled>Opens at launch</button>}
+          </div>
+        </div>,
+        document.body,
+      )}
     </aside>
   );
 }

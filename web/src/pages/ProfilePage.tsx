@@ -250,7 +250,6 @@ function WalletTab({ me, actions, balances }: { me: Me; actions: PrivyActions | 
         <div>
           <span className="label">Total balance</span>
           <div className="num wallet-usd">{balances.data ? usd(balances.data.totalUsd) : <span className="sk sk-bal" />}</div>
-          <p className="muted small">Self-custody. Your money stays in the coin you deposited, so its value moves with that coin.</p>
         </div>
         <div className="seg seg-inline" role="tablist" aria-label="Wallet action">
           <button role="tab" aria-selected={mode === 'deposit'} className={mode === 'deposit' ? 'active' : ''} onClick={() => setMode('deposit')}>Deposit</button>
@@ -301,7 +300,6 @@ function Deposit({ me }: { me: Me }) {
             <p className="num deposit-addr">{address}</p>
             <Copy text={address} label="Copy address" />
             <p className="warn small">Only send {net === 'solana' ? 'SOL or Solana USDC' : net === 'bsc' ? 'BNB or BNB Chain tokens' : 'ETH or tokens'} on {name}. Other networks can lose the funds.</p>
-            <p className="muted small">This is your own wallet. No bank or bridge in between: it arrives straight to you.</p>
           </div>
         </div>
       ) : <p className="muted">Your Solana wallet is being created. Sign in again in a moment.</p>}
@@ -365,7 +363,7 @@ function Withdraw({ me, actions, balances }: { me: Me; actions: PrivyActions | n
     }
   };
 
-  const explorer = { ethereum: 'https://etherscan.io/tx/', base: 'https://basescan.org/tx/', bsc: 'https://bscscan.com/tx/' }[chainKey];
+  const explorer = ({ ethereum: 'https://etherscan.io/tx/', base: 'https://basescan.org/tx/', bsc: 'https://bscscan.com/tx/', arbitrum: 'https://arbiscan.io/tx/' } as const)[chainKey];
 
   return (
     <section className="card withdraw">

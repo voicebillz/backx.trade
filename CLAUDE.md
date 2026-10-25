@@ -77,9 +77,13 @@ The owner is not a developer: explain briefly, in Norwegian.
   Safe exists on Robinhood, BNB, Base, Ethereum; not yet on Arbitrum, OP, Polygon, Avalanche.
 - Issue page: "Issue" opens a choice of Hedge · USDC (USDC reserve), Short · <coin> (the coin itself, owner 2026-10-25) or
   DEX pool (PancakeSwap Infinity / Uniswap v4, price range). "Your rewards" card (claimable USDC; Claim opens at launch).
-  Trade ticket: Buy (Hedge) / Sell (Short) tabs, optional "Buy/Sell at" price = entry order, take-profit, short roof row;
-  phone: sticky ▲ Buy / ▼ Sell buttons. Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
-  Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
+  Trade ticket (owner 2026-10-25): one Hedge·Buy ⇄ Short·Sell switch at the top, "Limit order" switch (price required;
+  warns above/below/at/far from today's price), take-profit (short: not past the roof), Buy/Sell opens a confirm overlay
+  (portal; "Opens at launch" until contracts are live). Missing USDC or coin → "Swap" opens SwapOverlay in the same
+  window with that coin preselected on the first launch chain that routes it; Back returns. Swap chains: Ethereum, Base,
+  BNB Chain, Arbitrum. Coin logos: CoinIcon falls back to the listed market image (LISTED_LOGO). No under-texts (owner):
+  keep only errors, warnings and numbers. App header: home icon (no text) before Trade → front page. Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
+  Until launch: "Coming soon" badge (header stats unblurred, owner 2026-10-25); DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (admins only until launch: everyone else sees a greyed-out "Coming soon" placeholder, `WhitepaperSite.tsx`; visual gate only, the text ships in the chunk; nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
   Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; header box + Whitepaper).

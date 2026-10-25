@@ -1275,3 +1275,32 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .callsheet th:nth-child(2) { width: 30%; }
 .callsheet th:nth-child(3) { width: 14%; }
 .callsheet th:nth-child(4) { width: 32%; }
+
+/* Swap overlay over Trade / Issue (same window, Back returns) */
+.swap-overlay { z-index: 60; }
+.swap-modal { width: min(480px, calc(100% - 32px)); max-height: 92vh; overflow-y: auto; }
+.swap-embed .swap-wrap { margin: 0; }
+.swap-embed .swap-card { border: 0; padding: 0; background: transparent; }
+.nav .nav-home { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; }
+
+/* Ticket: Hedge ⇄ Short switch (one button, sliding thumb), limit switch, warnings, confirm overlay */
+.side-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; min-height: 44px; padding: 3px; margin-bottom: 12px;
+  border-radius: var(--radius); background: var(--raised); border: 1px solid var(--line); cursor: pointer; }
+.side-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: calc(var(--radius) - 2px);
+  background: var(--panel); box-shadow: 0 0 0 1px var(--price-up); transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.side-switch.short .side-thumb { transform: translateX(100%); box-shadow: 0 0 0 1px var(--price-down); }
+.side-opt { position: relative; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.side-opt.on:first-of-type { color: var(--price-up); }
+.side-switch.short .side-opt.on { color: var(--price-down); }
+.side-switch:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.limit-switch { min-height: 44px; margin-bottom: 4px; }
+.field-warn { display: block; font-size: 12px; color: var(--warning); margin-top: 4px; }
+.field-err.row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.confirm-overlay { z-index: 55; }
+.confirm-modal { width: min(420px, calc(100% - 32px)); }
+.confirm-kv { margin: 12px 0 16px; }
+.confirm-kv dd .coin-icon { vertical-align: -2px; }
+.eyebrow.up { color: var(--price-up); }
+.eyebrow.down { color: var(--price-down); }
+@media (prefers-reduced-motion: reduce) { .side-thumb { transition: none; } }
+.swap-link { margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }

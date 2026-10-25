@@ -21,6 +21,7 @@ const EVM_ASSETS = [
   { chain: 'bsc', chainName: 'BNB Chain', symbol: 'USDC', name: 'USD Coin', decimals: 18, price: 'usd-coin', token: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d' },
   // Where backx markets live / will live: the user's gas and USDC there.
   { chain: 'robinhood', chainName: 'Robinhood Chain', symbol: 'ETH', name: 'Ether', decimals: 18, price: 'ethereum' },
+  { chain: 'arbitrum', chainName: 'Arbitrum', symbol: 'ETH', name: 'Ether', decimals: 18, price: 'ethereum' },
   { chain: 'arbitrum', chainName: 'Arbitrum', symbol: 'USDC', name: 'USD Coin', decimals: 6, price: 'usd-coin', token: '0xaf88d065e77c8cc2239327c5edb3a432268e5831' },
 ];
 const SOL_ASSETS = [

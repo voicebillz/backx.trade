@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   PrivyProvider, addRpcUrlOverrideToChain, useExportWallet, useLinkAccount, useMfaEnrollment, usePrivy, useSendTransaction,
 } from '@privy-io/react-auth';
-import { base, bsc, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, mainnet } from 'viem/chains';
 import { api, ApiError } from './api';
 import type { LinkedLogin, Me, PrivyActions, PrivyState } from './auth';
 
@@ -44,6 +44,7 @@ export default function PrivyBridge(props: Props) {
           addRpcUrlOverrideToChain(mainnet, 'https://rpc.mevblocker.io'),
           base,
           addRpcUrlOverrideToChain(bsc, 'https://bscrpc.pancakeswap.finance'),
+          arbitrum, // launch chain; sequencer ordering, no public mempool
         ],
         defaultChain: mainnet,
         appearance: { theme: '#0A0A0A', accentColor: '#FFD100', logo: '/backx-logo.png', walletChainType: 'ethereum-only',

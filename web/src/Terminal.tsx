@@ -7,7 +7,7 @@ import { OrderTicket } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
 import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
-import { SwapPage } from './pages/SwapPage';
+import { SwapOverlay, SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
 import { maxNotional, quote, shortQuote, shortTier, type Side } from './lib/hedge';
 import { availableToLend, coinsToLend, maxHedgeMFor, maxShortMFor } from './lib/reserves';
@@ -90,6 +90,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
   const [stake, setStake] = useState('100');
   const [m, setM] = useState(5);
   const [side, setSide] = useState<Side>('hedge');
+  const [swapFor, setSwapFor] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
@@ -115,7 +116,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
 
   const ticket = market && q && (
     <OrderTicket market={market} usdc={usdc} side={side} onSide={setSide} maxM={maxM} noCoins={side === 'short' && canNow === 0}
-      available={side === 'hedge' ? availableToLend(market) : coinsToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
+      available={side === 'hedge' ? availableToLend(market) : coinsToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} onSwap={setSwapFor} />
   );
 
   return (
@@ -145,6 +146,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
         <button className="btn btn-sell" onClick={() => { setSide('short'); setSheet(true); }}>▼ Sell {market?.symbol ?? ''}</button>
       </div>
       {sheet && ticket && <TicketSheet onClose={() => setSheet(false)}>{ticket}</TicketSheet>}
+      {swapFor && <SwapOverlay want={swapFor} onClose={() => setSwapFor(null)} />}
     </>
   );
 }

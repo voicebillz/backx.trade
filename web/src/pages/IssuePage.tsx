@@ -3,6 +3,7 @@ import type { Market } from '../lib/markets';
 import { usd, usdCompact } from '../lib/format';
 import { CoinIcon } from '../components/CoinIcon';
 import { demoReserves } from '../lib/reserves';
+import { SwapOverlay } from './SwapPage';
 import type { usdcOf } from '../lib/useBalances';
 
 type Usdc = ReturnType<typeof usdcOf> | null;
@@ -38,6 +39,7 @@ function Util({ v }: { v: number }) {
 export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) {
   const [sort, setSort] = useState<'usd' | 'apr' | 'coin' | 'dex'>('usd');
   const [issuing, setIssuing] = useState<Market | null>(null);
+  const [swapFor, setSwapFor] = useState<string | null>(null);
   const [demo, setDemo] = useState(loadDemo);
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(demo)); } catch { /* storage off */ } }, [demo]);
 
@@ -60,12 +62,11 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
           <p className="eyebrow gold">Issue <span className="soon-badge">Coming soon</span></p>
           <h1>Put your capital to work</h1>
         </div>
-        {/* Numbers are blurred until launch: the pools are not live yet. */}
-        <dl className="page-stats stats-soon">
-          <div><dt className="label">Hedge pools</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(totUsd)}</span><span className="sr-only">Coming soon</span></dd></div>
-          <div><dt className="label">Short pools</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(totCoin)}</span><span className="sr-only">Coming soon</span></dd></div>
-          <div><dt className="label">Lent to Hedges</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(lent)}</span><span className="sr-only">Coming soon</span></dd></div>
-          <div><dt className="label">DEX pools</dt><dd className="num"><span className="blurred" aria-hidden="true">{usdCompact(totDex)}</span><span className="sr-only">Coming soon</span></dd></div>
+        <dl className="page-stats">
+          <div><dt className="label">Hedge pools</dt><dd className="num">{usdCompact(totUsd)}</dd></div>
+          <div><dt className="label">Short pools</dt><dd className="num">{usdCompact(totCoin)}</dd></div>
+          <div><dt className="label">Lent to Hedges</dt><dd className="num">{usdCompact(lent)}</dd></div>
+          <div><dt className="label">DEX pools</dt><dd className="num">{usdCompact(totDex)}</dd></div>
         </dl>
       </header>
 
@@ -73,7 +74,7 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
         <label className="switch-row">
           <input type="checkbox" checked={demo.on} onChange={(e) => setDemo((d) => ({ ...d, on: e.target.checked }))} />
           <span className="switch" aria-hidden="true" />
-          <span><b>Demo mode</b> <small className="muted">Try issuing with ${DEMO_START.toLocaleString('en-US')} play USDC. Nothing is sent.</small></span>
+          <span><b>Demo mode</b></span>
         </label>
         {demo.on && <span className="num demo-bal">Demo USDC <b>{usd(demoBal)}</b></span>}
       </section>
@@ -82,7 +83,6 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
         <div>
           <p className="label">Your rewards</p>
           <p className="num rewards-amt">{usd(demo.on ? Math.floor(demoRewards * 100) / 100 : 0)} <small className="muted">USDC{demo.on ? ' · demo' : ''}</small></p>
-          <small className="muted">Borrow fees and 10 % of traders' gains, paid in USDC from every pool you issue to. Claim any time.</small>
         </div>
         <button className="btn btn-gold btn-sm" disabled>Claim</button>
       </section>
@@ -148,20 +148,20 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
           </table>
         </div>
       </div>
-      <p className="hint">APR: demo estimates, not a promise.</p>
 
       {issuing && (
         <IssueModal
-          market={issuing} usdc={usdc} demo={demo.on} demoBal={demoBal} onClose={() => setIssuing(null)}
+          market={issuing} usdc={usdc} demo={demo.on} demoBal={demoBal} onClose={() => setIssuing(null)} onSwap={setSwapFor}
           onDemoIssue={(i) => setDemo((d) => ({ ...d, items: [{ ...i, id: Date.now(), at: Date.now() }, ...d.items] }))}
         />
       )}
+      {swapFor && <SwapOverlay want={swapFor} onClose={() => setSwapFor(null)} />}
     </main>
   );
 }
 
-function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
-  market: Market; usdc: Usdc; demo: boolean; demoBal: number; onClose: () => void;
+function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue, onSwap }: {
+  market: Market; usdc: Usdc; demo: boolean; demoBal: number; onClose: () => void; onSwap: (symbol: string) => void;
   onDemoIssue: (i: Omit<DemoIssue, 'id' | 'at'>) => void;
 }) {
   const [kind, setKind] = useState<Kind>('hedge');
@@ -226,7 +226,6 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                       <button key={k} className={'chip-btn' + (range === k ? ' on' : '')} aria-pressed={range === k} onClick={() => setRange(k)}>{RANGES[k].label}</button>
                     ))}
                   </div>
-                  <span className="hint">{RANGES[range].hint}.</span>
                 </div>
               </>
             )}
@@ -241,8 +240,14 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                 <button className="max-btn" disabled={!bal || bal <= 0} onClick={() => bal && setAmt(String(inCoins ? parseFloat(bal.toPrecision(6)) : Math.floor(bal * 100) / 100))}>Max</button>
               </div>
               {tooMuch
-                ? <span className="field-err">Not enough {demo ? 'demo ' : ''}{inCoins ? market.symbol : 'USDC'}</span>
-                : inCoins && n > 0 ? <span className="hint">≈ {usd(n * market.price)} today</span> : null}
+                ? <span className="field-err row-between">Not enough {demo ? 'demo ' : ''}{inCoins ? market.symbol : 'USDC'}
+                    {!demo && <button type="button" className="btn-mini" onClick={() => onSwap(inCoins ? market.symbol : 'USDC')}>Swap</button>}</span>
+                : inCoins && n > 0 ? <span className="hint">≈ {usd(n * market.price)}</span> : null}
+              {!demo && (inCoins || (usdc != null && usdc.total <= 0)) && !tooMuch && (
+                <button type="button" className="btn-mini swap-link" onClick={() => onSwap(inCoins ? market.symbol : 'USDC')}>
+                  <CoinIcon symbol={inCoins ? market.symbol : 'USDC'} src={inCoins ? market.image : undefined} size={14} /> Get {inCoins ? market.symbol : 'USDC'} · Swap
+                </button>
+              )}
             </div>
 
             {kind === 'short' ? (
@@ -254,7 +259,6 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                   <div><dt>Comes back</dt><dd>The same number of {market.symbol}</dd></div>
                   <div><dt>Rewards</dt><dd>USDC, claimable</dd></div>
                 </dl>
-                <p className="hint">Your risk stays the price of {market.symbol}, as when you hold it. A sudden pump can leave a gap the Reserve Security Fund covers first.</p>
               </>
             ) : kind === 'hedge' ? (
               <>
@@ -264,7 +268,6 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                   <div><dt>Lent out</dt><dd className="num">{Math.round(v.usd.util * 100)}%</dd></div>
                   <div><dt>Comes back first</dt><dd>Same dollars (USDC)</dd></div>
                 </dl>
-                <p className="hint">Not risk-free: a sudden crash can leave a gap the Reserve Security Fund covers first.</p>
               </>
             ) : (
               <>
@@ -274,14 +277,12 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue }: {
                   <div><dt>Est. fee APR</dt><dd className="num gold">{dexApr.toFixed(1)}%</dd></div>
                   <div><dt>Pool size</dt><dd className="num">{usd(v.dex.tvl, 0)}</dd></div>
                 </dl>
-                <p className="hint">Half becomes {market.symbol}. When the price moves you can get back less than you put in.</p>
               </>
             )}
 
             {demo
               ? <button className="btn btn-gold btn-block" disabled={!(n > 0) || tooMuch} onClick={issueDemo}>Issue {n > 0 ? (inCoins ? `${n} ${market.symbol}` : usd(Math.floor(n * 100) / 100)) : ''} (demo)</button>
               : <button className="btn btn-gold btn-block" disabled>Issuing opens at launch</button>}
-            {!demo && <p className="hint hint-center">Try it now in Demo mode.</p>}
           </>
         )}
       </div>

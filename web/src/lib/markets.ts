@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
+import { rememberLogos } from './assets';
 
 // Demo market universe from the server (CoinGecko top coins, cached) until Robinhood Chain markets list.
 export type Kind = 'Major' | 'Large' | 'Mid' | 'Small';
@@ -36,6 +37,7 @@ export function useMovingMarkets() {
     loading.current = true;
     try {
       const r = await api<Page>(`/api/markets?page=${page.current}`);
+      rememberLogos(r.items);
       setItems((prev) => {
         const seen = new Set(prev.map((m) => m.id));
         return [...prev, ...r.items.filter((m) => !seen.has(m.id))];

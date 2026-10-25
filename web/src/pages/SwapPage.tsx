@@ -19,7 +19,7 @@ const CHAIN_OPTIONS = [
   ...EVM_CHAINS.map((c) => ({ value: c.key as string, label: c.name, icon: <img src={CHAIN_LOGO[c.key]} alt="" width={16} height={16} /> })),
   { value: 'solana', label: 'Solana (soon)', icon: <img src={CHAIN_LOGO.solana} alt="" width={16} height={16} /> },
 ];
-const EXPLORER: Record<EvmChain['key'], string> = { ethereum: 'https://etherscan.io/tx/', base: 'https://basescan.org/tx/', bsc: 'https://bscscan.com/tx/' };
+const EXPLORER: Record<EvmChain['key'], string> = { ethereum: 'https://etherscan.io/tx/', base: 'https://basescan.org/tx/', bsc: 'https://bscscan.com/tx/', arbitrum: 'https://arbiscan.io/tx/' };
 const ERRORS: Record<string, string> = {
   insufficient: 'Not enough balance.', no_route: 'No route found for this pair and amount.', bad_amount: 'Enter an amount.',
   unknown_token: 'This token is not routable right now.', price_impact: 'Blocked: this route would lose more than 10% of the value. Try a smaller amount.', route_rejected: 'Route rejected by our safety checks. Try again.', unavailable: 'Quotes are unavailable. Try again shortly.',
@@ -71,9 +71,21 @@ function TokenButton({ t, onClick }: { t: SwapToken | null; onClick: () => void 
   );
 }
 
-export function SwapPage({ onDone }: { onDone: () => void }) {
+/** Chains tried, in order, to find a coin the user wants (the swap overlay from Trade / Issue). */
+const WANT_ORDER = ['base', 'arbitrum', 'bsc', 'ethereum'];
+
+interface SwapProps {
+  onDone: () => void;
+  /** Overlay mode: the coin to get (USDC for a trade, the coin for a Short pool). Picks the first chain that lists it. */
+  want?: string;
+  /** Overlay mode: back to where the user was. */
+  onBack?: () => void;
+}
+
+export function SwapPage({ onDone, want, onBack }: SwapProps) {
   const { actions } = useAuth();
   const [chain, setChain] = useState<string>('base');
+  const tried = useRef<Set<string>>(new Set());
   const [tokens, setTokens] = useState<SwapToken[] | null>(null);
   const [from, setFrom] = useState<SwapToken | null>(null);
   const [to, setTo] = useState<SwapToken | null>(null);
@@ -93,11 +105,17 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
     if (!evm) { setTokens([]); return; }
     setTokens(null); setFrom(null); setTo(null); setQuote(null);
     api<{ items: SwapToken[] }>(`/api/swap/tokens?chain=${chain}`).then((r) => {
+      const target = r.items.find((t) => t.symbol === (want ?? 'USDC'));
+      // The coin is not on this chain: try the next launch chain that might route it.
+      tried.current.add(chain);
+      const next = want && !target ? WANT_ORDER.find((c) => !tried.current.has(c)) : undefined;
+      if (next) { setChain(next); return; }
       setTokens(r.items);
-      setFrom(r.items[0] ?? null);
-      setTo(r.items.find((t) => t.symbol === 'USDC') ?? r.items[1] ?? null);
+      const usdc = r.items.find((t) => t.symbol === 'USDC');
+      setFrom(want && want !== 'USDC' ? usdc ?? r.items[0] ?? null : r.items[0] ?? null);
+      setTo(target ?? r.items[1] ?? null);
     }).catch(() => setTokens([]));
-  }, [chain, evm]);
+  }, [chain, evm, want]);
 
   useEffect(() => {
     setBalance(null);
@@ -182,9 +200,10 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
   const busy = step.kind === 'checking' || step.kind === 'approve' || step.kind === 'swap';
   useEffect(() => { setAckImpact(false); }, [quote?.quotedAt]);
 
+  const Wrap = onBack ? 'div' : 'main';
   return (
-    <main id="main" className="page swap-page">
-      <h1 className="swap-title">Swap portal</h1>
+    <Wrap {...(onBack ? { className: 'swap-embed' } : { id: 'main', className: 'page swap-page' })}>
+      {!onBack && <h1 className="swap-title">Swap portal</h1>}
 
       <div className="swap-wrap">
         <section className="card swap-card">
@@ -252,6 +271,7 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
               </button>
               {!actions && <p className="hint">Sign in again to sign swaps with your wallet.</p>}
               {step.kind === 'done' && <p className="ok small">Swapped. <a href={EXPLORER[chain as EvmChain['key']] + step.msg} target="_blank" rel="noopener">View transaction</a></p>}
+              {step.kind === 'done' && onBack && <button className="btn btn-gold btn-block" onClick={onBack}>Back</button>}
               {step.kind === 'error' && <p className="field-err">Not swapped: {step.msg}</p>}
             </>
           )}
@@ -262,6 +282,24 @@ export function SwapPage({ onDone }: { onDone: () => void }) {
         <TokenPicker tokens={tokens} exclude={(picker === 'from' ? to : from)?.address}
           onPick={(t) => (picker === 'from' ? setFrom(t) : setTo(t))} onClose={() => setPicker(null)} />
       )}
-    </main>
+    </Wrap>
+  );
+}
+
+/** Swap in an overlay over Trade / Issue: the coin you need is preselected, and Back returns to where you were. */
+export function SwapOverlay({ want, onClose }: { want: string; onClose: () => void }) {
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    addEventListener('keydown', k);
+    return () => removeEventListener('keydown', k);
+  }, [onClose]);
+  return (
+    <div className="sheet-scrim center swap-overlay" onClick={onClose}>
+      <div className="modal swap-modal" role="dialog" aria-modal="true" aria-label={`Get ${want}`} onClick={(e) => e.stopPropagation()}>
+        <button className="icon-btn modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <div className="modal-title"><CoinIcon symbol={want} size={32} /><div><p className="eyebrow gold">Swap</p><h2>Get {want}</h2></div></div>
+        <SwapPage want={want} onDone={() => {}} onBack={onClose} />
+      </div>
+    </div>
   );
 }

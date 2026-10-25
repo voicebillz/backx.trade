@@ -11,6 +11,7 @@ const CHAINS = {
   ethereum: { id: 1, cg: 'ethereum', native: { symbol: 'ETH', cgId: 'ethereum' } },
   base: { id: 8453, cg: 'base', native: { symbol: 'ETH', cgId: 'ethereum' } },
   bsc: { id: 56, cg: 'binance-smart-chain', native: { symbol: 'BNB', cgId: 'binancecoin' } },
+  arbitrum: { id: 42161, cg: 'arbitrum-one', native: { symbol: 'ETH', cgId: 'ethereum' } }, // launch chain (2026-10-25)
 };
 const NATIVE = '0x0000000000000000000000000000000000000000';
 // Stablecoins pinned per chain: on BNB Chain they are separate "Binance-Peg" coins outside our universe.
@@ -18,6 +19,7 @@ const STABLES = {
   ethereum: [['usd-coin', 'USDC', '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'], ['tether', 'USDT', '0xdac17f958d2ee523a2206206994597c13d831ec7']],
   base: [['usd-coin', 'USDC', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'], ['tether', 'USDT', '0xfde4c96c8593536e31f229ea8f37b2ada2699bb2']],
   bsc: [['usd-coin', 'USDC', '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'], ['tether', 'USDT', '0x55d398326f99059ff775485246999027b3197955']],
+  arbitrum: [['usd-coin', 'USDC', '0xaf88d065e77c8cc2239327c5edb3a432268e5831'], ['tether', 'USDT', '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9']],
 };
 // LI.FI Diamond: the only contract a swap or approval may target (same address on these chains).
 const LIFI_DIAMOND = '0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae';
@@ -30,6 +32,7 @@ const MEV = {
   ethereum: 'Private submission via MEV Blocker',
   base: 'Sequencer ordering, no public mempool',
   bsc: 'Private submission via PancakeSwap MEV Guard',
+  arbitrum: 'Sequencer ordering, no public mempool',
 };
 
 /** coingecko id → contract address per supported chain. Refreshed daily. */
