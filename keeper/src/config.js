@@ -52,8 +52,21 @@ export const config = {
   reportUrl: process.env.REPORT_URL?.trim() || null,
   reportKey: process.env.REPORT_KEY?.trim() || null,      // ed25519 private key, PKCS#8 base64 (npm run keygen)
   reportEveryMs: num('REPORT_EVERY_MS', 60_000),
+  // $GAZZ holder payouts (owner 2026-10-25): only on the one validator the Safe made operator of BackxHolderRewards.
+  holders: process.env.HOLDER_REWARDS ? {
+    rewards: addr(process.env.HOLDER_REWARDS, 'HOLDER_REWARDS'),
+    treasury: addr(req('TREASURY'), 'TREASURY'),
+    usd: addr(req('USD_TOKEN'), 'USD_TOKEN'),                                   // USDC on this chain
+    gazz: addr(process.env.GAZZ_TOKEN || '0x08a5d78a4bc7754e8aff87b4509e007baeb685f3', 'GAZZ_TOKEN'),
+    gazzRpc: req('GAZZ_RPC'),                                                   // Robinhood Chain RPC, where $GAZZ lives
+    fromBlock: BigInt(process.env.GAZZ_FROM_BLOCK || '0'),                      // $GAZZ deploy block
+    exclude: list(process.env.HOLDERS_EXCLUDE).map((a) => addr(a, 'HOLDERS_EXCLUDE')),  // pools, burn, team, treasury
+    minPayout: BigInt(process.env.PAYOUT_MIN || '10000'),                       // $0.01 with 6-decimal USDC
+    perTx: num('PAYOUT_BATCH', 200),
+  } : null,
 };
 
+if (config.holders && !/^https:\/\//.test(config.holders.gazzRpc)) throw new Error('GAZZ_RPC must be https');
 if (config.reportUrl && !/^https:\/\//.test(config.reportUrl)) throw new Error('REPORT_URL must be https');
 if (config.reportUrl && !config.reportKey) throw new Error('REPORT_URL needs REPORT_KEY');
 if (!(config.low < config.target && config.target < config.cap)) throw new Error('Need LOW_WEI < TARGET_WEI < CAP_WEI');

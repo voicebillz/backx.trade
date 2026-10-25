@@ -18,3 +18,18 @@ export const managerAbi = parseAbi([
   'function claimable(address) view returns (uint256)',
   'function claimTo(address to) returns (uint256)',
 ]);
+
+// $GAZZ holder payouts (contracts/src/BackxTreasury.sol, BackxHolderRewards.sol): only the operator key pays.
+export const treasuryAbi = parseAbi([
+  'function distribute(address token) returns (uint256)',
+  'function pending(address token) view returns (uint256)',
+]);
+export const holderRewardsAbi = parseAbi([
+  'function operator() view returns (address)',
+  'function paused() view returns (bool)',
+  'function minGap() view returns (uint32)',
+  'function rounds(address) view returns (uint64 id, uint64 startedAt, uint128 left)',
+  'function startRound(address token) returns (uint64 id, uint256 budget)',
+  'function pay(address token, address[] to, uint256[] amounts)',
+]);
+export const erc20Abi = parseAbi(['event Transfer(address indexed from, address indexed to, uint256 value)']);

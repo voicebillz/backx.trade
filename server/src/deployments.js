@@ -30,8 +30,8 @@ export const selector = (sig) => '0x' + sel(sig);
 const FACTORY_INIT = sel('initialize(address,address,address,address,address,address,address)');
 const MARKET_COUNT = '0x' + sel('marketCount()');
 
-/** Holders' share of platform fees at deploy (25 %, the Safe can change it up to 50 % with setHolders). */
-const TREASURY_HOLDER_BPS = 2_500;
+/** Holders' share of platform fees at deploy (10 %, owner 2026-10-25; the Safe can lower it, or raise it to at most 50 %). */
+const TREASURY_HOLDER_BPS = 1_000;
 
 /** The implementations and the Treasury: identical on every chain, so they get the same address everywhere. */
 export const IMPLS = [
@@ -43,7 +43,9 @@ export const IMPLS = [
   // Platform Treasury (owner 2026-10-25): the fee collector of every market on the chain. Constructor (Safe, holders'
   // share in bps), so the same address on every chain. Not upgradeable.
   { key: 'treasury', artifact: 'BackxTreasury', kind: 'core', args: padAddr(SAFE) + pad(TREASURY_HOLDER_BPS), label: 'Treasury',
-    role: 'All platform fees in USDC. The $GAZZ holders\' share is paid out by anyone calling distribute; only the Safe withdraws the rest.' },
+    role: 'All platform fees in USDC. 10 % goes to $GAZZ holder rewards (set with setHolders); only the Safe withdraws the rest.' },
+  { key: 'holderRewards', artifact: 'BackxHolderRewards', kind: 'core', args: padAddr(SAFE), label: '$GAZZ holder rewards',
+    role: 'Receives the holders\' share from the Treasury; our validator pays $GAZZ holders from it once a week. The Safe sets the operator and can pause.' },
 ].map((c) => {
   const initcode = ART[c.artifact].initcode + (c.args ?? '');
   return { kind: 'implementation', ...c, initcode, runtimeSize: ART[c.artifact].runtimeSize, address: create2Address(initcode) };

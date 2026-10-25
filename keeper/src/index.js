@@ -6,6 +6,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createPrivateKey, sign } from 'node:crypto';
 import { config } from './config.js';
 import { managerAbi } from './abi.js';
+import { makeHolderJob } from './holders.js';
 
 const VERSION = '0.1.0';
 const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11';
@@ -192,3 +193,5 @@ loop('tick', tick, config.pollMs);
 loop('balance', balance, 60_000);
 loop('claim', claimRewards, 15 * 60_000);
 loop('report', report, config.reportEveryMs);
+// Weekly $GAZZ holder payout: checked hourly, the contract allows one round per 7 days.
+if (config.holders) loop('holders', makeHolderJob({ pub, wallet, account, cfg: config.holders, log }), 60 * 60_000);

@@ -77,6 +77,20 @@ Example, 1,000 positions a day: $100 a day of validator gas income; 300 liquidat
 Validators fund themselves many times over. Planned contract change (LIVENESS.md, needs owner sign-off): pay the
 fee to whoever executes, so any validator (or outside bot) earns directly.
 
+## Weekly $GAZZ holder payout (owner 2026-10-25)
+10 % of platform revenue goes from the Treasury to `BackxHolderRewards` (one per chain). ONE of our validators is its
+operator and pays $GAZZ holders once a week (`src/holders.js`, checked hourly):
+1. `Treasury.distribute(USDC)` moves the holders' share in.
+2. Snapshot of $GAZZ on Robinhood Chain from Transfer events: each holder counts with its lowest balance during the
+   past week (buying just before the payout earns nothing). Pools, burn and team wallets go in `HOLDERS_EXCLUDE`.
+3. `startRound` fixes the budget, `pay` sends it pro rata in batches; amounts under `PAYOUT_MIN` ($0.01) wait a week.
+
+Env on that one validator only: `HOLDER_REWARDS`, `TREASURY`, `USD_TOKEN`, `GAZZ_RPC` (https, Robinhood Chain),
+`GAZZ_FROM_BLOCK`, `HOLDERS_EXCLUDE`, optional `PAYOUT_MIN`, `PAYOUT_BATCH`. The Safe turns it on with
+`Treasury.setHolders(holderRewards, 1000)` and `HolderRewards.setOperator(<that validator's address>)`. Guardrails in
+the contract: one round per 7 days, never above the round's budget, nobody paid twice per round, the Safe can pause,
+lower the share, swap the operator or take the money back. A stolen operator key can at most misdirect one week.
+
 ## Speed: what is and is not guaranteed
 - Measured by every validator and shown in the admin portal: time from first seeing a position due to the
   transaction landing (p50 / p95). Target 0.5 s (EXECUTION.md). Alert if p95 > 1 s.

@@ -41,8 +41,8 @@
 - **Fees**: a 1× hedge pays a 0.3 % platform fee (nothing is borrowed); with multiplication and on shorts the platform
   fee is 2 % of the margin plus a 0.25 % borrow fee to issuers and a small Reserve Security Fund fee. Platform fees go
   on-chain to the BackX Treasury (USDC, one per chain, owned by the BackX Safe).
-- **$GAZZ**: the core token of BackX and part of the gazz.fun ecosystem. 25 % of what the Treasury receives belongs to
-  $GAZZ holders and is paid out on-chain. Contract on Robinhood Chain:
+- **$GAZZ**: the core token of BackX and part of the gazz.fun ecosystem. 10 % of what the Treasury receives is set aside
+  for $GAZZ holders and paid out on-chain every week, pro rata to each holder's lowest balance that week. Contract on Robinhood Chain:
   0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Not a promise of returns.
 
 ## Terminology

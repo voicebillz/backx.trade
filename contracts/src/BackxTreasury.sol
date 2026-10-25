@@ -7,7 +7,8 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title backx platform Treasury: one per chain, the fee collector of every market on it (owner 2026-10-25).
-/// @notice Every platform fee lands here in USDC. A share (holderBps) belongs to $GAZZ holders: anyone can call
+/// @notice Every platform fee lands here in USDC. A share (holderBps, 10 % at deploy) belongs to $GAZZ holders and goes to
+/// BackxHolderRewards, which our validator pays out weekly: anyone can call
 /// `distribute(token)` to split everything that arrived since the last split and send the holders' share to
 /// holderRewards. The rest is the platform's and only the Safe can withdraw it, to an address it chooses. While
 /// holderRewards is not set, the holders' share is kept aside (holdersOwed) and paid on the first split after it is.

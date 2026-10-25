@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BackxTreasury} from "../src/BackxTreasury.sol";
+import {BackxHolderRewards} from "../src/BackxHolderRewards.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 
 contract TreasuryTest is Test {
@@ -50,5 +51,50 @@ contract TreasuryTest is Test {
         t.setHolders(holders, 5_001);
         vm.expectRevert(BackxTreasury.BadParams.selector);
         new BackxTreasury(safe, 6_000);
+    }
+
+    function test_holderRewards_weeklyRounds() public {
+        BackxHolderRewards hr = new BackxHolderRewards(safe);
+        address op = makeAddr("validator");
+        address a = makeAddr("a");
+        address b = makeAddr("b");
+        vm.prank(safe);
+        hr.setOperator(op);
+        usd.mint(address(hr), 100e6);
+        IERC20 u = IERC20(address(usd));
+        address[] memory to = new address[](2);
+        uint256[] memory amt = new uint256[](2);
+        (to[0], to[1], amt[0], amt[1]) = (a, b, 60e6, 30e6);
+
+        vm.expectRevert(BackxHolderRewards.NotOperator.selector);
+        hr.startRound(u);
+        vm.startPrank(op);
+        hr.startRound(u);
+        hr.pay(u, to, amt);
+        assertEq(usd.balanceOf(a), 60e6);
+        vm.expectRevert(BackxHolderRewards.AlreadyPaid.selector);
+        hr.pay(u, to, amt);
+        address[] memory one = new address[](1);
+        uint256[] memory big = new uint256[](1);
+        (one[0], big[0]) = (makeAddr("c"), 11e6);
+        vm.expectRevert(BackxHolderRewards.OverBudget.selector);
+        hr.pay(u, one, big);
+        vm.expectRevert(BackxHolderRewards.TooSoon.selector);
+        hr.startRound(u);
+        vm.warp(block.timestamp + 7 days);
+        (, uint256 budget) = hr.startRound(u);
+        assertEq(budget, 10e6, "unpaid rest rolls over");
+        usd.setBlocked(a, true);
+        amt[0] = 5e6;
+        amt[1] = 5e6;
+        hr.pay(u, to, amt); // a is refused by the token: skipped, b paid
+        assertEq(usd.balanceOf(b), 35e6);
+        assertFalse(hr.paid(u, 2, a));
+        vm.stopPrank();
+        vm.prank(safe);
+        hr.setPaused(true);
+        vm.prank(op);
+        vm.expectRevert(BackxHolderRewards.IsPaused.selector);
+        hr.pay(u, one, big);
     }
 }
