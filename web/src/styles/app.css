@@ -1359,3 +1359,6 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .lay-seg { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius); background: var(--raised); }
 .lay-seg button { min-height: 36px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .lay-seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+
+/* App header stays on top while scrolling (owner 2026-10-25) */
+.topbar { position: sticky; top: 0; z-index: 25; }
