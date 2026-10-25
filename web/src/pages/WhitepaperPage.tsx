@@ -155,7 +155,6 @@ export function WhitepaperPage() {
           <p className="eyebrow gold">Whitepaper <span className="soon-badge">Draft</span></p>
           <h1>BackX: put your capital to work</h1>
           <Motto className="motto-wp" />
-          <p className="page-sub">Hedge &amp; Issue trading on Robinhood Chain and other EVM chains. How it works, how positions are executed and how issuers are protected.</p>
         </div>
       </header>
 
@@ -183,7 +182,7 @@ export function WhitepaperPage() {
 
           <section id="hedge">
             <h2>Hedge</h2>
-            <p>You choose a coin, an amount and a multiplication (1× to the coin's cap). The amount you type is what you pay: fees and keeper gas come out of it, and the rest is your margin. Your position is margin × multiplication; the part above your margin is lent by the issuers' reserve.</p>
+            <p>You choose a coin, an amount and a multiplication (1× to the coin's cap). The amount you type is what you pay: fees and validator gas come out of it, and the rest is your margin. Your position is margin × multiplication; the part above your margin is lent by the issuers' reserve.</p>
             <p>Each position has a liquidation price, shown before you open. If the price falls to it, the position is closed early so the lent capital goes back to the issuers first. You can also set a take-profit limit, filled by a keeper.</p>
             <HedgeAnatomy />
           </section>
@@ -197,10 +196,10 @@ export function WhitepaperPage() {
 
           <section id="execution">
             <h2>Execution &amp; liquidation</h2>
-            <p>Positions are watched every block by independent keepers. On Robinhood Chain a block is about 250 ms and transactions are ordered first come, first served, so there is no public mempool to front-run. Keepers settle many positions in one transaction. The points below are the launch design; the contracts are being updated to it before the audit.</p>
+            <p>Positions are watched every block by independent validators. On Robinhood Chain a block is about 250 ms and transactions are ordered first come, first served, so there is no public mempool to front-run. Keepers settle many positions in one transaction. The points below are the launch design; the contracts are being updated to it before the audit.</p>
             <ul>
-              <li><b>Fast reference price.</b> A low-latency oracle aggregated from major exchanges is the reference for triggers and fills; the keeper posts the price update and the liquidation in the same transaction.</li>
-              <li><b>Ahead of the pool.</b> On-chain pools follow centralized exchanges by a few seconds. Keepers watch those markets, so a liquidation can land before the pool has repriced.</li>
+              <li><b>Fast reference price.</b> A low-latency oracle aggregated from major exchanges is the reference for triggers and fills; the validator posts the price update and the liquidation in the same transaction.</li>
+              <li><b>Ahead of the pool.</b> On-chain pools follow centralized exchanges by a few seconds. Validators watch those markets, so a liquidation can land before the pool has repriced.</li>
               <li><b>Fair fills.</b> A liquidation sale must fill close to the reference price, so it cannot be sandwiched, and it must return the full lent amount whenever the coins cover it.</li>
               <li><b>Sized to sell.</b> A coin is only listed with real DEX liquidity, and position and open-interest caps are set so a crash can be sold quickly.</li>
             </ul>
@@ -228,7 +227,7 @@ export function WhitepaperPage() {
                 </div>
               ))}
             </div></Reveal>
-            <p className="hint">Simulation with modelled latencies (manual 20 s, intent fill 3 s, L1 bot 9 s, BackX keeper 0.5 s), not measurements of these products. A negative time means the sale lands before the on-chain pool has repriced. Issuer loss is before the Reserve Security Fund.</p>
+            <p className="hint">Simulation with modelled latencies (manual 20 s, intent fill 3 s, L1 bot 9 s, BackX validator 0.5 s), not measurements of these products. A negative time means the sale lands before the on-chain pool has repriced. Issuer loss is before the Reserve Security Fund.</p>
           </section>
 
           <section id="safety">
@@ -239,7 +238,7 @@ export function WhitepaperPage() {
 
           <section id="fees">
             <h2>Fees &amp; revenue</h2>
-            <p>Fees are baked into the amount a hedger pays and shown as one figure, plus keeper gas. They fund the issuers (borrow fee and a share of gains), the Reserve Security Fund, the keepers, and the platform. Issuers get the biggest rewards; platform revenue flows back to GAZZFUN and its holders.</p>
+            <p>Fees are baked into the amount a hedger pays and shown as one figure, plus validator gas. They fund the issuers (borrow fee and a share of gains), the Reserve Security Fund, the keepers, and the platform. Issuers get the biggest rewards; platform revenue flows back to GAZZFUN and its holders.</p>
           </section>
 
           <section id="gazz">

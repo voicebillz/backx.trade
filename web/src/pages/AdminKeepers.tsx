@@ -20,7 +20,7 @@ export function AdminKeepers() {
 
   useEffect(() => {
     let live = true;
-    const load = () => api<Resp>('/api/admin/keepers').then((r) => live && (setData(r), setErr(null))).catch(() => live && setErr('Could not load keepers.'));
+    const load = () => api<Resp>('/api/admin/keepers').then((r) => live && (setData(r), setErr(null))).catch(() => live && setErr('Could not load validators.'));
     load();
     const t = setInterval(load, 30_000);
     return () => { live = false; clearInterval(t); };
@@ -49,24 +49,24 @@ export function AdminKeepers() {
   return (
     <>
       <section className="admin-tiles">
-        {[['Keepers up', data ? `${up} / ${rows.length}` : null], ['Gas pool', data ? `${eth(total.toString())} ETH` : null],
+        {[['Validators up', data ? `${up} / ${rows.length}` : null], ['Gas pool', data ? `${eth(total.toString())} ETH` : null],
           ['Low on gas', data ? String(low) : null], ['Fastest p95', best != null ? `${(best / 1000).toFixed(2)} s` : data ? '—' : null]].map(([label, v]) => (
           <div className="card tile" key={label as string}><span className="label">{label}</span><span className="num tile-value">{v ?? <span className="sk sk-w30" />}</span></div>
         ))}
       </section>
       <section className="card">
         <div className="row-between docs-head">
-          <h2>Keepers</h2>
+          <h2>Our validators</h2>
           <span className="link-buttons">
-            <button className="btn btn-gold btn-sm" disabled={busy || !data} onClick={() => fundFile('low')}>Top up low keepers</button>
+            <button className="btn btn-gold btn-sm" disabled={busy || !data} onClick={() => fundFile('low')}>Top up low validators</button>
             <button className="btn btn-ghost btn-sm" disabled={busy || !data} onClick={() => fundFile('all')}>Fund all</button>
           </span>
         </div>
         {err && <p className="field-err" role="alert">{err}</p>}
-        {data && !rows.length && <p className="muted">No keepers configured. Add them to KEEPERS on Railway (docs/KEEPERS.md).</p>}
+        {data && !rows.length && <p className="muted">No validators configured. Add them to KEEPERS on Railway (docs/KEEPERS.md).</p>}
         <div className="table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Keeper</th><th>Status</th><th>Rank</th><th className="r">Gas (ETH)</th><th className="r">Watching</th><th className="r">Sent / landed / failed</th><th className="r">p50 / p95</th><th>Last report</th></tr></thead>
+            <thead><tr><th>Validator</th><th>Status</th><th>Rank</th><th className="r">Gas (ETH)</th><th className="r">Watching</th><th className="r">Sent / landed / failed</th><th className="r">p50 / p95</th><th>Last report</th></tr></thead>
             <tbody>
               {!data && !err && Array.from({ length: 4 }, (_, i) => <tr key={i} aria-hidden="true"><td colSpan={8}><span className="sk sk-w60" /></td></tr>)}
               {rows.map((r) => {

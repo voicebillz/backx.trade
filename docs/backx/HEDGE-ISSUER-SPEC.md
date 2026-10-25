@@ -101,9 +101,9 @@ begrenser høy multiplikator (se §6).
 - **Pris mot manipulasjon:** Issuer tjener på likvideringer. Derfor TWAP eller
   oracle-vakt + minimum-out på hvert bytte, så ingen kan presse prisen i én
   blokk for å utløse en likvidering.
-- **Keeper:** rask likvidator (sekunder). Simuleringen antok en treg keeper som
+- **Validator:** rask likvidator (sekunder). Simuleringen antok en treg validator som
   selger ved slutten av minuttet. Det er et forsiktig anslag. **ÅPEN:** bare vår
-  keeper, eller permissionless likvidering med liten belønning?
+  validator, eller permissionless likvidering med liten belønning?
 - **Gap-risiko:** faller prisen forbi likvideringspunktet før salget går
   gjennom, kan issuer tape. Dette dekkes av safety fund (§5).
 
@@ -234,7 +234,7 @@ Salgsargumenter som stemmer:
 | `BackxRouterAdapter` | Swaps via PCS/Uniswap med minOut + TWAP/oracle-vakt |
 | `BackxSafetyFund` | Mottar 0,5 %, dekker issuer-tap ved gap, overskudd til issuers (**ÅPEN:** eller holders) |
 | `BackxFeeCollector` | Mottar 2 % holders-gebyr (tynn, som GazzPadFeeCollector) |
-| Keeper (server) | Likvidering, fee-swap + airdrop-handoff, helsesjekk |
+| Validator (server) | Likvidering, fee-swap + airdrop-handoff, helsesjekk |
 
 **ÅPEN:** oppgraderbar (UUPS/Beacon, Safe eier, som Fund V3) eller immutable
 (som GazzPadFactory). Anbefaling: oppgraderbar i starten, timelock, Safe eier.
@@ -249,7 +249,7 @@ Prinsipper fra gazz.fun som SKAL gjelde:
 1. Låse de ÅPNE punktene med eier.
 2. Per-coin-simulering for de første 5–10 coinene (`sim/sim2.py` med ekte pool-dybde og fee).
 3. Kontrakter + enhetstester + fork-tester.
-4. Server: keeper (likvidering), prisvakt, fee-ruting til gazz.fun.
+4. Server: validator (likvidering), prisvakt, fee-ruting til gazz.fun.
 5. Web: backx.trade (se `DESIGN-KIT.md`), først med testbeløp og maks-cap.
 6. Ekstern review → lansering med lave caps → øk gradvis.
 

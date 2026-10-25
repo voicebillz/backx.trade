@@ -93,7 +93,7 @@ Hedge 1× låner ingenting.
   Først når fondet er tomt taper issuers, pro rata.
 - **Pris mot manipulasjon:** issuer tjener på likvidering, og en pumpe i én blokk kunne
   likvidert shorts. Derfor TWAP- eller oracle-vakt + `minOut`/`maxIn` på hver swap, akkurat
-  som Hedge. **ÅPEN:** permissionless likvidering eller bare vår keeper (samme beslutning som Hedge).
+  som Hedge. **ÅPEN:** permissionless likvidering eller bare vår validator (samme beslutning som Hedge).
 - **Krasjvern (bygget):** en pumpe i ett hopp kan koste fondet mange ganger innsatsen. Nye shorts avvises når
   fondet ikke dekker summen av alle åpne shorts' verste hull (`FEES-AND-MARGINS.md` §3b).
 - **Squeeze-tak:** samlet åpen short per coin begrenses så tilbakekjøpet av alle shorts aldri
@@ -151,5 +151,5 @@ Prinsipper som gjelder (som Hedge):
 1. Issuer-andeler fra shorts utbetales i tokenet (anbefalt) eller i USDC.
 2. Reserve Security Fund felles eller per side (anbefalt: per side).
 3. Short-maks per coin ved lansering (tabell §6 er utgangspunkt).
-4. Permissionless likvidering eller kun vår keeper (felles med Hedge).
+4. Permissionless likvidering eller kun vår validator (felles med Hedge).
 5. Squeeze-tak: maks samlet short per coin som andel av pool-dybde.

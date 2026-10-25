@@ -27,7 +27,7 @@
 | Short 30× | +$195,21 → **+$255,00** | $14,90 → **$14,43** |
 
 > Grunnlag: `sim/sim3.py` (Hedge og Short opp til 30×, samme ekte minuttpriser som før, begge
-> prisretninger, 1 500 utvalg per tidshorisont, treg keeper som lukker på minuttets slutt) og
+> prisretninger, 1 500 utvalg per tidshorisont, treg validator som lukker på minuttets slutt) og
 > kontraktene i `contracts/` (20 tester inkl. 30×, gap og fuzz, alle grønne). **Ikke auditert.**
 
 ## 1. Hvorfor gebyrene ble høye
@@ -81,7 +81,7 @@ Resultat (gap-rate = andel posisjoner der issuers ville tapt uten fondet):
 
 Prisen for marginen: likvideringen kommer litt tidligere for traderen på høy m.
 
-## 2b. Likvideringsmargin mot treg keeper og prisavvik (2026-10-19)
+## 2b. Likvideringsmargin mot treg validator og prisavvik (2026-10-19)
 
 Spørsmålet: får issuers alltid pengene tilbake hvis salget går tregt, eller prisen i poolen avviker fra oraklet?
 `sim/sim5.py` (Hedge, v4) tester det **pessimistisk**: når likvideringen utløses, selges posisjonen til den
@@ -114,7 +114,7 @@ Konklusjon (bygget inn):
 
 Marginene ble hevet etter sikkerhetsgjennomgangen 2026-10-20 (`SECURITY-REVIEW.md`). Med disse nivåene var det **ingen gap** i noen simulert situasjon, også med 5 minutters forsinkelse og 0,5 % avvik.
 Fondet skal da bare brukes ved ekte flash-krasj (prisen hopper mer enn margin + e på sekunder).
-Safe kan endre margin (maks 5 %) og maks m per coin. Kontrakttest: 20× med 1 % margin og en keeper som er
+Safe kan endre margin (maks 5 %) og maks m per coin. Kontrakttest: 20× med 1 % margin og en validator som er
 1,5 % for sen, gir issuers alt tilbake uten at fondet brukes.
 
 Gebyrene vises ikke lenger som egen seksjon i billetten. De er bakt inn i tallene: «You pay (all fees included)»,
@@ -189,7 +189,7 @@ Hva det betyr hvis sperren slås på: et fond på **$100 000** tåler ca. 125 He
 
 - Traderen kan sette en **pris** ved åpning eller senere (`setLimit`, 0 = fjern). Hedge: over dagens pris
   («Sell at»). Short: under dagens pris («Buy back at»).
-- En keeper lukker posisjonen når **TWAP** har nådd prisen (`executeLimit`). En pris-spike i én blokk kan ikke
+- En validator lukker posisjonen når **TWAP** har nådd prisen (`executeLimit`). En pris-spike i én blokk kan ikke
   utløse den (testet). Fyllingen er aldri mer enn **1 %** dårligere enn limiten (`limitSlipBps`, maks 5 %).
 - Oppgjøret er en vanlig lukking: issuers får principal tilbake først, så p av gevinsten.
 - Billetten viser «At your limit …, worst fill» i stedet for «If it rises 10 %» når en limit er satt.
@@ -247,7 +247,7 @@ tidslås (f.eks. 48 t) foran oppgraderinger når det er TVL, så issuers rekker 
 
 **Gass** (forge gas report, median): åpne Hedge ca. 394 000 (før proxy: 344 000), lukke ca. 306 000 (267 000),
 likvidere ca. 268 000. Tillegget er proxy-oppslaget som gjør oppgradering uten redeploy mulig, og 24-timers opptjening
-av belønning. Optimalisert: belønning pakket i én lagringsplass, én reserve-sjekk i stedet for to. Keeper: `liquidateBatch`
+av belønning. Optimalisert: belønning pakket i én lagringsplass, én reserve-sjekk i stedet for to. Validator: `liquidateBatch`
 og `executeLimitBatch` tar mange posisjoner i én transaksjon (ca. 227 000 per likvidering i bunt mot 268 000 enkeltvis).
 
 **Deploy fra adminportalen:** «Save and deploy contracts» lager en fil for Safe Transaction Builder med

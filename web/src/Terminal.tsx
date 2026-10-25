@@ -24,7 +24,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const TITLES: Record<string, string> = {
   trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
   profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
-  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts', adminBranding: 'Admin · Branding', adminKeepers: 'Admin · Keepers',
+  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts', adminBranding: 'Admin · Branding', adminKeepers: 'Admin · Validators',
 };
 const PRIVATE = new Set(['profile', 'security', 'wallet', 'documents', 'admin', 'adminUsers', 'adminParticipants', 'adminContracts', 'adminBranding', 'adminKeepers']);
 

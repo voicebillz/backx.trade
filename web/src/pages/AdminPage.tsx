@@ -95,7 +95,7 @@ export default function AdminPage({ route }: { route: Route }) {
       <header className="page-head">
         <div>
           <p className="eyebrow gold">Admin portal</p>
-          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : route === 'adminKeepers' ? 'Keepers' : 'Listed assets'}</h1>
+          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : route === 'adminKeepers' ? 'Validators' : 'Listed assets'}</h1>
         </div>
       </header>
       <div className="admin-grid">
@@ -103,7 +103,7 @@ export default function AdminPage({ route }: { route: Route }) {
           <a href={href('admin')} onClick={go('admin')} className={route === 'admin' ? 'active' : ''} aria-current={route === 'admin' ? 'page' : undefined}>Listed assets</a>
           <a href={href('adminUsers')} onClick={go('adminUsers')} className={route === 'adminUsers' ? 'active' : ''} aria-current={route === 'adminUsers' ? 'page' : undefined}>Users</a>
           <a href={href('adminContracts')} onClick={go('adminContracts')} className={route === 'adminContracts' ? 'active' : ''} aria-current={route === 'adminContracts' ? 'page' : undefined}>Contracts</a>
-          <a href={href('adminKeepers')} onClick={go('adminKeepers')} className={route === 'adminKeepers' ? 'active' : ''} aria-current={route === 'adminKeepers' ? 'page' : undefined}>Keepers</a>
+          <a href={href('adminKeepers')} onClick={go('adminKeepers')} className={route === 'adminKeepers' ? 'active' : ''} aria-current={route === 'adminKeepers' ? 'page' : undefined}>Validators</a>
           <a href={href('adminParticipants')} onClick={go('adminParticipants')} className={route === 'adminParticipants' ? 'active' : ''} aria-current={route === 'adminParticipants' ? 'page' : undefined}>Participants</a>
           <a href={href('adminBranding')} onClick={go('adminBranding')} className={route === 'adminBranding' ? 'active' : ''} aria-current={route === 'adminBranding' ? 'page' : undefined}>Branding</a>
           <a href={href('profile')} onClick={go('profile')}>← Back to profile</a>
@@ -918,7 +918,7 @@ function DeployCore({ item, chain, onClose }: { item: CItem; chain: CChain; onCl
         ) : isFactory && !state.batch ? (
           <form onSubmit={(e) => { e.preventDefault(); void prepare(); }}>
             <p className="muted small">The factory is set up once per chain with these addresses (they can be changed later by the Safe). Reserve currency: {chain.stable?.symbol}.</p>
-            {([['feeCollector', 'Fee collector', 'Receives the holders fee (gazz.fun / treasury split is open)'], ['keeper', 'Keeper', 'Bot address allowed to liquidate and fill limits'], ['keeperWallet', 'Keeper gas wallet', 'Receives the per-position keeper gas']] as const).map(([k, l, h]) => (
+            {([['feeCollector', 'Fee collector', 'Receives the holders fee (gazz.fun / treasury split is open)'], ['keeper', 'Validator (ours)', 'Our validator address allowed to liquidate and fill limits (until execution is open to anyone)'], ['keeperWallet', 'Keeper gas wallet', 'Receives the per-position keeper gas']] as const).map(([k, l, h]) => (
               <Field key={k} id={`cf-${k}`} label={l} hint={h} error={state.fields?.[k]}>
                 <input id={`cf-${k}`} className="num" value={cfg[k]} onChange={(e) => setCfg({ ...cfg, [k]: e.target.value.trim() })} placeholder="0x…" autoComplete="off" spellCheck={false} />
               </Field>

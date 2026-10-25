@@ -7,12 +7,12 @@
 
 ## Product
 - **Hedge**: buys real tokens worth stake × multiplication. Up to 20× on major coins (BTC/ETH-type pools), 5× on large
-  coins, 3× on mid caps, 2× on small caps. The amount entered is what is paid; fees and keeper
+  coins, 3× on mid caps, 2× on small caps. The amount entered is what is paid; fees and validator
   gas come out of it and the rest is the margin. At 5×, $100 opens a position of about $482; issuers lend the rest.
-- **Liquidation**: if the price falls to the liquidation price, a keeper sells the position and the issuers are repaid
+- **Liquidation**: if the price falls to the liquidation price, a validator sells the position and the issuers are repaid
   first. The trader keeps part of what is left. A trader can never lose more than they paid.
 - **1× hedge**: borrows nothing, has no liquidation, issuers get nothing from it.
-- **Limit (take profit)**: a sell price above today's price; a keeper closes the position when the time-weighted price
+- **Limit (take profit)**: a sell price above today's price; a validator closes the position when the time-weighted price
   reaches it, at most 1 % worse than the limit.
 - **Issue Reserve**: users issue USDC to a coin's USD reserve. It is lent to hedges and returned first. Issuers earn a
   borrow fee, 10 % of a hedge's gain, and most of what is left after a liquidation. Rewards go into the reserve,
@@ -22,7 +22,7 @@
   right now, so the maximum shown can be lower when the reserve is busy.
 - **Reserve Security Fund**: funded by every position; covers the rare case where a crash moves faster than a
   liquidation can execute, before any issuer loses.
-- **Fees**: paid once at open, taken out of the amount entered (including a small flat gas amount for the keeper).
+- **Fees**: paid once at open, taken out of the amount entered (including a small flat gas amount for the validator).
   No funding fees.
 - **Wallets**: every user gets a self-custodial embedded wallet (Privy). Login with email, SMS, Google, X, Discord,
   Twitch, Telegram, Farcaster or passkey. No external wallet connection.

@@ -1201,3 +1201,8 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .recipe-code pre { margin: 0; padding: 10px 76px 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised);
   font-family: var(--mono, ui-monospace, monospace); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
 .recipe-code .btn-mini { position: absolute; top: 6px; right: 6px; min-height: 32px; }
+
+/* Whitepaper: the top (title, key numbers, contents) uses the same column as the text below */
+.wp-page > .page-head, .wp-page > .wp-stats, .wp-page > .wp-contents { max-width: 760px; margin-left: auto; margin-right: auto; }
+.wp-page > .wp-contents ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .wp-page > .wp-contents ol { grid-template-columns: 1fr; } }

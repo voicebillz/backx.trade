@@ -53,7 +53,7 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Upgradeable, isolated per coin per chain (owner 2026-10-19): one `BackxMarketFactory` per EVM chain (UUPS, Safe-owned)
   creates each coin's own BackxReserveVault + BackxReserveSecurityFund + BackxPositionManager as BeaconProxies in ONE
   `createMarket` call. The Safe owns the three beacons and upgrades a contract type for every coin on a chain with one
-  `upgradeTo`; no redeploy, balances and positions stay. Storage is append-only across versions. Keepers settle many
+  `upgradeTo`; no redeploy, balances and positions stay. Storage is append-only across versions. Validators settle many
   positions per tx (`liquidateBatch`, `executeLimitBatch`). The admin portal never deploys with a server key: it builds
   the createMarket transaction as a Safe Transaction Builder file, the Safe signs, the portal reads the factory to
   record the new addresses.
@@ -79,19 +79,19 @@ The owner is not a developer: explain briefly, in Norwegian.
   Listing goes through the best launch chain (Admin → Listed assets → Best chain, `bestChain` in listing.js): find the
   coin's main token per chain (GeckoTerminal search, wrapped majors priced at the underlying's market cap), run the
   listing rules, pick highest tier → cheapest liquidation gas → deepest liquidity. GeckoTerminal allows ~10 calls/min,
-  so it runs in the background and is cached 1 h. One keeper set per chain (CHAIN_ID).
+  so it runs in the background and is cached 1 h. One validator set per chain (CHAIN_ID).
 - Chains (server/src/chains.js): Robinhood Chain, Ethereum, Base, BNB Chain, Arbitrum, Optimism, Polygon, Avalanche.
   Non-EVM coins (BTC, SOL, ADA, XRP, DOGE …) are listed via their wrapped token on one of these chains; the contracts
   are Solidity only. Robinhood Chain's reserve stablecoin is OPEN (no USDC there on LI.FI yet).
 - Web math (`web/src/lib/hedge.ts`) must match the contract defaults (fees, e/s/p per m, buffers, limit slip): change both together.
-- Fee model v4 (owner 2026-10-18/19): the amount the trader types IS what they pay; fees and keeper gas come out of it
+- Fee model v4 (owner 2026-10-18/19): the amount the trader types IS what they pay; fees and validator gas come out of it
   (contract `_stakeFor`, web `marginFor`), the rest is the margin X and the position is m × X (holders 2 % of X to
   gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % of X + 0.03 % of lent), issuers' share of a gain p = 10 %.
-  Keeper gas: flat keeperGasUsd per position (default $0.10, max $5, ≈ 2× one close) paid at open straight to the
-  keeper wallet. The ticket shows the amount, the position size and "Gas" (other fees baked in).
+  Validator gas: flat keeperGasUsd per position (default $0.10, max $5, ≈ 2× one close) paid at open straight to the
+  validator wallet. The ticket shows the amount, the position size and "Gas" (other fees baked in).
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
-  Limit (take-profit) orders fill via keeper on the TWAP, at most 1 % worse than the limit.
+  Limit (take-profit) orders fill via validator on the TWAP, at most 1 % worse than the limit.
 - Multiplication follows the issued USDC (owner 2026-10-19): the market cap (maxHedgeM) is the standard, but a hedge can
   only borrow what the reserve can lend ((m − 1)·stake ≤ availableToLend, 90 % util cap): `maxHedgeMFor` in the
   contract, `maxHedgeMFor` in web/src/lib/reserves.ts for the ticket. Issuer rewards go INTO the reserve (ERC-4626
@@ -105,17 +105,19 @@ The owner is not a developer: explain briefly, in Norwegian.
   OPEN FLAW (flash-crash sim 2026-10-22, `docs/backx/EXECUTION.md`, `sim/flash.py`): the 60 s TWAP confirm and the
   2 % TWAP guard lag in a fast crash, so liquidations revert until the crash stops (issuer losses 10–57 % of lent in
   the sim). Fix before audit: fast pull oracle (Pyth chosen 2026-10-22: Robinhood 0x8250f4aF…487a, ≤ 3 s stale) as trigger and
-  guard reference, keeper posts update+liquidation in one tx; TWAP only for opens/limits. Sim with it: 0 % loss. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
+  guard reference, validator posts update+liquidation in one tx; TWAP only for opens/limits. Sim with it: 0 % loss. The ticket shows no fee breakdown: fees are in "You pay", the liquidation price and the outcomes.
   Details: `docs/backx/FEES-AND-MARGINS.md` (v4 box, §3b–3c) and `SCENARIOS-100.md`.
   LIVENESS (owner 2026-10-23, `docs/backx/LIVENESS.md`): nothing that protects money may depend on our servers. Planned
-  (needs owner sign-off, with the size fix): liquidate / limit fills / processQueue open to anyone, keeper gas escrowed per
+  (needs owner sign-off, with the size fix): liquidate / limit fills / processQueue open to anyone, validator gas escrowed per
   position and paid to whoever executes plus a capped liquidation bonus, Pyth + Chainlink price anyone can post with a TWAP
-  fallback, pause never blocks exits, two keepers on two clouds, timelocked upgrades, IPFS app mirror.
-  Keepers (owner 2026-10-23, `keeper/`, `docs/KEEPERS.md`): up to 50 processes on 4 providers, unique ranks (rank r acts
+  fallback, pause never blocks exits, two validators on two clouds, timelocked upgrades, IPFS app mirror.
+  Words (owner 2026-10-25): say "validator" everywhere in docs and UI. A validator is anyone who settles or fills
+  on-chain and gets that position's gas fee; ours are "our validators". Code/env/contract names keep "keeper".
+  Our validators (owner 2026-10-23, `keeper/`, `docs/KEEPERS.md`): 10 per chain on 5 servers, unique ranks (rank r acts
   r × 2 blocks later after a simulation re-check), chain-only, several RPCs, self-balancing gas (richest tops up the
   poorest, excess above the cap swept to the Safe). Optional signed ed25519 heartbeat to `POST /keeper/heartbeat`
-  (outside /api, KEEPERS env on Railway); Admin → Keepers shows health, balances, latency and builds a Safe file to fund them.
-  Servers (owner 2026-10-25): 5 servers × 2 keepers per chain (Railway, Oracle Always Free, GCP e2-micro, Northflank
+  (outside /api, KEEPERS env on Railway); Admin → Validators shows health, balances, latency and builds a Safe file to fund them.
+  Servers (owner 2026-10-25): 5 servers × 2 validators per chain (Railway, Oracle Always Free, GCP e2-micro, Northflank
   Sandbox, Azure 12 mo), ranks interleaved (server s runs s−1 and s+4). One image `ghcr.io/voicebillz/backx-keeper`
   (built by .github/workflows/keeper-image.yml), `src/setup.js` makes a server's keys → KEEPER_SET (secret, that server
   only) + public KEEPERS lines, `src/multi.js` runs them. Step-by-step recipe: Admin → Contracts (AdminKeeperRecipe).

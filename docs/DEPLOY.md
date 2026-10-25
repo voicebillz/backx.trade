@@ -121,5 +121,5 @@ select signup_method, count(*) from users group by 1 order by 2 desc;
 ```
 
 
-## Keepers (2026-10-23)
+## Validators (2026-10-23)
 Railway variable `KEEPERS` (optional): `id:gasAddress:reportPublicKey,...` from `npm run keygen` in `keeper/`. Setup per host: `docs/KEEPERS.md`.

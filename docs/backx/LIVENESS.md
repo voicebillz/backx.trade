@@ -7,19 +7,19 @@ Principle: **our servers are a convenience, never a requirement.** Every action 
 (1) callable by anyone, (2) paid for by the protocol so someone always wants to call it, and (3) decided only by
 on-chain state plus a price that anyone can post.
 
-## 1. What happens today if our keeper is down (contracts as written, not deployed)
+## 1. What happens today if our validator is down (contracts as written, not deployed)
 
-| Action | Who can do it today | If our keeper is down |
+| Action | Who can do it today | If our validator is down |
 |---|---|---|
-| Liquidate / `liquidateBatch` | Keepers only, unless the Safe turns on `permissionlessLiquidation` (off by default) | **Nobody liquidates.** Losses grow past the trader's margin into the issuers' principal; the RSF covers first, then issuers lose. |
-| Take-profit fill (`executeLimit`) | Keepers only (same flag) | Limits are not filled. |
+| Liquidate / `liquidateBatch` | Validators only, unless the Safe turns on `permissionlessLiquidation` (off by default) | **Nobody liquidates.** Losses grow past the trader's margin into the issuers' principal; the RSF covers first, then issuers lose. |
+| Take-profit fill (`executeLimit`) | Validators only (same flag) | Limits are not filled. |
 | Trader closes own position (`close`) | The owner, any time (pause never blocks it) | Works, if the user can sign (Privy wallet or exported key) and finds the contract (explorer). |
 | Issuer withdraws free money / `requestRedeem` | The issuer, any time | Works. |
 | Pay the withdrawal queue (`processQueue`) | Anyone | Works, but nobody is paid to call it. |
 | Open a position | Anyone (pause blocks only this) | Works. |
 
 `pause()` only blocks new opens: close, liquidate, limit fills and withdrawals cannot be frozen. Keep it that way
-(test it). The weak point is liquidation: it is gated to our keeper and nobody else is rewarded for doing it.
+(test it). The weak point is liquidation: it is gated to our validator and nobody else is rewarded for doing it.
 
 ## 2. Design: four layers, each enough on its own
 
@@ -28,7 +28,7 @@ on-chain state plus a price that anyone can post.
    open to any address. Safety does not come from *who* calls but from the checks inside: the trigger, the price
    guard (sale within 2 % of the reference price and full principal back when the coins cover it) and balance-delta
    accounting already make a hostile caller harmless.
-2. **The protocol pays whoever does the work.** Today keeper gas (flat ~$0.10 per position) is sent to our keeper
+2. **The protocol pays whoever does the work.** Today validator gas (flat ~$0.10 per position) is sent to our validator
    wallet at open. Instead hold it in the contract per position and pay it to **whoever** closes, liquidates or fills
    it. Add a small liquidation bonus on top (e.g. 0.25 % of the position, capped, taken from what the trader would
    keep, never from the issuers' principal). Any liquidation bot, MEV searcher or user then earns money by keeping
@@ -45,11 +45,11 @@ on-chain state plus a price that anyone can post.
    new code applies. Open decision since 2026-10-19.
 
 ### Layer 1: many independent executors
-- **Our keepers, not one server:** at least two keeper services on different providers (Railway + another cloud),
+- **Our validators, not one server:** at least two validator services on different providers (Railway + another cloud),
   each with its own key, its own funded gas wallet and a different RPC provider (Robinhood public RPC plus e.g.
   Chainstack / GetBlock / Alchemy). Either one alone keeps the system safe. Alerts if any liquidatable position is
   older than a few blocks.
-- **Open-source keeper:** publish the keeper script so anyone can run it; with Layer 0 rewards it pays for itself.
+- **Open-source validator:** publish the validator script so anyone can run it; with Layer 0 rewards it pays for itself.
 - **Third-party bots:** liquidation searchers find BackX through the events and the reward.
 - **Automation networks** (Gelato, Chainlink Automation): neither is confirmed on Robinhood Chain yet (checked
   2026-10-23). Ask both (PARTNERS.md); add whichever arrives as an extra executor, never as the only one.
@@ -66,10 +66,10 @@ not only us. L2BEAT notes there is no guaranteed forced-inclusion path on Robinh
 Handling: a sequencer-uptime check; after a restart, a short grace period where opens stay paused while prices
 settle, liquidations allowed, the RSF covers gaps. This is a chain risk issuers must be told about (Risks section).
 
-## 2b. Orders that already sit on-chain (owner question 2026-10-23: no keeper at all?)
+## 2b. Orders that already sit on-chain (owner question 2026-10-23: no validator at all?)
 
 An EVM chain never runs code by itself: every change needs someone's transaction. What we *can* do is make the
-market's own trades carry out our orders, so no BackX keeper is needed:
+market's own trades carry out our orders, so no BackX validator is needed:
 
 | Order | Keeperless on-chain form | Executed by |
 |---|---|---|
@@ -87,14 +87,14 @@ never as the only one.
 1. Contracts (needs owner sign-off; together with the 24 KB size fix, i.e. removing Short or splitting the
    manager, and the Pyth integration already planned):
    - remove the keeper-only gate (or initialise `permissionlessLiquidation = true`);
-   - escrow keeper gas per position and pay it to the executor; add the capped liquidation bonus;
+   - escrow validator gas per position and pay it to the executor; add the capped liquidation bonus;
    - Pyth update-and-liquidate in one call, Chainlink second source, TWAP fallback, stale-price auto-pause of opens;
    - tests: pause never blocks exits; a random address can liquidate/fill/process the queue; a hostile caller cannot
      make a sale worse than the guard; liquidation still works with the fast oracle stale.
-2. Keeper service: two instances, two clouds, two RPCs, alerts; publish the script.
+2. Validator service: two instances, two clouds, two RPCs, alerts; publish the script.
 3. Timelock on upgrades.
 4. IPFS mirror of the app; "exit without the website" guide in the docs.
-5. Re-run `sim/flash.py` with: our keepers down, only third-party bots (slower, e.g. 2–12 s) and the fast oracle.
+5. Re-run `sim/flash.py` with: our validators down, only third-party bots (slower, e.g. 2–12 s) and the fast oracle.
 
 ## 4. What issuers should hear
 BackX does not need its own servers to liquidate or to return issuer money: the contracts pay anyone to do it and

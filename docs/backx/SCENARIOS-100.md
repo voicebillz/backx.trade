@@ -3,7 +3,7 @@
 > Laget med `sim/scenarios.py` (samme tall som `web/src/lib/hedge.ts` og kontraktene).
 > **Beløpet du skriver inn er det du betaler** (eier 2026-10-19): gebyrer og keeper-gas ($0,10) trekkes fra det,
 > resten er marginen, og posisjonen er multiplikator × margin. $100 inn = $100 betalt.
-> Én prisbevegelse, ingen tidsbane. **(L)** = likvidert av keeper akkurat på likvideringspunktet.
+> Én prisbevegelse, ingen tidsbane. **(L)** = likvidert av validator akkurat på likvideringspunktet.
 > Short er pauset i produktet; tallene står her for senere. Ikke auditert, ikke deployet. Ingen lovnader om avkastning.
 
 ## 1. Modellen
@@ -31,10 +31,10 @@ Dyp pool, 5×, prisen beveger seg 10 % riktig vei: **Hedge +$39,27**, Short +$38
 |    | → issuer får **PONS-ene tilbake først**, pluss lånegebyr og 10 % av gevinsten (kjøpt som PONS) | issuer +$5,69 |
 |    | → traderen får resten i USDC: $136,56 | **+$36,56** netto |
 | 6b | **Prisen stiger 10 %:** tilbakekjøpet koster $530,67 | traderen får $44,56 (**−$55,44**) |
-| 6c | **Prisen stiger 12,58 %:** keeper likviderer | traderen $9,63, issuer +$23,67 |
+| 6c | **Prisen stiger 12,58 %:** validator likviderer | traderen $9,63, issuer +$23,67 |
 | 7 | **Gap:** Reserve Security Fund kjøper PONS-ene som mangler; først når fondet er tomt, taper issuers pro rata | |
 
-## 3. Når fondet brukes (dyp pool, prisen hopper 10 % i ett hopp før keeper rekker å handle)
+## 3. Når fondet brukes (dyp pool, prisen hopper 10 % i ett hopp før validator rekker å handle)
 
 | Posisjon | Fondet fikk inn | Fondet betaler ut | Issuers |
 |---|---|---|---|

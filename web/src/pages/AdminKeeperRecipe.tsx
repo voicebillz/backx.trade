@@ -4,7 +4,7 @@ import { useState } from 'react';
 // Railway (paid, already used) + the 4 best free hosts for an always-on process (checked 2026-10-25; free terms change).
 // Ranks are interleaved (server s runs ranks s−1 and s+4), so the first five ranks sit on five different providers.
 // Coordination needs no shared server: each rank waits 2 blocks more than the one above it and re-checks the chain
-// first; the signed heartbeat to api.backx.trade only reports health (Admin → Keepers).
+// first; the signed heartbeat to api.backx.trade only reports health (Admin → Validators).
 
 const IMAGE = 'ghcr.io/voicebillz/backx-keeper:latest';
 const CHAINS = '4663,56,8453,42161';
@@ -35,8 +35,8 @@ export function AdminKeeperRecipe() {
   const setup = `docker run --rm ${IMAGE} node src/setup.js --server ${s.key} --slot ${slot} --of 5 --keepers 10 --chains ${CHAINS}`;
   return (
     <section className="card recipe">
-      <h2>Oppskrift: keeper-servere</h2>
-      <p className="muted">5 servere × 2 keepere per kjede = 10 keepere på hver av Robinhood, BNB, Base og Arbitrum. Hver server kjører rang {`s−1`} og {`s+4`}, så de fem første rangene ligger hos fem ulike leverandører. Ingen server styrer de andre: rang r venter 2 blokker mer enn rangen over og sjekker kjeden først, så bare én sender.</p>
+      <h2>Oppskrift: våre validator-servere</h2>
+      <p className="muted">5 servere × 2 av våre egne validatorer per kjede = 10 på hver av Robinhood, BNB, Base og Arbitrum. Hver server kjører rang {`s−1`} og {`s+4`}, så de fem første rangene ligger hos fem ulike leverandører. Ingen server styrer de andre: rang r venter 2 blokker mer enn rangen over og sjekker kjeden først, så bare én sender.</p>
 
       <ol className="recipe-steps">
         <li><b>Én gang:</b> GitHub → voicebillz → Packages → <span className="num">backx-keeper</span> → Package settings → Change visibility: <b>Public</b> (keeper-koden har ingen hemmeligheter; nøklene lages på hver server).</li>
@@ -55,17 +55,17 @@ export function AdminKeeperRecipe() {
           Den skriver ut to deler. <b>KEEPER_SET=…</b> er hemmelig og hører bare hjemme på denne serveren. Den <b>offentlige linjen</b> legger du til i Railway → API-tjenesten → <span className="num">KEEPERS</span> (skilt med komma).
         </li>
         {s.kind === 'vm' ? (
-          <li><b>Start keeperne</b> (lim inn KEEPER_SET-linjen i filen, lagre med Ctrl+O, Enter, Ctrl+X):
+          <li><b>Start validatorene</b> (lim inn KEEPER_SET-linjen i filen, lagre med Ctrl+O, Enter, Ctrl+X):
             <Code text={`sudo mkdir -p /opt/backx && sudo nano /opt/backx/keepers.env\nsudo docker run -d --name backx-keepers --restart=always --env-file /opt/backx/keepers.env ${IMAGE}`} />
             Oppdatere til ny versjon senere:
             <Code text={`sudo docker pull ${IMAGE} && sudo docker rm -f backx-keepers && sudo docker run -d --name backx-keepers --restart=always --env-file /opt/backx/keepers.env ${IMAGE}`} />
           </li>
         ) : (
-          <li><b>Start keeperne:</b> lim inn KEEPER_SET som variabel på tjenesten og deploy. Ny versjon: Redeploy.</li>
+          <li><b>Start validatorene:</b> lim inn KEEPER_SET som variabel på tjenesten og deploy. Ny versjon: Redeploy.</li>
         )}
-        <li><b>Kontrakt-adresser:</b> når markedene er deployet, legg til <span className="num">MANAGERS_4663</span> osv. og kjør steg 5 på nytt, eller vent: uten adresser står keeperne i ro.</li>
-        <li><b>Gass:</b> Admin → Keepers → «Top up low keepers» lager en Safe-fil. Etter det fyller keeperne på hverandre selv.</li>
-        <li><b>Sjekk:</b> Admin → Keepers viser «▲ Up» for keeperne på denne serveren innen ett minutt.</li>
+        <li><b>Kontrakt-adresser:</b> når markedene er deployet, legg til <span className="num">MANAGERS_4663</span> osv. og kjør steg 5 på nytt, eller vent: uten adresser står validatorene i ro.</li>
+        <li><b>Gass:</b> Admin → Validators → «Top up low validators» lager en Safe-fil. Etter det fyller validatorene på hverandre selv.</li>
+        <li><b>Sjekk:</b> Admin → Validators viser «▲ Up» for validatorene på denne serveren innen ett minutt.</li>
       </ol>
       <p className="hint">Ikke brukt: Koyeb (gratis-instansen sover etter 1 time), Render (sover), Fly.io (ingen gratisplan). Cloudflare/GitHub-cron går bare hvert minutt: for treigt til likvideringer.</p>
     </section>
