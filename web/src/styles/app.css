@@ -153,7 +153,7 @@ th { text-align: left; font-weight: 500; color: var(--ink-3); height: 32px; padd
 .sheet-head { position: relative; flex: none; height: 44px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
 .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
 .sheet .ticket { height: auto; padding-top: 0; }
-.sheet .ticket .btn-block { position: sticky; bottom: 0; margin-top: 4px; box-shadow: 0 -12px 0 var(--panel); }
+.sheet .ticket > .btn-block { position: sticky; bottom: 0; margin-top: 4px; box-shadow: 0 -12px 0 var(--panel); }
 .sheet .ticket { border: 0; }
 .sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto; }
 .sheet-close { position: absolute; right: 6px; top: 0; width: 44px; height: 44px; }
@@ -1293,7 +1293,45 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .side-opt.on:first-of-type { color: var(--price-up); }
 .side-switch.short .side-opt.on { color: var(--price-down); }
 .side-switch:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-.limit-switch { min-height: 44px; margin-bottom: 4px; }
+/* Buy | Sell under the Hedge | Short flip: a plain underline so the two never look alike */
+.act-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: -4px 0 14px; border-bottom: 1px solid var(--line); }
+.act-tabs button { min-height: 44px; font-size: 14px; font-weight: 600; color: var(--ink-3); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out); }
+.act-tabs button:hover { color: var(--ink); }
+.act-tabs button.on { color: var(--ink); border-bottom-color: var(--brand); }
+.act-count { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--raised); color: var(--ink-2); }
+/* Option tiles (limit order, take profit): the whole head row toggles, the body opens inside the tile */
+.opt-tile { border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; background: var(--panel); transition: border-color 160ms var(--ease-out); }
+.opt-tile.on { border-color: var(--ink-3); }
+.opt-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; text-align: left; border-radius: var(--radius); }
+.opt-head:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.opt-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.opt-aside { margin-left: auto; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt-head .tgl { margin-left: auto; }
+.opt-aside + .tgl { margin-left: 0; }
+.tgl { position: relative; flex: none; width: 38px; height: 22px; border-radius: 999px; background: var(--raised); border: 1px solid var(--line);
+  transition: background 180ms var(--ease-out), border-color 180ms var(--ease-out); }
+.tgl-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink-3); color: transparent;
+  display: grid; place-items: center; transition: transform 180ms var(--ease-out), background 180ms var(--ease-out), color 180ms var(--ease-out); }
+.opt-tile.on .tgl { background: var(--brand); border-color: var(--brand); }
+.opt-tile.on .tgl-knob { transform: translateX(16px); background: var(--bg); color: var(--brand); }
+.opt-body { padding: 0 12px 12px; display: grid; gap: 8px; }
+/* Multiplication starts closed: one button opens the slider at 2×, dragging back to 1× closes it */
+.mult-activate { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; margin-bottom: 10px;
+  border: 1px dashed var(--ink-3); border-radius: var(--radius); color: var(--ink); text-align: left; transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
+.mult-activate:hover:not(:disabled) { border-style: solid; border-color: var(--brand); background: var(--brand-bg); }
+.mult-activate:disabled { opacity: .5; cursor: not-allowed; }
+.mult-x { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--action); color: var(--on-action); font-weight: 700; font-size: 14px; flex: none; }
+.mult-txt { font-size: 13px; font-weight: 600; }
+.mult-max { margin-left: auto; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+/* Sell: the positions you hold on this side */
+.sell-list { display: grid; gap: 10px; }
+.sell-row { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 8px; }
+.sell-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sell-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-3); }
+.sell-empty { text-align: center; padding: 24px 8px; color: var(--ink-3); display: grid; gap: 10px; justify-items: center; }
+.sell-empty p { margin: 0; }
+.sell-demo { justify-self: start; margin-left: 0; }
 .field-warn { display: block; font-size: 12px; color: var(--warning); margin-top: 4px; }
 .field-err.row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .confirm-overlay { z-index: 55; }
@@ -1302,7 +1340,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .confirm-kv dd .coin-icon { vertical-align: -2px; }
 .eyebrow.up { color: var(--price-up); }
 .eyebrow.down { color: var(--price-down); }
-@media (prefers-reduced-motion: reduce) { .side-thumb { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .side-thumb, .tgl, .tgl-knob, .opt-tile, .act-tabs button, .mult-activate { transition: none; } }
 .swap-link { margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
 .chart-quick { display: flex; gap: 2px; margin-right: 6px; }
 
@@ -1354,7 +1392,9 @@ html:root { --privy-color-icon-muted: var(--brand); }
 @media (max-width: 699px) { .lay-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
 @media (prefers-reduced-motion: reduce) { .rz::after, .lay-card { transition: none; } .lay-card:hover { transform: none; } }
 .ticket-col.slot > .panel { overflow-y: auto; }
-.ticket-col .ticket > .btn-block { position: sticky; bottom: 0; flex: none; box-shadow: 0 8px 0 var(--panel); }
+.ticket-col .ticket > .btn-block { position: sticky; bottom: 0; flex: none; box-shadow: 0 8px 0 var(--panel), 0 -10px 0 var(--panel); }
+/* Sticky buy button stays opaque when disabled, so nothing shows through it */
+.ticket > .btn-block:disabled { opacity: 1; background: var(--raised); color: var(--ink-3); border-color: var(--line); }
 .lay-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lay-seg { display: flex; gap: 2px; padding: 3px; border-radius: var(--radius); background: var(--raised); }
 .lay-seg button { min-height: 36px; padding: 0 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }

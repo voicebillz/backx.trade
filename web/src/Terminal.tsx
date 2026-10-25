@@ -3,7 +3,7 @@ import { Topbar } from './components/Topbar';
 import { MarketList } from './components/MarketList';
 import { CoinHeader } from './components/CoinHeader';
 import { PriceChart } from './components/PriceChart';
-import { OrderTicket } from './components/OrderTicket';
+import { OrderTicket, type Action } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
 import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -89,8 +89,9 @@ interface TradeProps {
 
 function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProps) {
   const [stake, setStake] = useState('100');
-  const [m, setM] = useState(5);
+  const [m, setM] = useState(1);
   const [side, setSide] = useState<Side>('hedge');
+  const [action, setAction] = useState<Action>('buy');
   const [swapFor, setSwapFor] = useState<string | null>(null);
   // Terminal layout (header gear): saved layout + a live override while a panel edge is being dragged.
   const { layout, set: saveLayout } = useLayout();
@@ -131,7 +132,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
   }, [stake, m, market, maxM, side]);
 
   const ticket = market && q && (
-    <OrderTicket market={market} usdc={usdc} side={side} onSide={setSide} maxM={maxM} noCoins={side === 'short' && canNow === 0}
+    <OrderTicket market={market} usdc={usdc} side={side} onSide={setSide} action={action} onAction={setAction} maxM={maxM} noCoins={side === 'short' && canNow === 0}
       available={side === 'hedge' ? availableToLend(market) : coinsToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} onSwap={setSwapFor} />
   );
 
@@ -173,10 +174,10 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
         )}
       </main>
 
-      {/* Mobile: sticky Buy / Sell buttons open the ticket as a bottom sheet on that side. */}
+      {/* Mobile: sticky Buy / Sell buttons open the ticket as a bottom sheet (Hedge | Short is flipped inside it). */}
       <div className="mobile-bar">
-        <button className="btn btn-primary" onClick={() => { setSide('hedge'); setSheet(true); }}>▲ Buy {market?.symbol ?? ''}</button>
-        <button className="btn btn-sell" onClick={() => { setSide('short'); setSheet(true); }}>▼ Sell {market?.symbol ?? ''}</button>
+        <button className="btn btn-primary" onClick={() => { setAction('buy'); setSheet(true); }}>Buy {market?.symbol ?? ''}</button>
+        <button className="btn btn-sell" onClick={() => { setAction('sell'); setSheet(true); }}>Sell {market?.symbol ?? ''}</button>
       </div>
       {sheet && ticket && <TicketSheet onClose={() => setSheet(false)}>{ticket}</TicketSheet>}
       {swapFor && <SwapOverlay want={swapFor} onClose={() => setSwapFor(null)} />}

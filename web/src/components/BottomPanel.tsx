@@ -1,15 +1,10 @@
 import { useState } from 'react';
 import { CoinIcon } from './CoinIcon';
 import { arrow, price, usd } from '../lib/format';
+import { DEMO_POSITIONS as POSITIONS, pnlOf } from '../lib/demoPositions';
 
-// Demo rows for admins until positions and vaults come from the contracts.
-const POSITIONS = [
-  { sym: 'ETH', side: 'Hedge', m: 5, size: 500, entry: 2391.2, mark: 2418.1, liq: 2079.3 },
-  { sym: 'SOL', side: 'Hedge', m: 3, size: 300, entry: 104.2, mark: 108.9, liq: 72.3 },
-  { sym: 'BTC', side: 'Hedge', m: 3, size: 300, entry: 80510, mark: 82012, liq: 62390 },
-  { sym: 'DOGE', side: 'Hedge', m: 1, size: 120, entry: 0.2391, mark: 0.2471, liq: null },
-  { sym: 'BNB', side: 'Hedge', m: 2, size: 200, entry: 715.0, mark: 723.4, liq: 509.1 },
-];
+// Demo rows for admins until history and vaults come from the contracts.
+
 const HISTORY = [
   { t: '18 Oct 11:42', sym: 'SOL', action: 'Opened', m: 10, size: 1000, px: 106.4, pnl: null },
   { t: '18 Oct 09:15', sym: 'ETH', action: 'Opened', m: 5, size: 500, px: 2391.2, pnl: null },
@@ -53,11 +48,11 @@ export function BottomPanel() {
             <thead><tr><th>Market</th><th className="c-sm">Side</th><th className="r">Size</th><th className="r c-md">Entry</th><th className="r c-md">Mark</th><th className="r c-sm">Liq. price</th><th className="r">PnL</th><th className="c-sm" /></tr></thead>
             <tbody>
               {POSITIONS.map((p) => {
-                const pnl = p.size * p.m * (p.mark / p.entry - 1);
+                const pnl = pnlOf(p);
                 return (
                   <tr key={p.sym + p.side}>
                     <td><Market sym={p.sym} m={p.m} /></td>
-                    <td className="c-sm"><span className="side side-hedge">▲ Hedge</span></td>
+                    <td className="c-sm">{p.side === 'hedge' ? <span className="side side-hedge">▲ Hedge</span> : <span className="side side-short">▼ Short</span>}</td>
                     <td className="r num">{usd(p.size)}</td>
                     <td className="r num c-md">{price(p.entry)}</td>
                     <td className="r num c-md">{price(p.mark)}</td>
