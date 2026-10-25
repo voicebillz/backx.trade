@@ -27,7 +27,11 @@ for label, m, side in [('Hedge 1x', 1, 'hedge'), ('Hedge 5x', 5, 'hedge'), ('Hed
 VOLUME = 50e6
 MIX = [('Hedge 1x', 1, 'hedge', 0.40), ('Hedge 5x', 5, 'hedge', 0.40), ('Short 3x', 3, 'short', 0.20)]
 WIN_SHARE, WIN_MOVE = 0.5, 0.04   # half the multiplied volume closes in profit, average +4 % price move
-tot = dict(platform=0, rsf=0, borrow=0, gain=0, gas=0, lent=0, trades=0)
+LIQ_SHARE = 0.15                  # 15 % of positions with a loan end in liquidation
+# e = trader equity left at liquidation, s = issuers' share of it (contract params, same table as web hedge.ts)
+E = {3: 0.35, 5: 0.30, 10: 0.20}
+S = {3: 0.60, 5: 0.70, 10: 0.85}
+tot = dict(platform=0, rsf=0, borrow=0, gain=0, liq=0, gas=0, lent=0, trades=0)
 for label, m, side, share in MIX:
     one = split(100, m, side)
     n = VOLUME * share / one['notional']
@@ -36,20 +40,18 @@ for label, m, side, share in MIX:
     tot['trades'] += n
     if one['lent'] > 0:
         tot['gain'] += VOLUME * share * WIN_SHARE * WIN_MOVE * P_GAIN
-issuers = tot['borrow'] + tot['gain']
+        tot['liq'] += n * LIQ_SHARE * one['margin'] * E[m] * S[m]
+issuers = tot['borrow'] + tot['gain'] + tot['liq']
 print(f"\n$50M volume, {tot['trades']:,.0f} trades of $100")
 print(f"  Treasury (90 % of platform) ${tot['platform']*(1-HOLDERS):,.0f}")
 print(f"  $GAZZ revenue share (10 %)  ${tot['platform']*HOLDERS:,.0f}")
 print(f"  Reserve Security Fund       ${tot['rsf']:,.0f}")
-print(f"  Issuers: borrow ${tot['borrow']:,.0f} + profit share ${tot['gain']:,.0f} = ${issuers:,.0f}")
+print(f"  Issuers: borrow ${tot['borrow']:,.0f} + profit share ${tot['gain']:,.0f} + liquidations ${tot['liq']:,.0f} = ${issuers:,.0f}")
 print(f"  Validators (gas)            ${tot['gas']:,.0f}")
 print(f"  Lent in total               ${tot['lent']:,.0f}")
 
 # Issuer APR: depends on how fast the volume comes and how much is issued. Positions held 3 days on average.
-HOLD_DAYS = 3
-for days in (30, 90, 365):
-    avg_out = tot['lent'] * HOLD_DAYS / days            # average amount lent out at any moment
-    for util in (0.3, 0.6):
-        reserve = avg_out / util
-        apr = issuers / reserve * 365 / days
-        print(f"  $50M over {days:3} days, reserve ${reserve:,.0f} ({util:.0%} used on average): issuer APR ~{apr:.0%}")
+# APR = issuer income per $ lent x turns per year x share of the reserve lent out (not the volume itself).
+per_lent = issuers / tot['lent']
+for hold in (1, 3, 7):
+    print('  hold', hold, 'days:', '  '.join(f"{u:.0%} lent → APR ~{per_lent * 365 / hold * u:.0%}" for u in (0.3, 0.6)))
