@@ -30,11 +30,13 @@ interface Props {
   /** Take-profit and stop-loss from the ticket (null = not set). */
   tp?: number | null;
   sl?: number | null;
+  /** Entry is a limit price (the position opens there, not at today's price). */
+  limit?: boolean;
 }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = null, sl = null }: Props) {
+export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = null, sl = null, limit = false }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
   const series = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -101,7 +103,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
     if (!s) return;
     lines.current.forEach((l) => s.removePriceLine(l));
     lines.current = [
-      s.createPriceLine({ price: entry, color: css('--ink-3'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Entry' }),
+      s.createPriceLine({ price: entry, color: css('--ink-3'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: limit ? 'Limit' : 'Entry' }),
       ...(liqPrice != null ? [s.createPriceLine({ price: liqPrice, color: css('--down'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'Liq.' })] : []),
       ...(tp != null ? [s.createPriceLine({ price: tp, color: css('--up'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'TP' })] : []),
       ...(sl != null ? [s.createPriceLine({ price: sl, color: css('--warning'), lineWidth: 1, lineStyle: LineStyle.Dashed, title: 'SL' })] : []),
@@ -115,7 +117,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
         return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...marks), maxValue: Math.max(r.priceRange.maxValue, ...marks) } };
       },
     });
-  }, [entry, liqPrice, tp, sl, theme, ready]);
+  }, [entry, liqPrice, tp, sl, limit, theme, ready]);
 
   return (
     <section className="panel chart-panel" aria-label={`${market.symbol} price chart`}>

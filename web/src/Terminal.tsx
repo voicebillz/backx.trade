@@ -3,7 +3,7 @@ import { Topbar } from './components/Topbar';
 import { MarketList } from './components/MarketList';
 import { CoinHeader } from './components/CoinHeader';
 import { PriceChart } from './components/PriceChart';
-import { OrderTicket, type Action } from './components/OrderTicket';
+import { OrderTicket, type Action, type TicketLines } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
 import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -92,7 +92,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
   const [m, setM] = useState(1);
   const [side, setSide] = useState<Side>('hedge');
   const [action, setAction] = useState<Action>('buy');
-  const [exits, setExits] = useState<{ tp: number | null; sl: number | null }>({ tp: null, sl: null }); // ticket TP/SL → chart lines
+  const [lines, setLines] = useState<TicketLines | null>(null); // ticket entry / liq / TP / SL → chart lines
   const [swapFor, setSwapFor] = useState<string | null>(null);
   // Terminal layout (header gear): saved layout + a live override while a panel edge is being dragged.
   const { layout, set: saveLayout } = useLayout();
@@ -133,7 +133,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
   }, [stake, m, market, maxM, side]);
 
   const ticket = market && q && (
-    <OrderTicket market={market} usdc={usdc} side={side} onSide={setSide} action={action} onAction={setAction} onExits={setExits} maxM={maxM} noCoins={side === 'short' && canNow === 0}
+    <OrderTicket market={market} usdc={usdc} side={side} onSide={setSide} action={action} onAction={setAction} onLines={setLines} maxM={maxM} noCoins={side === 'short' && canNow === 0}
       available={side === 'hedge' ? availableToLend(market) : coinsToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} onSwap={setSwapFor} />
   );
 
@@ -152,7 +152,7 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
           {market && q ? (
             <>
               {L.header && <CoinHeader market={market} live={live} dir={dir} tick={tick} />}
-              <PriceChart market={market} theme={theme} priceColors={priceColors} entry={market.price} liqPrice={q.noLiquidation ? null : q.liqPrice} tp={exits.tp} sl={exits.sl} />
+              <PriceChart market={market} theme={theme} priceColors={priceColors} entry={lines?.entry ?? market.price} liqPrice={lines ? lines.liq : q.noLiquidation ? null : q.liqPrice} tp={lines?.tp ?? null} sl={lines?.sl ?? null} limit={lines?.limit ?? false} />
             </>
           ) : (
             <>
