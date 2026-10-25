@@ -2,8 +2,9 @@
 pragma solidity 0.8.24;
 
 import {Base} from "./Base.t.sol";
-import {BackxPositionManager} from "../src/BackxPositionManager.sol";
+import {BackxManagerBase} from "../src/BackxManagerBase.sol";
 import {BackxReserveVault} from "../src/BackxReserveVault.sol";
+import {BackxReserveSecurityFund} from "../src/BackxReserveSecurityFund.sol";
 
 contract HedgeTest is Base {
     function setUp() public {
@@ -11,70 +12,72 @@ contract HedgeTest is Base {
     }
 
     function test_hedge_5x_up10_issuersFirstThenShare() public {
-        uint256 assetsBefore = usdVault.totalAssets();
         uint256 id = _hedge(100 * USD, 5); // $100 paid, everything included
-        (,,,,,, uint128 equity, uint128 lent, uint128 coins,,,,) = pm.positions(id);
+        BackxManagerBase.Position memory p = _pos(hm, id);
         // Owner 2026-10-19: the amount typed is the amount paid. Margin X = (100 − gas) / (1 + 2.5 % + 4 · 0.28 %).
-        assertEq(equity, (100 * USD - 100_000) * 10_000 / 10_362, "margin after fees");
-        assertEq(lent, 4 * uint256(equity), "L = (m-1)X");
-        assertEq(usdVault.lent(), lent);
+        assertEq(p.stake, (100 * USD - USD / 10) * 10_000 / 10_362, "margin after fees");
+        assertEq(p.lent, 4 * uint256(p.stake), "L = (m-1)X");
+        assertEq(p.gas, USD / 10, "validator gas escrowed in the position");
+        assertEq(usdVault.lent(), p.lent);
         uint256 paid = 1_000_000 * USD - usd.balanceOf(trader);
         assertLe(paid, 100 * USD, "never more than the amount typed");
         assertGe(paid, 100 * USD - 5, "the whole amount, minus rounding dust");
-        assertEq(usd.balanceOf(feeCollector), uint256(equity) * 200 / 10_000);
-        uint256 borrow = uint256(lent) * 25 / 10_000;
+        assertEq(usd.balanceOf(feeCollector), uint256(p.stake) * 200 / 10_000);
+        uint256 borrow = uint256(p.lent) * 25 / 10_000;
 
         _move(1_000); // +10 %
         uint256 before = usd.balanceOf(trader);
         vm.prank(trader);
-        pm.close(id, 0);
+        hm.close(id, 0);
         uint256 got = usd.balanceOf(trader) - before;
 
         assertEq(usdVault.lent(), 0, "principal back");
-        uint256 out = uint256(coins) * 2_200 * USD / 1e18;
+        uint256 out = uint256(p.amount) * 2_200 * USD / 1e18;
         out = out * (10_000 - 5 - out * 10_000 / (10_000_000 * USD)) / 10_000;
-        uint256 rest = out - lent;
-        uint256 issuerShare = (rest - equity) * 1_000 / 10_000; // p = 10 % (v4)
-        assertEq(got, rest - issuerShare, "trader gets rest minus p");
-        vm.warp(block.timestamp + 1 days); // rewards vest into the share price over 24 h
-        assertEq(usdVault.totalAssets(), assetsBefore + borrow + issuerShare, "issuers: borrow fee + p");
+        uint256 rest = out - p.lent;
+        uint256 issuerShare = (rest - p.stake) * 1_000 / 10_000; // p = 10 % (v4)
+        assertEq(got, rest - issuerShare + p.gas, "trader gets rest minus p, plus its own gas back");
+        vm.warp(block.timestamp + 1 days); // rewards stream in over 24 h
+        assertApproxEqAbs(usdVault.pendingRewards(issuer), borrow + issuerShare, 2, "issuers: borrow fee + p, claimable USDC");
         assertGt(got, 135 * USD, "$100 in at 5x, +10 %: about +$39 net");
     }
 
     function test_hedge_1x_noLoan_noLiquidation_issuersZero() public {
         uint256 id = _hedge(100 * USD, 1);
-        (,,,,,,, uint128 lent,,,,,) = pm.positions(id);
-        assertEq(lent, 0);
+        assertEq(_pos(hm, id).lent, 0);
         _move(-5_000);
-        assertFalse(pm.isLiquidatable(id), "1x never liquidates");
+        assertFalse(hm.isLiquidatable(id), "1x never liquidates");
         _move(2_000);
-        uint256 assets = usdVault.totalAssets();
         vm.prank(trader);
-        pm.close(id, 0);
-        assertEq(usdVault.totalAssets(), assets, "issuers get 0 % at 1x");
+        hm.close(id, 0);
+        vm.warp(block.timestamp + 1 days);
+        assertEq(usdVault.pendingRewards(issuer), 0, "issuers get 0 % at 1x");
     }
 
     /// Contract trigger vs web/src/lib/hedge.ts and docs/backx/sim/sim4.py (v4): deep 30× hedge −2.10 %, 10× −7.62 %.
     function test_hedge_trigger_matches_sim() public {
-        int256 t30 = _triggerBps(_hedge(100 * USD, 30), false);
-        assertApproxEqAbs(t30, -210, 6, "30x");
-        int256 t10 = _triggerBps(_hedge(100 * USD, 10), false);
-        assertApproxEqAbs(t10, -762, 6, "10x");
+        assertApproxEqAbs(_triggerBps(hm, _hedge(100 * USD, 30), false), -210, 6, "30x");
+        assertApproxEqAbs(_triggerBps(hm, _hedge(100 * USD, 10), false), -762, 6, "10x");
     }
 
-    function test_hedge_30x_liquidation_issuersWhole() public {
+    function test_hedge_30x_liquidation_issuersWhole_validatorPaid() public {
         uint256 assetsBefore = usdVault.totalAssets();
         uint256 id = _hedge(100 * USD, 30);
         _move(-215); // just past the −2.10 % trigger
-        assertTrue(pm.isLiquidatable(id));
+        assertTrue(hm.isLiquidatable(id));
         uint256 fundBefore = hedgeFund.balance();
         uint256 traderBefore = usd.balanceOf(trader);
-        vm.prank(keeper);
-        pm.liquidate(id);
+        vm.prank(validator); // anyone
+        hm.liquidate(id);
         assertEq(usdVault.lent(), 0);
         assertGe(usdVault.totalAssets(), assetsBefore, "issuers never lose on a normal liquidation");
         assertGe(hedgeFund.balance(), fundBefore, "fund untouched");
         assertGt(usd.balanceOf(trader), traderBefore, "trader keeps (1-s) of the rest");
+        assertGt(hm.claimable(validator), USD / 10, "validator: gas + accuracy bonus");
+        vm.prank(validator);
+        hm.claim();
+        assertGt(usd.balanceOf(validator), USD / 10);
+        assertEq(hm.claimable(validator), 0);
     }
 
     function test_hedge_30x_gap_fundCovers() public {
@@ -82,23 +85,21 @@ contract HedgeTest is Base {
         uint256 id = _hedge(100 * USD, 30);
         _move(-1_000); // −10 % in one jump: far past the trigger
         uint256 fundBefore = hedgeFund.balance();
-        vm.prank(keeper);
-        pm.liquidate(id);
+        vm.prank(validator);
+        hm.liquidate(id);
         assertLt(hedgeFund.balance(), fundBefore, "fund paid the gap");
         assertGe(usdVault.totalAssets() + 1, assetsBefore, "issuers whole: fund covered it");
         assertEq(usdVault.lent(), 0);
+        assertEq(hm.claimable(validator), USD / 10, "late: gas only, no accuracy bonus");
     }
 
     function test_hedge_gap_fundEmpty_writeOff() public {
-        uint256 id = _hedge(100 * USD, 30); // opens while the fund still covers it
-        uint256 seed = hedgeFund.balance();
-        vm.prank(address(pm));
-        hedgeFund.cover(seed); // then the fund is drained
-        usd.burn(address(pm), usd.balanceOf(address(pm)));
+        uint256 id = _hedge(100 * USD, 30);
+        usd.burn(address(hedgeFund), hedgeFund.balance()); // the fund is empty
         _move(-1_400);
         uint256 assetsBefore = usdVault.totalAssets();
-        vm.prank(keeper);
-        pm.liquidate(id);
+        vm.prank(validator);
+        hm.liquidate(id);
         assertEq(usdVault.lent(), 0, "written off, not stuck");
         assertLt(usdVault.totalAssets(), assetsBefore, "loss shared by issuers pro rata");
     }
@@ -107,8 +108,8 @@ contract HedgeTest is Base {
         uint256 id = _hedge(100 * USD, 30);
         _move(-1_000);
         vm.prank(trader);
-        vm.expectRevert(BackxPositionManager.Underwater.selector);
-        pm.close(id, 0);
+        vm.expectRevert(BackxManagerBase.Underwater.selector);
+        hm.close(id, 0);
     }
 }
 
@@ -117,41 +118,52 @@ contract ShortTest is Base {
         _deploy(5, 10_000_000 * USD);
     }
 
-    function test_short_5x_down10_tokensBackFirst() public {
+    function test_short_5x_down10_sameCoinsBack_usdcRewards() public {
         uint256 coinsBefore = tokenVault.totalAssets();
         uint256 id = _short(100 * USD, 5);
-        (,,,,,,, uint128 q, uint128 held, uint128 issuerUsd,,,) = pm.positions(id);
-        assertEq(tokenVault.lent(), q, "q coins lent");
-        assertGt(held, 0);
-        assertGt(issuerUsd, 0);
+        BackxManagerBase.Position memory p = _pos(sm, id);
+        assertEq(tokenVault.lent(), p.lent, "q coins lent");
+        assertGt(p.amount, p.lentUsd, "holds margin + sale proceeds");
 
         _move(-1_000);
         uint256 before = usd.balanceOf(trader);
         vm.prank(trader);
-        pm.close(id, type(uint256).max);
+        sm.close(id, type(uint256).max);
         assertEq(tokenVault.lent(), 0, "exactly q coins back");
+        assertEq(tokenVault.totalAssets(), coinsBefore, "same number of coins: nothing sold for rewards");
         vm.warp(block.timestamp + 1 days);
-        assertGt(tokenVault.totalAssets(), coinsBefore, "issuers earn in the coin");
+        assertGt(tokenVault.pendingRewards(issuer), 0, "coin issuers earn USDC");
         assertGt(usd.balanceOf(trader) - before, 100 * USD, "short won");
+        uint256 r = tokenVault.pendingRewards(issuer);
+        vm.prank(issuer);
+        tokenVault.claimRewards();
+        assertEq(usd.balanceOf(issuer), r, "claimed in USDC");
     }
 
-    /// Contract trigger vs hedge.ts / sim4 (v4): deep 30× short +1.75 %, 10× +7.23 %.
+    /// Contract trigger vs web/src/lib/hedge.ts shortQuote (buffer as Hedge since 2026-10-25): deep 30× +2.06 %, 10× +7.55 %.
     function test_short_trigger_matches_sim() public {
-        int256 t30 = _triggerBps(_short(100 * USD, 30), true);
-        assertApproxEqAbs(t30, 175, 6, "30x");
-        int256 t10 = _triggerBps(_short(100 * USD, 10), true);
-        assertApproxEqAbs(t10, 723, 8, "10x");
+        assertApproxEqAbs(_triggerBps(sm, _short(100 * USD, 30), true), 206, 6, "30x");
+        assertApproxEqAbs(_triggerBps(sm, _short(100 * USD, 10), true), 755, 8, "10x");
+    }
+
+    /// Owner 2026-10-25: 20× short on a Major (2 % margin) must work: liquidation still above +0.5 %.
+    function test_short_20x_major() public {
+        _setCfg(sm, _cfg(20, 200, 8_000));
+        int256 t = _triggerBps(sm, _short(100 * USD, 20), true);
+        assertGt(t, 50);
+        assertLt(t, 300);
     }
 
     function test_short_30x_liquidation_issuersWhole() public {
         uint256 coinsBefore = tokenVault.totalAssets();
         uint256 id = _short(100 * USD, 30);
-        _move(180);
-        assertTrue(pm.isLiquidatable(id));
-        vm.prank(keeper);
-        pm.liquidate(id);
+        _move(215); // just past the +2.06 % trigger
+        assertTrue(sm.isLiquidatable(id));
+        vm.prank(validator);
+        sm.liquidate(id);
         assertEq(tokenVault.lent(), 0);
-        assertGe(tokenVault.totalAssets(), coinsBefore, "same number of coins back, plus earnings");
+        assertGe(tokenVault.totalAssets(), coinsBefore, "same number of coins back");
+        assertGt(sm.claimable(validator), 0);
     }
 
     function test_short_30x_gap_fundBuysMissingCoins() public {
@@ -159,8 +171,8 @@ contract ShortTest is Base {
         uint256 id = _short(100 * USD, 30);
         _move(1_000); // +10 % pump
         uint256 fundBefore = shortFund.balance();
-        vm.prank(keeper);
-        pm.liquidate(id);
+        vm.prank(validator);
+        sm.liquidate(id);
         assertLt(shortFund.balance(), fundBefore, "fund bought the missing coins");
         assertEq(tokenVault.lent(), 0);
         assertGe(tokenVault.totalAssets(), coinsBefore, "issuers whole in coins");
@@ -170,8 +182,49 @@ contract ShortTest is Base {
         uint256 id = _short(100 * USD, 30);
         _move(1_000);
         vm.prank(trader);
-        vm.expectRevert(BackxPositionManager.Underwater.selector);
-        pm.close(id, type(uint256).max);
+        vm.expectRevert(BackxManagerBase.Underwater.selector);
+        sm.close(id, type(uint256).max);
+    }
+
+    /// Profit roof: every short has one. At −80 % the roof closes it automatically (anyone can run it).
+    function test_short_roof_autoCloses() public {
+        uint256 id = _short(100 * USD, 2);
+        BackxManagerBase.Position memory p = _pos(sm, id);
+        assertEq(p.limitValue, uint256(p.lentUsd) * 2_000 / 10_000, "roof = cost of q at -80 %");
+        _move(-7_900);
+        assertFalse(sm.isLimitReached(id));
+        _move(-8_000);
+        assertTrue(sm.isLimitReached(id));
+        uint256 before = usd.balanceOf(trader);
+        vm.prank(validator);
+        sm.executeLimit(id);
+        assertEq(tokenVault.lent(), 0, "coins back while the market can still sell them");
+        uint256 won = usd.balanceOf(trader) - before;
+        assertGt(won, 230 * USD, "2x short, -80 %: about $236 back on $100 paid");
+        assertLt(won, 240 * USD, "capped at the roof");
+    }
+
+    function test_short_roof_cannotBeRemoved() public {
+        uint256 id = _short(100 * USD, 2);
+        uint256 roof = _pos(sm, id).limitValue; // set to the roof at open
+        vm.startPrank(trader);
+        sm.setLimit(id, 0);
+        assertEq(_pos(sm, id).limitValue, roof, "0 puts it back on the roof");
+        sm.setLimit(id, 100 * USD); // −95 %: past the roof
+        assertEq(_pos(sm, id).limitValue, roof);
+        sm.setLimit(id, 1_500 * USD); // −25 %: earlier take-profit is fine
+        assertGt(_pos(sm, id).limitValue, roof);
+        vm.stopPrank();
+    }
+
+    function test_short_noCoinsIssued_maxM0() public {
+        vm.startPrank(issuer);
+        tokenVault.redeem(tokenVault.balanceOf(issuer), issuer, issuer);
+        vm.stopPrank();
+        assertEq(sm.maxMFor(100 * USD), 0, "no coins issued: no short yet");
+        vm.prank(trader);
+        vm.expectRevert(BackxReserveVault.OverUtilised.selector);
+        sm.open(100 * USD, 2, 0, 0);
     }
 }
 
@@ -180,67 +233,64 @@ contract GuardsTest is Base {
         _deploy(5, 10_000_000 * USD);
     }
 
-    /// A one-block spot move without the TWAP following cannot liquidate anyone.
+    /// A one-block spot move without the oracle following cannot liquidate anyone.
     function test_spotSpikeAloneCannotLiquidate() public {
         uint256 h = _hedge(100 * USD, 30);
         uint256 s = _short(100 * USD, 30);
         pool.setSpotOnly(P0 * 9_000 / 10_000);
-        assertFalse(pm.isLiquidatable(h), "hedge: TWAP disagrees");
+        assertFalse(hm.isLiquidatable(h), "hedge: oracle disagrees");
         pool.setSpotOnly(P0 * 11_000 / 10_000);
-        assertFalse(pm.isLiquidatable(s), "short: TWAP disagrees");
-        vm.prank(keeper);
-        vm.expectRevert(BackxPositionManager.NotLiquidatable.selector);
-        pm.liquidate(s);
+        assertFalse(sm.isLiquidatable(s), "short: oracle disagrees");
+        vm.prank(validator);
+        vm.expectRevert(BackxManagerBase.NotLiquidatable.selector);
+        sm.liquidate(s);
     }
 
     function test_openFailsIfBornLiquidated_thinPool() public {
         _deploy(30, 56_000 * USD); // GAZZ-like pool
         vm.prank(trader);
         vm.expectRevert(); // TooLarge or WouldLiquidate: $3,000 notional in a $56k pool
-        pm.openHedge(address(coin), 100 * USD, 30, 0, 0);
+        hm.open(100 * USD, 30, 0, 0);
     }
 
     function test_caps() public {
-        vm.prank(safe);
-        pm.setMarket(address(coin), _market(10, 0));
+        _setCfg(hm, _cfg(10, 0, 0));
+        BackxManagerBase.Config memory off = _cfg(10, 0, 8_000);
+        off.enabled = false;
+        _setCfg(sm, off);
         vm.startPrank(trader);
-        vm.expectRevert(BackxPositionManager.BadM.selector);
-        pm.openHedge(address(coin), 100 * USD, 11, 0, 0);
-        vm.expectRevert(BackxPositionManager.BadM.selector);
-        pm.openShort(address(coin), 100 * USD, 1, 0, 0);
-        vm.expectRevert(BackxPositionManager.TooLarge.selector);
-        pm.openHedge(address(coin), 10_000 * USD, 10, 0, 0);
-        vm.expectRevert(BackxPositionManager.MarketOff.selector);
-        pm.openHedge(address(0xBEEF), 100 * USD, 2, 0, 0);
+        vm.expectRevert(BackxManagerBase.BadM.selector);
+        hm.open(100 * USD, 11, 0, 0);
+        vm.expectRevert(BackxManagerBase.MarketOff.selector);
+        sm.open(100 * USD, 1, 0, 0);
+        vm.expectRevert(BackxManagerBase.TooLarge.selector);
+        hm.open(10_000 * USD, 10, 0, 0);
         vm.stopPrank();
     }
 
     function test_pauseStopsOpensNotCloses() public {
         uint256 id = _hedge(100 * USD, 5);
         vm.prank(safe);
-        pm.pause();
+        hm.pause();
         vm.prank(trader);
         vm.expectRevert();
-        pm.openHedge(address(coin), 100 * USD, 5, 0, 0);
+        hm.open(100 * USD, 5, 0, 0);
         vm.prank(trader);
-        pm.close(id, 0); // still works
+        hm.close(id, 0); // still works
     }
 
     function test_access() public {
         uint256 id = _hedge(100 * USD, 30);
         _move(-215);
         vm.prank(makeAddr("stranger"));
-        vm.expectRevert(BackxPositionManager.NotOwner.selector);
-        pm.close(id, 0);
+        vm.expectRevert(BackxManagerBase.NotOwner.selector);
+        hm.close(id, 0);
         vm.prank(makeAddr("stranger"));
-        vm.expectRevert(BackxPositionManager.NotKeeper.selector);
-        pm.liquidate(id);
-        vm.prank(safe);
-        pm.setPermissionlessLiquidation(true);
-        vm.prank(makeAddr("stranger"));
-        pm.liquidate(id);
+        hm.liquidate(id); // open validators: anyone can liquidate a due position
         vm.expectRevert(); // only the Safe configures
-        pm.setFees(BackxPositionManager.Fees(0, 0, 0, 0, 0));
+        hm.setFees(BackxManagerBase.Fees(0, 0, 0, 0, 0));
+        vm.expectRevert(BackxManagerBase.OnlySelf.selector);
+        hm.selfSettle(1, 1, address(this), 0);
     }
 
     function test_vault_onlyIdleWithdrawable_andUtilCap() public {
@@ -251,237 +301,252 @@ contract GuardsTest is Base {
         vm.expectRevert();
         usdVault.withdraw(all, issuer, issuer);
         vm.prank(trader);
-        pm.close(id, 0);
+        hm.close(id, 0);
         assertEq(usdVault.lent(), 0);
     }
 
     function test_paramBounds() public {
         vm.startPrank(safe);
-        vm.expectRevert(BackxPositionManager.BadParams.selector);
-        pm.setParams(30, BackxPositionManager.Params(100, 9000, 3000, 70, 100)); // e below 5 %
-        vm.expectRevert(BackxPositionManager.BadParams.selector);
-        pm.setFees(BackxPositionManager.Fees(500, 50, 3, 20, 200)); // holders above 3 %
+        vm.expectRevert(BackxManagerBase.BadParams.selector);
+        hm.setParams(30, BackxManagerBase.Params(100, 9000, 3000, 70)); // e below 5 %
+        vm.expectRevert(BackxManagerBase.BadParams.selector);
+        hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200)); // holders above 3 %
+        vm.expectRevert(BackxManagerBase.BadParams.selector);
+        hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100)); // gas above $5
+        vm.expectRevert(BackxManagerBase.BadParams.selector);
+        hm.setConfig(_cfg(31, 0, 0));
         vm.stopPrank();
     }
 }
 
-/// Take-profit (limit) orders: filled by a keeper once the TWAP reaches the limit, never worse than limit − slip.
+/// Take-profit orders: filled by any validator once the oracle reaches the limit, never worse than limit − slip.
 contract LimitTest is Base {
     function setUp() public {
         _deploy(5, 10_000_000 * USD);
     }
 
-    function test_hedge_limit_fillsAtTarget() public {
+    function test_hedge_limit_fillsAtTarget_validatorBonusLargestAtTarget() public {
         vm.prank(trader);
-        uint256 id = pm.openHedge(address(coin), 100 * USD, 5, 0, 2_200 * USD); // sell at $2,200 (+10 %)
+        uint256 a = hm.open(100 * USD, 5, 0, 2_200 * USD); // sell at $2,200 (+10 %)
+        vm.prank(trader);
+        uint256 b = hm.open(100 * USD, 5, 0, 2_200 * USD);
         _move(500);
-        assertFalse(pm.isLimitReached(id));
-        vm.prank(keeper);
-        vm.expectRevert(BackxPositionManager.LimitNotReached.selector);
-        pm.executeLimit(id);
+        assertFalse(hm.isLimitReached(a));
+        vm.prank(validator);
+        vm.expectRevert(BackxManagerBase.LimitNotReached.selector);
+        hm.executeLimit(a);
 
-        _move(1_000);
-        assertTrue(pm.isLimitReached(id));
+        _move(1_000); // exactly at the limit
         uint256 before = usd.balanceOf(trader);
-        vm.prank(keeper);
-        pm.executeLimit(id);
-        assertEq(usdVault.lent(), 0, "principal back first");
+        address v1 = makeAddr("v1");
+        vm.prank(v1);
+        hm.executeLimit(a);
+        assertEq(_pos(hm, a).owner, address(0));
         assertGt(usd.balanceOf(trader) - before, 100 * USD, "trader took the profit");
-        assertEq(pm.hedgeStressUsd(), 0, "crash cover released");
+
+        _move(1_080); // 0.8 % past the limit: a late fill earns a much smaller bonus
+        address v2 = makeAddr("v2");
+        vm.prank(v2);
+        hm.executeLimit(b);
+        assertGt(hm.claimable(v1), hm.claimable(v2), "more accurate, more reward");
+        assertGt(hm.claimable(v2), USD / 10 - 1, "both get the gas");
+        assertEq(usdVault.lent(), 0, "principal back first");
+        assertEq(hm.stressUsd(), 0, "crash cover released");
     }
 
     function test_short_limit_fillsAtTarget() public {
         vm.prank(trader);
-        uint256 id = pm.openShort(address(coin), 100 * USD, 5, 0, 1_800 * USD); // buy back at $1,800 (−10 %)
+        uint256 id = sm.open(100 * USD, 5, 0, 1_800 * USD); // buy back at $1,800 (−10 %)
         _move(-500);
-        assertFalse(pm.isLimitReached(id));
+        assertFalse(sm.isLimitReached(id));
         _move(-1_000);
         uint256 before = usd.balanceOf(trader);
-        vm.prank(keeper);
-        pm.executeLimit(id);
+        vm.prank(validator);
+        sm.executeLimit(id);
         assertEq(tokenVault.lent(), 0, "exactly q coins back");
         assertGt(usd.balanceOf(trader) - before, 100 * USD);
-        assertEq(pm.shortStressUsd(), 0);
+        assertEq(sm.stressUsd(), 0);
     }
 
     function test_limit_spikeAloneCannotFill() public {
         vm.prank(trader);
-        uint256 id = pm.openHedge(address(coin), 100 * USD, 5, 0, 2_200 * USD);
-        pool.setSpotOnly(P0 * 12_000 / 10_000); // TWAP still at $2,000
-        assertFalse(pm.isLimitReached(id));
-        vm.prank(keeper);
-        vm.expectRevert(BackxPositionManager.LimitNotReached.selector);
-        pm.executeLimit(id);
+        uint256 id = hm.open(100 * USD, 5, 0, 2_200 * USD);
+        pool.setSpotOnly(P0 * 12_000 / 10_000); // oracle still at $2,000
+        assertFalse(hm.isLimitReached(id));
+        vm.prank(validator);
+        vm.expectRevert(BackxManagerBase.LimitNotReached.selector);
+        hm.executeLimit(id);
     }
 
     function test_limit_rules() public {
         vm.startPrank(trader);
-        vm.expectRevert(BackxPositionManager.BadLimit.selector); // hedge limit below today's price
-        pm.openHedge(address(coin), 100 * USD, 5, 0, 1_900 * USD);
-        vm.expectRevert(BackxPositionManager.BadLimit.selector); // short limit above today's price
-        pm.openShort(address(coin), 100 * USD, 5, 0, 2_100 * USD);
-        uint256 id = pm.openHedge(address(coin), 100 * USD, 5, 0, 0);
-        pm.setLimit(id, 2_500 * USD);
+        vm.expectRevert(BackxManagerBase.BadLimit.selector); // hedge limit below today's price
+        hm.open(100 * USD, 5, 0, 1_900 * USD);
+        vm.expectRevert(BackxManagerBase.BadLimit.selector); // short limit above today's price
+        sm.open(100 * USD, 5, 0, 2_100 * USD);
+        uint256 id = hm.open(100 * USD, 5, 0, 0);
+        hm.setLimit(id, 2_500 * USD);
         vm.stopPrank();
-        (,,,,,,,,,,, uint128 limitValue,) = pm.positions(id);
-        assertGt(limitValue, 0);
+        assertGt(_pos(hm, id).limitValue, 0);
 
         vm.prank(makeAddr("stranger"));
-        vm.expectRevert(BackxPositionManager.NotOwner.selector);
-        pm.setLimit(id, 3_000 * USD);
-        vm.prank(makeAddr("stranger"));
-        vm.expectRevert(BackxPositionManager.NotKeeper.selector);
-        pm.executeLimit(id);
+        vm.expectRevert(BackxManagerBase.NotOwner.selector);
+        hm.setLimit(id, 3_000 * USD);
 
         vm.prank(trader);
-        pm.setLimit(id, 0); // cancel
+        hm.setLimit(id, 0); // cancel
         _move(3_000);
-        vm.prank(keeper);
-        vm.expectRevert(BackxPositionManager.LimitNotReached.selector);
-        pm.executeLimit(id);
+        vm.prank(validator);
+        vm.expectRevert(BackxManagerBase.LimitNotReached.selector);
+        hm.executeLimit(id);
         vm.prank(trader);
-        pm.close(id, 0); // closing by hand always works
+        hm.close(id, 0); // closing by hand always works
     }
 }
 
-/// Crash cover: the open positions' worst-case gap per side may never exceed what that side's fund holds.
-contract CrashCoverTest is Base {
+/// Entry orders (buy for Hedge, sell for Short): USDC escrowed, any validator opens the position when due.
+contract OrderTest is Base {
     function setUp() public {
         _deploy(5, 10_000_000 * USD);
     }
 
-    /// Default: the gate is off and issuer reserves are used in full; exposure is still tracked.
-    function test_gateOffByDefault_reservesUsedInFull() public {
-        assertEq(pm.stressCoverBps(), 0);
-        for (uint256 i; i < 200; i++) _hedge(100 * USD, 30); // ≈ $160k worst case vs a $100k fund
-        assertGt(pm.hedgeStressUsd(), hedgeFund.balance(), "exposure above the fund is allowed");
+    function test_hedge_buyTheDip() public {
+        vm.prank(trader);
+        uint256 oid = hm.placeOrder(5, 100 * USD, 1_900 * USD, false, uint40(block.timestamp + 1 days), 0);
+        assertEq(usd.balanceOf(address(hm)), 100 * USD, "escrowed");
+        assertFalse(hm.isOrderFillable(oid));
+        vm.prank(validator);
+        vm.expectRevert(BackxManagerBase.NotFillable.selector);
+        hm.fillOrder(oid);
+        _move(-500); // $1,900
+        assertTrue(hm.isOrderFillable(oid));
+        vm.prank(validator);
+        hm.fillOrder(oid);
+        uint256 id = hm.nextId() - 1;
+        BackxManagerBase.Position memory p = _pos(hm, id);
+        assertEq(p.owner, trader, "the position is the trader's");
+        assertEq(p.m, 5);
+        assertGt(hm.claimable(validator), USD / 10, "filler: gas + accuracy bonus");
     }
 
-    function test_fundLimitsOpenPositions_whenSwitchedOn() public {
-        vm.prank(safe);
-        pm.setStressCover(10_000);
-        // Hedge 30×, $100 paid → margin ≈ $90.31: −30 % in one jump: L·c − E·(1 − c) ≈ 2,619·0.3 − 90.3·0.7 ≈ $722.
-        uint256 id = _hedge(100 * USD, 30);
-        (,,,,,,,,,,,, uint128 stress) = pm.positions(id);
-        assertApproxEqAbs(stress, 722 * USD, 2 * USD);
-        // $100k fund: about 138 such positions, then it stops.
-        uint256 n = 1;
-        vm.startPrank(trader);
-        while (true) {
-            try pm.openHedge(address(coin), 100 * USD, 30, 0, 0) { n++; } catch (bytes memory err) {
-                assertEq(bytes4(err), BackxPositionManager.FundTooSmall.selector);
-                break;
-            }
-        }
+    function test_short_orderWaitsForIssuedCoins() public {
+        vm.startPrank(issuer);
+        tokenVault.redeem(tokenVault.balanceOf(issuer), issuer, issuer);
         vm.stopPrank();
-        assertApproxEqAbs(n, 138, 3);
-        assertLe(pm.hedgeStressUsd(), hedgeFund.balance());
-        // 1× borrows nothing: no crash risk, always allowed.
-        _hedge(100 * USD, 1);
-        // Shorts use their own fund.
-        _short(100 * USD, 10);
+        vm.prank(trader); // no coins issued yet: place the order, it fills when there are
+        uint256 oid = sm.placeOrder(3, 100 * USD, 0, false, uint40(block.timestamp + 7 days), 0);
+        assertFalse(sm.isOrderFillable(oid), "nothing to borrow yet");
+        vm.prank(issuer);
+        tokenVault.deposit(10 * COIN, issuer);
+        assertTrue(sm.isOrderFillable(oid));
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = oid;
+        vm.prank(validator);
+        assertEq(sm.fillOrderBatch(ids), 1);
+        assertGt(tokenVault.lent(), 0, "coins borrowed and sold");
+        assertEq(sm.claimable(validator), USD / 10, "no trigger: gas only");
     }
 
-    /// The estimate is never below what the fund really pays when the crash happens in one jump.
+    function test_cancelAndExpiry() public {
+        uint256 before = usd.balanceOf(trader);
+        vm.prank(trader);
+        uint256 oid = hm.placeOrder(2, 100 * USD, 2_500 * USD, true, uint40(block.timestamp + 1 hours), 0);
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(BackxManagerBase.NotOwner.selector);
+        hm.cancelOrder(oid);
+        vm.warp(block.timestamp + 2 hours);
+        assertFalse(hm.isOrderFillable(oid), "expired");
+        vm.prank(makeAddr("stranger"));
+        hm.cancelOrder(oid); // anyone clears an expired order, the money goes home
+        assertEq(usd.balanceOf(trader), before);
+    }
+}
+
+/// Crash cover and the fund's guardrails (owner 2026-10-25: crises only).
+contract FundTest is Base {
+    function setUp() public {
+        _deploy(5, 10_000_000 * USD);
+    }
+
+    function test_gateOffByDefault_reservesUsedInFull() public {
+        assertEq(hm.stressCoverBps(), 0);
+        for (uint256 i; i < 200; i++) _hedge(100 * USD, 30);
+        assertGt(hm.stressUsd(), hedgeFund.balance(), "exposure above the fund is allowed");
+    }
+
+    function test_onlyManagerDraws_andGuardrails() public {
+        vm.prank(trader);
+        vm.expectRevert(BackxReserveSecurityFund.NotManager.selector);
+        hedgeFund.cover(1);
+        uint256 bal = hedgeFund.balance();
+        vm.prank(address(hm));
+        uint256 paid = hedgeFund.cover(bal);
+        assertEq(paid, bal / 4, "one payment at most 25 % of the fund");
+        vm.prank(address(hm));
+        paid = hedgeFund.cover(bal);
+        assertApproxEqAbs(paid, bal * 3 / 16, 2, "next one 25 % of what is left");
+        vm.prank(address(hm));
+        hedgeFund.cover(bal);
+        assertGe(hedgeFund.balance(), bal / 2, "never more than 50 % in 24 h");
+        vm.warp(block.timestamp + 1 days);
+        assertGt(hedgeFund.available(), 0, "a new window opens");
+        vm.prank(trader);
+        vm.expectRevert();
+        hedgeFund.setLimits(0, 0);
+    }
+
     function test_stressCoversRealGap() public {
         uint256 h = _hedge(100 * USD, 30);
         uint256 s = _short(100 * USD, 30);
-        (,,,,,,,,,,,, uint128 hs) = pm.positions(h);
-        (,,,,,,,,,,,, uint128 ss) = pm.positions(s);
+        uint256 hs = _pos(hm, h).stressUsd;
+        uint256 ss = _pos(sm, s).stressUsd;
         _move(-3_000);
         uint256 f0 = hedgeFund.balance();
-        vm.prank(keeper);
-        pm.liquidate(h);
-        assertLe(f0 - hedgeFund.balance(), uint256(hs) * 105 / 100, "hedge gap within 5 % of the estimate");
+        vm.prank(validator);
+        hm.liquidate(h);
+        assertLe(f0 - hedgeFund.balance(), hs * 105 / 100, "hedge gap within 5 % of the estimate");
         _move(3_000);
         f0 = shortFund.balance();
-        vm.prank(keeper);
-        pm.liquidate(s);
-        assertLe(f0 - shortFund.balance(), uint256(ss) * 110 / 100, "short gap within 10 % of the estimate");
-        assertEq(pm.hedgeStressUsd() + pm.shortStressUsd(), 0);
+        vm.prank(validator);
+        sm.liquidate(s);
+        assertLe(f0 - shortFund.balance(), ss * 115 / 100, "short gap within 15 % of the estimate (swap costs on top)");
+        assertEq(hm.stressUsd() + sm.stressUsd(), 0);
     }
 
-    function test_crashLevelsBounded() public {
-        BackxPositionManager.Market memory mk = _market(30, 30);
-        mk.crashBps = 0;
-        vm.prank(safe);
-        vm.expectRevert(BackxPositionManager.BadParams.selector);
-        pm.setMarket(address(coin), mk);
-        vm.prank(safe);
-        vm.expectRevert(BackxPositionManager.BadParams.selector);
-        pm.setStressCover(1_000);
-        vm.prank(safe);
-        pm.setStressCover(0); // off again
+    function test_shortPaysIntoItsOwnFund() public {
+        uint256 f0 = shortFund.balance();
+        uint256 h0 = hedgeFund.balance();
+        _short(100 * USD, 5);
+        assertGt(shortFund.balance(), f0, "the RSF fee is baked into every short");
+        assertEq(hedgeFund.balance(), h0, "and kept apart from the hedge fund");
     }
 }
 
-/// Execution margin: liquidation comes earlier so a slow keeper and a price discrepancy still repay issuers.
+/// Execution margin: liquidation comes earlier so a slow validator and a price discrepancy still repay issuers.
 contract LiqMarginTest is Base {
     function setUp() public {
         _deploy(5, 10_000_000 * USD);
-        BackxPositionManager.Market memory mk = _market(20, 0);
-        mk.liqMarginBps = 100; // 1 % of the position, as the server's Major tier
-        vm.prank(safe);
-        pm.setMarket(address(coin), mk);
+        _setCfg(hm, _cfg(20, 100, 0)); // 1 % of the position
     }
 
-    /// 20× deep with 1 % margin: web/src/lib/hedge.ts and sim5 say −2.7 %.
     function test_trigger_matches_sim() public {
-        assertApproxEqAbs(_triggerBps(_hedge(100 * USD, 20), false), -270, 6);
+        assertApproxEqAbs(_triggerBps(hm, _hedge(100 * USD, 20), false), -270, 6);
     }
 
-    /// The keeper is late: price is 1.5 % past the trigger when the sale fills. Issuers are still whole and the
-    /// fund is not touched.
-    function test_slowKeeper_issuersWhole() public {
+    function test_slowValidator_issuersWhole() public {
         uint256 assetsBefore = usdVault.totalAssets();
         uint256 id = _hedge(100 * USD, 20);
         _move(-270 - 150);
         uint256 fundBefore = hedgeFund.balance();
-        vm.prank(keeper);
-        pm.liquidate(id);
+        vm.prank(validator);
+        hm.liquidate(id);
         assertEq(usdVault.lent(), 0);
         assertGe(usdVault.totalAssets(), assetsBefore, "issuers whole");
         assertEq(hedgeFund.balance(), fundBefore, "fund untouched");
     }
-
-    function test_marginBounded() public {
-        BackxPositionManager.Market memory mk = _market(20, 0);
-        mk.liqMarginBps = 600;
-        vm.prank(safe);
-        vm.expectRevert(BackxPositionManager.BadParams.selector);
-        pm.setMarket(address(coin), mk);
-    }
 }
 
-contract KeeperGasTest is Base {
-    function setUp() public {
-        _deploy(5, 10_000_000 * USD);
-    }
-
-    function test_gasPerPosition_toKeeperWallet() public {
-        _hedge(100 * USD, 5);
-        _hedge(1_000 * USD, 1); // flat, not a share of the stake
-        assertEq(usd.balanceOf(keeper), 200_000);
-    }
-
-    function test_gasRules() public {
-        vm.prank(trader);
-        vm.expectRevert();
-        pm.setKeeperGas(trader, 1); // only the Safe
-        vm.prank(safe);
-        vm.expectRevert(BackxPositionManager.BadParams.selector);
-        pm.setKeeperGas(keeper, 6 * USD); // max $5
-        vm.prank(safe);
-        pm.setKeeperGas(address(0), 100_000); // no wallet: no gas fee
-        uint256 before = usd.balanceOf(trader);
-        _hedge(100 * USD, 1);
-        assertLe(before - usd.balanceOf(trader), 100 * USD, "the amount typed, nothing on top");
-        assertGe(before - usd.balanceOf(trader), 100 * USD - 5);
-    }
-}
-
-/// Issuer rewards (owner 2026-10-19): everything goes INTO the reserve, split pro rata by shares, withdrawn with the
-/// principal, nothing to claim. Vesting over 24 h keeps a just-in-time depositor from taking rewards.
+/// Issuer rewards (owner 2026-10-25): USDC, claimable, split pro rata, streamed in over 24 h.
 contract RewardsTest is Base {
     address issuer2 = makeAddr("issuer2");
     address jit = makeAddr("jit");
@@ -496,30 +561,28 @@ contract RewardsTest is Base {
     }
 
     function _reward(uint256 amount) internal {
-        usd.mint(address(pm), amount);
-        vm.startPrank(address(pm));
+        usd.mint(address(hm), amount);
+        vm.startPrank(address(hm));
         usd.approve(address(usdVault), amount);
-        usdVault.addEarnings(amount);
+        usdVault.addRewards(amount);
         vm.stopPrank();
     }
 
-    function _value(address who) internal view returns (uint256) {
-        return usdVault.convertToAssets(usdVault.balanceOf(who));
-    }
-
-    function test_rewardsSplitProRata_andWithdrawable() public {
+    function test_rewardsSplitProRata_andClaimable() public {
+        uint256 assets = usdVault.totalAssets();
         _reward(10_000 * USD);
+        assertEq(usdVault.totalAssets(), assets, "rewards are not principal");
         vm.warp(block.timestamp + 1 days);
-        assertApproxEqAbs(_value(issuer), 5_005_000 * USD, 2, "half the reward");
-        assertApproxEqAbs(_value(issuer2), 5_005_000 * USD, 2, "half the reward");
-        uint256 before = usd.balanceOf(issuer2);
-        vm.startPrank(issuer2);
-        usdVault.redeem(usdVault.balanceOf(issuer2), issuer2, issuer2);
-        vm.stopPrank();
-        assertApproxEqAbs(usd.balanceOf(issuer2) - before, 5_005_000 * USD, 2, "principal + reward, no claim step");
+        assertApproxEqAbs(usdVault.pendingRewards(issuer), 5_000 * USD, 2, "half");
+        assertApproxEqAbs(usdVault.pendingRewards(issuer2), 5_000 * USD, 2, "half");
+        address agent = makeAddr("agentWallet");
+        vm.prank(issuer2);
+        usdVault.claimRewardsTo(agent);
+        assertApproxEqAbs(usd.balanceOf(agent), 5_000 * USD, 2, "claimed to any address");
+        assertEq(usdVault.pendingRewards(issuer2), 0);
     }
 
-    function test_justInTimeDepositGetsAlmostNothing() public {
+    function test_justInTimeDepositGetsLittle() public {
         _reward(10_000 * USD);
         usd.mint(jit, 10_000_000 * USD);
         vm.startPrank(jit);
@@ -528,67 +591,68 @@ contract RewardsTest is Base {
         vm.warp(block.timestamp + 1 hours);
         usdVault.redeem(usdVault.balanceOf(jit), jit, jit);
         vm.stopPrank();
-        uint256 gain = usd.balanceOf(jit) - 10_000_000 * USD;
-        assertLt(gain, 10_000 * USD * 3 / 100, "under 3 % of a reward it did not back");
+        assertLt(usdVault.pendingRewards(jit), 10_000 * USD * 3 / 100, "under 3 % of a reward it did not back");
         vm.warp(block.timestamp + 1 days);
-        assertGt(_value(issuer) + _value(issuer2), 10_009_000 * USD, "the backers keep the rest");
+        assertGt(usdVault.pendingRewards(issuer) + usdVault.pendingRewards(issuer2), 9_700 * USD, "the backers keep the rest");
     }
 
-    function test_realHedgeRewardsReachAllIssuers() public {
-        uint256 a1 = _value(issuer);
-        uint256 a2 = _value(issuer2);
-        uint256 id = _hedge(1_000 * USD, 5);
-        _move(1_000);
-        vm.prank(trader);
-        pm.close(id, 0);
+    function test_transferMovesFutureRewardsOnly() public {
+        _reward(10_000 * USD);
         vm.warp(block.timestamp + 1 days);
-        uint256 g1 = _value(issuer) - a1;
-        uint256 g2 = _value(issuer2) - a2;
-        assertGt(g1, 0);
-        assertApproxEqAbs(g1, g2, 2, "equal stakes, equal rewards");
+        uint256 shares = usdVault.balanceOf(issuer2);
+        vm.prank(issuer2);
+        usdVault.transfer(jit, shares);
+        assertApproxEqAbs(usdVault.pendingRewards(issuer2), 5_000 * USD, 2, "earned rewards stay with the earner");
+        assertEq(usdVault.pendingRewards(jit), 0);
     }
 
-    function test_writeOffEatsUnvestedRewardsFirst() public {
+    function test_queuedSharesStopEarning() public {
+        uint256 shares = usdVault.balanceOf(issuer2);
+        _hedge(1_000 * USD, 20); // some money lent so the request waits
+        vm.prank(issuer2);
+        usdVault.requestRedeem(shares);
+        _reward(10_000 * USD);
+        vm.warp(block.timestamp + 1 days);
+        assertApproxEqAbs(usdVault.pendingRewards(issuer), 10_000 * USD, 60 * USD, "all to the issuer still in (+ the hedge's borrow fee)");
+    }
+
+    function test_writeOffTakesStreamingRewardsFirst() public {
         _reward(10_000 * USD);
         uint256 before = usdVault.totalAssets();
-        vm.prank(trader);
-        uint256 id = pm.openHedge(address(coin), 100 * USD, 20, 0, 0);
-        uint256 locked = usdVault.lockedNow();
-        assertGt(locked, 10_000 * USD);
-        id;
-        vm.prank(address(pm));
+        _hedge(100 * USD, 20);
+        uint256 streaming = usdVault.rewardsStreaming();
+        vm.prank(address(hm));
         usdVault.writeOff(1_000 * USD);
-        assertEq(usdVault.lockedNow(), locked - 1_000 * USD, "loss taken from rewards still vesting");
-        assertGe(usdVault.totalAssets() + 2, before, "vested value untouched");
+        assertApproxEqAbs(usdVault.rewardsStreaming(), streaming - 1_000 * USD, 2, "loss taken from rewards still streaming");
+        assertGe(usdVault.totalAssets() + 2, before, "principal untouched");
     }
 }
 
-/// Multiplication follows the issued USDC: a hedge can never borrow more than the reserve can lend.
+/// Multiplication follows the issued capital: a position can never borrow more than the reserve can lend.
 contract ReserveLimitTest is Base {
     function setUp() public {
         _deploy(5, 10_000_000 * USD);
-        // Leave only $1,000 in the reserve: 90 % utilisation cap → $900 can be lent.
         vm.startPrank(issuer);
-        usdVault.withdraw(4_999_000 * USD, issuer, issuer);
+        usdVault.withdraw(4_999_000 * USD, issuer, issuer); // $900 can be lent (90 % cap)
         vm.stopPrank();
     }
 
     function test_maxMFollowsAvailableUsdc() public {
-        assertEq(pm.maxHedgeMFor(address(coin), 100 * USD), 10, "$900 available: (m-1)*$100 <= $900");
-        assertEq(pm.maxHedgeMFor(address(coin), 1_000 * USD), 1, "too little for a $1,000 stake to multiply");
+        assertEq(hm.maxMFor(100 * USD), 10, "$900 available: (m-1)*$100 <= $900");
+        assertEq(hm.maxMFor(1_000 * USD), 1, "too little for a $1,000 stake to multiply");
         vm.prank(trader);
         vm.expectRevert(BackxReserveVault.OverUtilised.selector);
-        pm.openHedge(address(coin), 100 * USD, 11, 0, 0);
+        hm.open(100 * USD, 11, 0, 0);
         _hedge(100 * USD, 10);
-        assertLe(pm.maxHedgeMFor(address(coin), 100 * USD), 1, "reserve used up");
+        assertLe(hm.maxMFor(100 * USD), 1, "reserve used up");
         _hedge(100 * USD, 1); // 1× borrows nothing: always possible
     }
 
-    function test_capStillApplies() public {
+    function test_shortMaxMFollowsIssuedCoins() public {
+        assertEq(sm.maxMFor(100 * USD), 30, "deep coin reserve: market cap");
         vm.startPrank(issuer);
-        usd.mint(issuer, 10_000_000 * USD);
-        usdVault.deposit(10_000_000 * USD, issuer);
+        tokenVault.withdraw(2_499 * COIN + COIN / 2, issuer, issuer); // 0.5 coin ($1,000) left
         vm.stopPrank();
-        assertEq(pm.maxHedgeMFor(address(coin), 100 * USD), 30, "market cap when the reserve is deep");
+        assertLt(sm.maxMFor(100 * USD), 30, "thin coin reserve: less");
     }
 }

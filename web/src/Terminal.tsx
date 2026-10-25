@@ -9,8 +9,8 @@ import { IssuePage } from './pages/IssuePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
-import { maxNotional, quote } from './lib/hedge';
-import { availableToLend, maxHedgeMFor } from './lib/reserves';
+import { maxNotional, quote, shortQuote, shortTier, type Side } from './lib/hedge';
+import { availableToLend, coinsToLend, maxHedgeMFor, maxShortMFor } from './lib/reserves';
 import { useTheme, usePriceColors } from './lib/theme';
 import { useTicker } from './lib/useTicker';
 import { useRoute, navigate } from './lib/router';
@@ -89,12 +89,15 @@ interface TradeProps {
 function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProps) {
   const [stake, setStake] = useState('100');
   const [m, setM] = useState(5);
+  const [side, setSide] = useState<Side>('hedge');
   const [sheet, setSheet] = useState(false);
   const { price: live, dir, tick } = useTicker(market?.price ?? 0, market?.kind === 'Major' ? 0.0012 : 0.004);
 
-  // The coin's cap, limited by the USDC issuers can lend for this stake (contract maxHedgeMFor). No clamp before a market loads.
+  // The coin's cap, limited by what issuers can lend for this amount (contract maxMFor: USDC for a Buy/Hedge, the coin
+  // itself for a Sell/Short). A short with no coins issued yet (0) can still be placed as an order. No clamp before a market loads.
   const stakeNum = Math.max(parseFloat(stake) || 0, 0);
-  const maxM = market ? maxHedgeMFor(market, stakeNum, maxNotional(market.depth)) : 30;
+  const canNow = market ? (side === 'hedge' ? maxHedgeMFor(market, stakeNum, maxNotional(market.depth)) : maxShortMFor(market, stakeNum, maxNotional(market.depth))) : 30;
+  const maxM = market && side === 'short' && canNow === 0 ? Math.max(market.shortMaxM, 1) : canNow;
   useEffect(() => { setM((x) => Math.max(1, Math.min(x, maxM))); }, [maxM]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSheet(false); };
@@ -102,13 +105,17 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
     return () => removeEventListener('keydown', onKey);
   }, []);
 
-  const q = useMemo(
-    () => market && quote(Math.max(parseFloat(stake) || 0, 0), Math.min(m, maxM), market.price, market.poolFee, market.depth, market.liqMargin ?? 0),
-    [stake, m, market, maxM],
-  );
+  const q = useMemo(() => {
+    if (!market) return null;
+    const amt = Math.max(parseFloat(stake) || 0, 0), mm = Math.min(m, maxM);
+    if (side === 'hedge') return quote(amt, mm, market.price, market.poolFee, market.depth, market.liqMargin ?? 0);
+    const t = shortTier(market.maxM);
+    return shortQuote(amt, mm, market.price, market.poolFee, market.depth, Math.max(t.margin, market.liqMargin ?? 0), t.roof);
+  }, [stake, m, market, maxM, side]);
 
   const ticket = market && q && (
-    <OrderTicket market={market} usdc={usdc} maxM={maxM} available={availableToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
+    <OrderTicket market={market} usdc={usdc} side={side} onSide={setSide} maxM={maxM} noCoins={side === 'short' && canNow === 0}
+      available={side === 'hedge' ? availableToLend(market) : coinsToLend(market)} stake={stake} onStake={setStake} m={m} onM={setM} q={q} />
   );
 
   return (
@@ -132,9 +139,10 @@ function Trade({ market, moving, onSelect, theme, priceColors, usdc }: TradeProp
         <BottomPanel />
       </main>
 
-      {/* Mobile: sticky Hedge button opens the ticket as a bottom sheet. */}
-      <div className="mobile-bar single">
-        <button className="btn btn-primary" onClick={() => setSheet(true)}>▲ Hedge {market?.symbol ?? ''}</button>
+      {/* Mobile: sticky Buy / Sell buttons open the ticket as a bottom sheet on that side. */}
+      <div className="mobile-bar">
+        <button className="btn btn-primary" onClick={() => { setSide('hedge'); setSheet(true); }}>▲ Buy {market?.symbol ?? ''}</button>
+        <button className="btn btn-sell" onClick={() => { setSide('short'); setSheet(true); }}>▼ Sell {market?.symbol ?? ''}</button>
       </div>
       {sheet && ticket && <TicketSheet onClose={() => setSheet(false)}>{ticket}</TicketSheet>}
     </>

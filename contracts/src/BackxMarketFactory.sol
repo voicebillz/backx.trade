@@ -10,58 +10,49 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {BackxReserveVault} from "./BackxReserveVault.sol";
 import {BackxReserveSecurityFund} from "./BackxReserveSecurityFund.sol";
-import {BackxPositionManager} from "./BackxPositionManager.sol";
+import {BackxManagerBase} from "./BackxManagerBase.sol";
+import {BackxHedgeManager} from "./BackxHedgeManager.sol";
+import {BackxShortManager} from "./BackxShortManager.sol";
 import {ISwapAdapter} from "./interfaces/ISwapAdapter.sol";
 import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 
 /// @title backx.trade market factory: one per chain.
 /// @notice createMarket deploys a coin's whole set in ONE transaction, isolated from every other coin:
-///   - BackxReserveVault (Issue Reserve, USDC) that backs its hedges,
-///   - BackxReserveSecurityFund for its gaps,
-///   - BackxPositionManager that opens, closes and liquidates its positions,
-///   - optionally the Short side (token reserve + its own fund), off in the product for now.
-/// A bug or a bad price on one coin cannot touch another coin's reserve, fund or positions.
-///
-/// Upgrades without redeploying (owner 2026-10-19): every contract is a BeaconProxy. The Safe owns the three
-/// beacons and calls `upgradeTo(newCode)` on one of them to upgrade that contract type for EVERY coin on the
-/// chain at once; addresses, balances, shares and open positions stay. The factory itself is UUPS-upgradeable by
-/// the Safe. Only the Safe can create markets or upgrade; the admin portal prepares the transaction, the Safe signs.
+///   Hedge: BackxHedgeManager + USDC reserve + Hedge Reserve Security Fund;
+///   Short (when shortConfig.maxM > 0): BackxShortManager + the coin's own reserve + Short Reserve Security Fund.
+/// addShort adds the Short side to a coin later. Every contract is a BeaconProxy: the Safe owns the four beacons and
+/// upgrades a contract type for EVERY coin on the chain at once; balances and positions stay. The factory itself is
+/// UUPS-upgradeable by the Safe. Only the Safe creates markets; the admin portal prepares the file, the Safe signs.
 contract BackxMarketFactory is Initializable, UUPSUpgradeable, Ownable2StepUpgradeable {
     struct Set {
-        BackxPositionManager manager;
+        BackxHedgeManager hedge;
         BackxReserveVault usdVault;
         BackxReserveSecurityFund hedgeFund;
-        BackxReserveVault tokenVault;          // address(0) without Short
-        BackxReserveSecurityFund shortFund;    // address(0) without Short
+        BackxShortManager short;               // address(0) without Short
+        BackxReserveVault tokenVault;
+        BackxReserveSecurityFund shortFund;
     }
 
-    /// @notice What the admin portal fills in per coin. Pool/oracle are the coin's swap adapter and TWAP oracle.
     struct NewMarket {
         address token;
         address adapter;
         address oracle;
-        uint8 maxHedgeM;
-        uint8 maxShortM;           // 0 = Short off (no token reserve is deployed)
-        uint128 maxNotionalUsd;
-        uint128 maxOpenHedgeUsd;
-        uint128 maxOpenShortUsd;
-        uint16 crashBps;
-        uint16 pumpBps;
-        uint16 liqMarginBps;
+        BackxManagerBase.Config hedge;
+        BackxManagerBase.Config short;         // maxM = 0: no Short side yet
     }
 
     UpgradeableBeacon public vaultBeacon;
     UpgradeableBeacon public fundBeacon;
-    UpgradeableBeacon public managerBeacon;
+    UpgradeableBeacon public hedgeBeacon;
+    UpgradeableBeacon public shortBeacon;
     IERC20 public usd;
     address public feeCollector;
-    address public keeper;
-    address public keeperWallet;
     mapping(address token => Set) internal _sets;
     address[] public tokens;
 
-    event MarketCreated(address indexed token, address manager, address usdVault, address hedgeFund, address tokenVault, address shortFund);
-    event DefaultsSet(address feeCollector, address keeper, address keeperWallet);
+    event MarketCreated(address indexed token, address hedge, address usdVault, address hedgeFund);
+    event ShortAdded(address indexed token, address short, address tokenVault, address shortFund);
+    event FeeCollectorSet(address feeCollector);
 
     error Exists();
     error BadValue();
@@ -77,76 +68,95 @@ contract BackxMarketFactory is Initializable, UUPSUpgradeable, Ownable2StepUpgra
         IERC20 usd_,
         address vaultImpl,
         address fundImpl,
-        address managerImpl,
-        address feeCollector_,
-        address keeper_,
-        address keeperWallet_
+        address hedgeImpl,
+        address shortImpl,
+        address feeCollector_
     ) external initializer {
-        if (safe == address(0) || address(usd_) == address(0)) revert BadValue();
+        if (safe == address(0) || address(usd_) == address(0) || feeCollector_ == address(0)) revert BadValue();
         __Ownable_init(safe);
         __Ownable2Step_init();
         usd = usd_;
         vaultBeacon = new UpgradeableBeacon(vaultImpl, safe);
         fundBeacon = new UpgradeableBeacon(fundImpl, safe);
-        managerBeacon = new UpgradeableBeacon(managerImpl, safe);
-        _setDefaults(feeCollector_, keeper_, keeperWallet_);
-    }
-
-    function setDefaults(address feeCollector_, address keeper_, address keeperWallet_) external onlyOwner {
-        _setDefaults(feeCollector_, keeper_, keeperWallet_);
-    }
-
-    function _setDefaults(address feeCollector_, address keeper_, address keeperWallet_) internal {
-        if (feeCollector_ == address(0)) revert BadValue();
+        hedgeBeacon = new UpgradeableBeacon(hedgeImpl, safe);
+        shortBeacon = new UpgradeableBeacon(shortImpl, safe);
         feeCollector = feeCollector_;
-        keeper = keeper_;
-        keeperWallet = keeperWallet_;
-        emit DefaultsSet(feeCollector_, keeper_, keeperWallet_);
+        emit FeeCollectorSet(feeCollector_);
+    }
+
+    function setFeeCollector(address c) external onlyOwner {
+        if (c == address(0)) revert BadValue();
+        feeCollector = c;
+        emit FeeCollectorSet(c);
     }
 
     /// @notice One coin, one isolated set of contracts, one transaction (signed by the Safe).
     function createMarket(NewMarket calldata n) external onlyOwner returns (Set memory s) {
         if (n.token == address(0) || n.token == address(usd) || n.adapter == address(0) || n.oracle == address(0)) revert BadValue();
-        if (n.maxHedgeM == 0 || n.maxHedgeM > 30 || n.liqMarginBps > 500) revert BadValue();
-        if (address(_sets[n.token].manager) != address(0)) revert Exists();
+        if (n.hedge.maxM == 0) revert BadValue();
+        if (address(_sets[n.token].hedge) != address(0)) revert Exists();
         address safe = owner();
         string memory sym = IERC20Metadata(n.token).symbol();
 
-        // The manager proxy first (empty), so the reserves and funds can name it as their only manager.
-        s.manager = BackxPositionManager(address(new BeaconProxy(address(managerBeacon), "")));
-        s.usdVault = BackxReserveVault(address(new BeaconProxy(address(vaultBeacon), abi.encodeCall(
-            BackxReserveVault.initialize, (usd, string.concat("backx USD reserve ", sym), string.concat("bxUSD-", sym), safe, address(s.manager))))));
-        s.hedgeFund = BackxReserveSecurityFund(address(new BeaconProxy(address(fundBeacon), abi.encodeCall(
-            BackxReserveSecurityFund.initialize, (usd, safe, address(s.manager))))));
-        if (n.maxShortM > 0) {
-            s.tokenVault = BackxReserveVault(address(new BeaconProxy(address(vaultBeacon), abi.encodeCall(
-                BackxReserveVault.initialize, (IERC20(n.token), string.concat("backx ", sym, " reserve"), string.concat("bx", sym), safe, address(s.manager))))));
-            s.shortFund = BackxReserveSecurityFund(address(new BeaconProxy(address(fundBeacon), abi.encodeCall(
-                BackxReserveSecurityFund.initialize, (usd, safe, address(s.manager))))));
-        }
-
-        // Initialised in this same transaction: nobody can front-run it.
-        s.manager.initialize(_init(n, s, safe));
+        // The manager proxy first (empty), so the reserve and fund can name it as their only manager.
+        s.hedge = BackxHedgeManager(address(new BeaconProxy(address(hedgeBeacon), "")));
+        s.usdVault = _vault(usd, string.concat("backx USD reserve ", sym), string.concat("bxUSD-", sym), safe, address(s.hedge));
+        s.hedgeFund = _fund(safe, address(s.hedge));
+        s.hedge.initialize(_init(n.token, n.adapter, n.oracle, s.usdVault, s.hedgeFund, safe, n.hedge));
         _sets[n.token] = s;
         tokens.push(n.token);
-        emit MarketCreated(n.token, address(s.manager), address(s.usdVault), address(s.hedgeFund), address(s.tokenVault), address(s.shortFund));
+        emit MarketCreated(n.token, address(s.hedge), address(s.usdVault), address(s.hedgeFund));
+        if (n.short.maxM > 0) s = _addShort(n.token, n.adapter, n.oracle, n.short);
     }
 
-    function _init(NewMarket calldata n, Set memory s, address safe) internal view returns (BackxPositionManager.Init memory a) {
-        a.usd = usd;
-        a.hedgeFund = s.hedgeFund;
-        a.shortFund = s.shortFund;
-        a.feeCollector = feeCollector;
-        a.owner = safe;
-        a.keeper = keeper;
-        a.keeperWallet = keeperWallet;
-        a.token = n.token;
-        a.market = BackxPositionManager.Market({
-            enabled: true, usdVault: s.usdVault, tokenVault: s.tokenVault,
-            adapter: ISwapAdapter(n.adapter), oracle: IPriceOracle(n.oracle),
-            maxHedgeM: n.maxHedgeM, maxShortM: n.maxShortM, maxNotionalUsd: n.maxNotionalUsd,
-            maxOpenHedgeUsd: n.maxOpenHedgeUsd, maxOpenShortUsd: n.maxOpenShortUsd, openHedgeUsd: 0, openShortUsd: 0,
-            crashBps: n.crashBps, pumpBps: n.pumpBps, liqMarginBps: n.liqMarginBps
+    /// @notice Adds the Short side (the coin's own reserve, its fund and the Short manager) to an existing coin.
+    function addShort(address token, address adapter, address oracle, BackxManagerBase.Config calldata c)
+        external
+        onlyOwner
+        returns (Set memory)
+    {
+        if (address(_sets[token].hedge) == address(0) || adapter == address(0) || oracle == address(0) || c.maxM == 0) revert BadValue();
+        return _addShort(token, adapter, oracle, c);
+    }
+
+    function _addShort(address token, address adapter, address oracle, BackxManagerBase.Config memory c) internal returns (Set memory s) {
+        s = _sets[token];
+        if (address(s.short) != address(0)) revert Exists();
+        address safe = owner();
+        string memory sym = IERC20Metadata(token).symbol();
+        s.short = BackxShortManager(address(new BeaconProxy(address(shortBeacon), "")));
+        s.tokenVault = _vault(IERC20(token), string.concat("backx ", sym, " reserve"), string.concat("bx", sym), safe, address(s.short));
+        s.shortFund = _fund(safe, address(s.short));
+        s.short.initialize(_init(token, adapter, oracle, s.tokenVault, s.shortFund, safe, c));
+        _sets[token] = s;
+        emit ShortAdded(token, address(s.short), address(s.tokenVault), address(s.shortFund));
+    }
+
+    function _vault(IERC20 asset, string memory name, string memory symbol, address safe, address manager)
+        internal
+        returns (BackxReserveVault)
+    {
+        return BackxReserveVault(address(new BeaconProxy(address(vaultBeacon), abi.encodeCall(
+            BackxReserveVault.initialize, (asset, name, symbol, safe, manager, usd)))));
+    }
+
+    function _fund(address safe, address manager) internal returns (BackxReserveSecurityFund) {
+        return BackxReserveSecurityFund(address(new BeaconProxy(address(fundBeacon), abi.encodeCall(
+            BackxReserveSecurityFund.initialize, (usd, safe, manager)))));
+    }
+
+    function _init(
+        address token,
+        address adapter,
+        address oracle,
+        BackxReserveVault vault,
+        BackxReserveSecurityFund fund,
+        address safe,
+        BackxManagerBase.Config memory c
+    ) internal view returns (BackxManagerBase.Init memory a) {
+        a = BackxManagerBase.Init({
+            usd: usd, token: token, vault: vault, fund: fund, adapter: ISwapAdapter(adapter), oracle: IPriceOracle(oracle),
+            feeCollector: feeCollector, owner: safe, config: c
         });
     }
 

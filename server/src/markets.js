@@ -12,10 +12,11 @@ const HEDGE_CAP = { Major: 20, Large: 5, Mid: 3, Small: 2 };
 // Raised after the security review (owner 2026-10-20): issuers must not lose. Room for the price to fall PAST
 // the liquidation point before any issuer money is at risk: Major 20× 2.7 %, Large 5× 8.2 %, Mid 3× 14.9 %, Small 2× 24 %.
 const LIQ_MARGIN = { Major: 0.015, Large: 0.02, Mid: 0.03, Small: 0.04 };
-// Short is off in the product for now (owner 2026-10-19): 0 everywhere. Earlier caps: Major 30, Large 10, Mid 5.
-const SHORT_CAP = { Major: 0, Large: 0, Mid: 0, Small: 0 };
+// Short is back (owner 2026-10-25): same caps as Hedge, margins and profit roofs in listing.js TIERS
+// (Major 2 % / −80 %, Large 3 % / −70 %, Mid 4 % / −60 %, Small 5 % / −50 %), docs/backx/sim/short_roof.py.
+const SHORT_CAP = { ...HEDGE_CAP };
 
-// shortMaxM: shorts lose on up-spikes, which gap harder than drops (docs/backx/SHORT-SPEC.md).
+// shortMaxM: the Short cap; up-spikes gap harder than drops, so shorts use a larger margin (docs/backx/SHORT-SPEC.md).
 function tier(mcap) {
   if (mcap >= 10e9) return { maxM: HEDGE_CAP.Major, liqMargin: LIQ_MARGIN.Major, shortMaxM: SHORT_CAP.Major, poolFee: 0.0005, kind: 'Major' };
   if (mcap >= 1e9) return { maxM: HEDGE_CAP.Large, liqMargin: LIQ_MARGIN.Large, shortMaxM: SHORT_CAP.Large, poolFee: 0.003, kind: 'Large' };

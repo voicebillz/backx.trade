@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { listingReport, bestChainCached, RULES, TIERS } from './listing.js';
 import { CHAINS, SAFE, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
 import { mountKeeperAdmin } from './keepers.js';
-import { IMPLS, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch } from './deployments.js';
+import { IMPLS, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch, selector } from './deployments.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
 // portal's existence is not revealed. Own rate limit, strict validation, every write logged in admin_audit.
@@ -300,13 +300,17 @@ adminRouter.post('/assets/verify', async (req, res) => {
 
 // ---- deploy: the portal prepares, the Safe signs ----------------------------------------------------------
 
-const CREATE_MARKET = '0x085bd065'; // createMarket((address,address,address,uint8,uint8,uint128,uint128,uint128,uint16,uint16,uint16))
-const SET_OF = '0x637a31db';        // setOf(address)
+// Config = (enabled, maxM, stressBps, liqMarginBps, roofBps, maxNotionalUsd, maxOpenUsd); all static, so the tuple
+// is encoded inline. BackxMarketFactory.createMarket((token, adapter, oracle, Config hedge, Config short)).
+const CONFIG_T = '(bool,uint8,uint16,uint16,uint16,uint128,uint128)';
+const CREATE_MARKET = selector(`createMarket((address,address,address,${CONFIG_T},${CONFIG_T}))`);
+const SET_OF = selector('setOf(address)');
+const configWords = (c) => pad(1) + pad(c.maxM) + pad(c.stressBps) + pad(c.liqMarginBps) + pad(c.roofBps) + pad(c.maxNotional) + pad(c.maxOpen);
 
 /**
  * Builds factory.createMarket for this asset as a Safe Transaction Builder batch. Nothing is signed or sent here:
  * the server never holds keys. The owner opens it in the Safe app, signs, and the factory deploys the coin's
- * reserve, security fund and position manager in that one transaction.
+ * Hedge side (USDC reserve, fund, manager) and Short side (the coin's own reserve, fund, manager) in one transaction.
  */
 adminRouter.post('/assets/:id/deploy', async (req, res, next) => {
   const id = Number(req.params.id);
@@ -338,12 +342,16 @@ adminRouter.post('/assets/:id/deploy', async (req, res, next) => {
     if (missing.length) return res.status(409).json({ error: 'not_ready', missing });
 
     const unit = 10n ** BigInt(chain.stable.decimals);
+    const tier = TIERS.find((t) => t.name === report.tier);
+    const sizes = { maxNotional: BigInt(a.max_position_usd) * unit, maxOpen: BigInt(a.max_open_usd) * unit };
+    // Short (owner 2026-10-25): same cap, the tier's short margin, profit roof and a +30 % pump for the crash cover.
+    const hedge = { maxM: a.max_m, stressBps: 3000, liqMarginBps: a.liq_margin_bps, roofBps: 0, ...sizes };
+    const short = { maxM: a.max_m, stressBps: 3000, liqMarginBps: Math.max(a.liq_margin_bps, tier.shortMarginBps), roofBps: tier.roofBps, ...sizes };
     const data = CREATE_MARKET + padAddr(a.token_address) + padAddr(a.adapter_address) + padAddr(a.oracle_address)
-      + pad(a.max_m) + pad(0) + pad(BigInt(a.max_position_usd) * unit) + pad(BigInt(a.max_open_usd) * unit) + pad(0)
-      + pad(3000) + pad(3000) + pad(a.liq_margin_bps);
+      + configWords(hedge) + configWords(short);
     const batch = {
       version: '1.0', chainId: String(a.chain_id), createdAt: Date.now(),
-      meta: { name: `backx: list ${a.symbol} on ${chain.name}`, description: `Deploys the ${a.symbol} reserve, security fund and position manager (BackxMarketFactory.createMarket).`, createdFromSafeAddress: SAFE },
+      meta: { name: `backx: list ${a.symbol} on ${chain.name}`, description: `Deploys ${a.symbol} Hedge (USDC reserve, fund, manager) and Short (${a.symbol} reserve, fund, manager, roof −${tier.roofBps / 100} %) via BackxMarketFactory.createMarket.`, createdFromSafeAddress: SAFE },
       transactions: [{ to: factory, value: '0', data, contractMethod: null, contractInputsValues: null }],
     };
     await db.query(`update listed_assets set deploy_status = 'proposed', updated_at = now(), updated_by = $2 where id = $1`, [id, req.user.address]);
@@ -369,11 +377,12 @@ adminRouter.post('/assets/:id/check', async (req, res, next) => {
     if (!factory) return res.status(409).json({ error: 'no_factory' });
     let out;
     try { out = await ethCall(a.chain_id, factory, SET_OF + padAddr(a.token_address)); } catch { return res.status(502).json({ error: 'rpc' }); }
-    // Five addresses back (manager, usdVault, hedgeFund, tokenVault, shortFund); anything else = no factory code there.
-    if (typeof out !== 'string' || !/^0x[0-9a-fA-F]{320}$/.test(out)) return res.json(assetOut(a));
-    const [manager, usdVault, hedgeFund] = decodeAddresses(out, 3);
-    if (/^0x0{40}$/.test(manager)) return res.json(assetOut(a));
-    const deployed = { manager, usdVault, hedgeFund, factory, checkedAt: new Date().toISOString() };
+    // Six addresses back (hedge, usdVault, hedgeFund, short, tokenVault, shortFund); anything else = no factory code there.
+    if (typeof out !== 'string' || !/^0x[0-9a-fA-F]{384}$/.test(out)) return res.json(assetOut(a));
+    const [hedge, usdVault, hedgeFund, short, tokenVault, shortFund] = decodeAddresses(out, 6);
+    if (/^0x0{40}$/.test(hedge)) return res.json(assetOut(a));
+    const none = (x) => (/^0x0{40}$/.test(x) ? null : x);
+    const deployed = { hedge, usdVault, hedgeFund, short: none(short), tokenVault: none(tokenVault), shortFund: none(shortFund), factory, checkedAt: new Date().toISOString() };
     const upd = await db.query(`update listed_assets set deploy_status = 'deployed', deployed = $2, updated_at = now(), updated_by = $3 where id = $1 returning *`,
       [id, JSON.stringify(deployed), req.user.address]);
     await audit(req, 'asset.deployed', `${a.symbol} ${a.token_address}`, deployed);
@@ -421,11 +430,10 @@ adminRouter.post('/contracts/deploy', async (req, res, next) => {
     let initcode, config = null;
     if (item.key === 'factory') {
       const errors = {};
-      for (const k of ['feeCollector', 'keeper', 'keeperWallet']) {
-        if (typeof b[k] !== 'string' || !ADDR.test(b[k]) || /^0x0{40}$/.test(b[k])) errors[k] = 'A 0x address (42 characters)';
-      }
+      // Execution is open to every validator and gas is escrowed per position: only the fee collector is set here.
+      if (typeof b.feeCollector !== 'string' || !ADDR.test(b.feeCollector) || /^0x0{40}$/.test(b.feeCollector)) errors.feeCollector = 'A 0x address (42 characters)';
       if (Object.keys(errors).length) return res.status(400).json({ error: 'invalid', fields: errors });
-      config = { feeCollector: b.feeCollector.toLowerCase(), keeper: b.keeper.toLowerCase(), keeperWallet: b.keeperWallet.toLowerCase(), usd: chain.stable.address };
+      config = { feeCollector: b.feeCollector.toLowerCase(), usd: chain.stable.address };
       initcode = factoryInitcode(chain.stable.address, config);
     } else {
       initcode = IMPLS.find((c) => c.key === item.key).initcode;

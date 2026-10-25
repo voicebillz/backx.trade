@@ -46,6 +46,8 @@ export const config = {
   low: BigInt(process.env.LOW_WEI || '1500000000000000'),              // 0.0015 ETH: a peer below this gets topped up
   cap: BigInt(process.env.CAP_WEI || '20000000000000000'),             // 0.02 ETH: above this the excess is swept
   sweepTo: process.env.SWEEP_TO ? addr(process.env.SWEEP_TO, 'SWEEP_TO') : null,  // the Safe / keeper treasury
+  // USDC rewards (validator gas + accuracy bonus) are claimed once this much is waiting, in USDC base units.
+  claimMin: BigInt(process.env.CLAIM_MIN || '1000000'),                             // $1 with 6-decimal USDC
   // Optional status reports to api.backx.trade (never needed to work).
   reportUrl: process.env.REPORT_URL?.trim() || null,
   reportKey: process.env.REPORT_KEY?.trim() || null,      // ed25519 private key, PKCS#8 base64 (npm run keygen)

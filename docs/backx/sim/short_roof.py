@@ -11,7 +11,7 @@ import random
 
 SWAP = 0.0035
 FEE_HOLD, FEE_RSF, FEE_RSF_L, FEE_BORROW, P_SHARE = .02, .005, .0003, .0025, .10
-TIERS = [("Major", .015, 5, .80), ("Large", .02, 3, .70), ("Mid", .03, 2, .60), ("Small", .04, 1, .50)]  # name, margin, max m, roof
+TIERS = [("Major", .02, 20, .80), ("Large", .03, 5, .70), ("Mid", .04, 3, .60), ("Small", .05, 2, .50)]  # name, margin, max m, roof (owner 2026-10-25)
 
 def open_pos(A, m):
     lent_mult = m                                   # q·P0 = m·X is lent (in coin)
@@ -48,7 +48,25 @@ def pump_sim(m, margin, lat, n=20000, seed=7):
             short += 1; total += (cost - C) / (q * 1)
     return short / n, total / n
 
+SCEN = [("+30% / 10 s", .30, 10), ("+30% / 60 s", .30, 60), ("+60% / 5 min", .60, 300), ("+100% / 30 s", 1.0, 30)]
+
+
+def scenario_loss(m, margin, lat, up, dur):
+    """Linear pump of `up` over `dur` s; the validator buys back `lat` s after the trigger. Shortfall in % of lent."""
+    X, q, C = open_pos(100, m)
+    trig = C / ((1 + margin) * q * (1 + SWAP))
+    if 1 + up <= trig:
+        return 0.0
+    p = min(1 + up, trig + up * lat / dur)
+    return max(0.0, q * p * (1 + SWAP + .005) - C) / q * 100
+
+
 if __name__ == "__main__":
+    print("Fixed pump scenarios at the tier caps (owner 2026-10-25): issuer shortfall in % of lent, before the fund")
+    for name, margin, mmax, _ in TIERS:
+        for lat in (0.5, 3):
+            print(f"{name:5} {mmax:>2}x margin {margin*100:.0f}% validator {lat:>3}s: " + "  ".join(f"{n} {scenario_loss(mmax, margin, lat, u, d):5.2f}%" for n, u, d in SCEN))
+    print()
     print("Liquidation (price rise) and roof outcome per $100, issuer share of gain p = 10 %")
     for name, margin, mmax, roof in TIERS:
         for m in sorted({1, 2, mmax}):

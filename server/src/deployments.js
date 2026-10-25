@@ -25,22 +25,25 @@ export function create2Address(initcode) {
 }
 
 const sel = (sig) => keccak(Buffer.from(sig).toString('hex')).slice(0, 8);
-const FACTORY_INIT = sel('initialize(address,address,address,address,address,address,address,address)');
+/** 4-byte selector of a Solidity signature, 0x-prefixed. */
+export const selector = (sig) => '0x' + sel(sig);
+const FACTORY_INIT = sel('initialize(address,address,address,address,address,address,address)');
 const MARKET_COUNT = '0x' + sel('marketCount()');
 
 /** The implementations: identical on every chain, so they get the same address everywhere. */
 export const IMPLS = [
-  { key: 'vaultImpl', artifact: 'BackxReserveVault', label: 'Issue Reserve', role: 'Holds issuers\' USDC and lends it to hedges (ERC-4626, withdrawal queue).' },
-  { key: 'fundImpl', artifact: 'BackxReserveSecurityFund', label: 'Reserve Security Fund', role: 'Last-resort cover when a crash cannot be liquidated in time.' },
-  { key: 'managerImpl', artifact: 'BackxPositionManager', label: 'Position Manager', role: 'Opens, closes and liquidates hedges; keeper batches, limits.' },
+  { key: 'vaultImpl', artifact: 'BackxReserveVault', label: 'Issue Reserve', role: 'Issuers\' capital: USDC for hedges, the coin itself for shorts (ERC-4626, withdrawal queue, claimable USDC rewards).' },
+  { key: 'fundImpl', artifact: 'BackxReserveSecurityFund', label: 'Reserve Security Fund', role: 'Crisis cover when a crash cannot be liquidated in time, with per-payment and daily caps.' },
+  { key: 'hedgeImpl', artifact: 'BackxHedgeManager', label: 'Hedge Manager', role: 'Opens, closes and liquidates hedges; open validators, take-profits, buy orders, claims.' },
+  { key: 'shortImpl', artifact: 'BackxShortManager', label: 'Short Manager', role: 'Borrow-and-sell shorts with a profit roof; open validators, take-profits, sell orders, claims.' },
   { key: 'factoryImpl', artifact: 'BackxMarketFactory', label: 'Market Factory (code)', role: 'Code behind the factory proxy (UUPS).' },
 ].map((c) => ({ ...c, kind: 'implementation', initcode: ART[c.artifact].initcode, runtimeSize: ART[c.artifact].runtimeSize, address: create2Address(ART[c.artifact].initcode) }));
 
-/** ERC1967Proxy(factoryImpl, initialize(safe, usd, impls…, feeCollector, keeper, keeperWallet)). */
+/** ERC1967Proxy(factoryImpl, initialize(safe, usd, vault, fund, hedge, short, feeCollector)). */
 export function factoryInitcode(usdAddr, cfg) {
   const a = Object.fromEntries(IMPLS.map((c) => [c.key, c.address]));
-  const init = FACTORY_INIT + padAddr(SAFE) + padAddr(usdAddr) + padAddr(a.vaultImpl) + padAddr(a.fundImpl) + padAddr(a.managerImpl)
-    + padAddr(cfg.feeCollector) + padAddr(cfg.keeper) + padAddr(cfg.keeperWallet);
+  const init = FACTORY_INIT + padAddr(SAFE) + padAddr(usdAddr) + padAddr(a.vaultImpl) + padAddr(a.fundImpl) + padAddr(a.hedgeImpl)
+    + padAddr(a.shortImpl) + padAddr(cfg.feeCollector);
   const len = init.length / 2;
   const args = padAddr(a.factoryImpl) + pad(64) + pad(len) + init.padEnd(Math.ceil(len / 32) * 64, '0');
   return ART.ERC1967Proxy.initcode + args;
@@ -92,7 +95,7 @@ export async function chainStatus(chainId) {
   const fAddr = f?.address ?? envFactory;
   const fCode = fAddr ? await hasCode(chainId, fAddr) : false;
   const factory = {
-    key: 'factory', label: 'Market Factory', kind: 'proxy', role: 'Creates each coin\'s reserve, fund and position manager in one Safe transaction.',
+    key: 'factory', label: 'Market Factory', kind: 'proxy', role: 'Creates each coin\'s Hedge and Short sides (reserve, fund, manager) in one Safe transaction.',
     address: fAddr, runtimeSize: null, status: fCode ? 'deployed' : f?.status === 'proposed' ? 'proposed' : 'ready', blocked: [], config: f?.config ?? null,
   };
   if (factory.status !== 'deployed') {

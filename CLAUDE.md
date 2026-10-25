@@ -51,22 +51,34 @@ The owner is not a developer: explain briefly, in Norwegian.
   initialisation). Written at the owner's request 2026-10-18; NOT audited, NOT deployed. Deploying needs owner sign-off on
   the open decisions, the swap adapter + TWAP oracle per pool, fork tests and an external audit. `forge test` must stay green.
 - Upgradeable, isolated per coin per chain (owner 2026-10-19): one `BackxMarketFactory` per EVM chain (UUPS, Safe-owned)
-  creates each coin's own BackxReserveVault + BackxReserveSecurityFund + BackxPositionManager as BeaconProxies in ONE
-  `createMarket` call. The Safe owns the three beacons and upgrades a contract type for every coin on a chain with one
-  `upgradeTo`; no redeploy, balances and positions stay. Storage is append-only across versions. Validators settle many
-  positions per tx (`liquidateBatch`, `executeLimitBatch`). The admin portal never deploys with a server key: it builds
+  creates each coin's Hedge side (BackxHedgeManager + USDC BackxReserveVault + BackxReserveSecurityFund) and Short side
+  (BackxShortManager + the coin's own BackxReserveVault + its own fund) as BeaconProxies in ONE `createMarket` call
+  (`addShort` adds the Short side later). Shared code: `BackxManagerBase`. The Safe owns the four beacons and upgrades a
+  contract type for every coin on a chain with one `upgradeTo`; no redeploy, balances and positions stay. Storage is
+  append-only across versions. Validators settle many per tx (`liquidateBatch`, `executeLimitBatch`, `fillOrderBatch`).
+  Contracts v2 (owner 2026-10-25, `docs/backx/VALIDATORS.md`, `AGENTS.md`): execution is OPEN to anyone (no keeper
+  allow list); each position escrows its validator gas, paid to whoever settles it + an accuracy bonus
+  (max·((W−d)/W)², W 1 %; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal); own
+  close refunds the gas. Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
+  cancel; a short order waits until coins are issued). ALL rewards are claimable USDC: validators `claim()/claimTo()`
+  per manager; issuers (USDC reserve AND coin reserves) `claimRewards()/claimRewardsTo()` on the vault, streamed over
+  24 h, pro rata, queued shares stop earning; the share price is principal only. Fund guardrails: only its manager
+  draws, only in a confirmed gap, ≤ 50 % of the position's lent (manager), ≤ 25 % of the fund per payment and ≤ 50 %
+  per 24 h (fund; Safe can tune 5–100 %, never off). The admin portal never deploys with a server key: it builds
   the createMarket transaction as a Safe Transaction Builder file, the Safe signs, the portal reads the factory to
   record the new addresses.
-- Admin "Contracts" (`/admin/contracts`, owner 2026-10-22): per chain the four core contracts (vault, fund, manager,
-  factory implementations) + the Market Factory proxy. Deploy = Safe Transaction Builder file calling the CREATE2
+- Admin "Contracts" (`/admin/contracts`, owner 2026-10-22): per chain the five core contracts (vault, fund, hedge manager,
+  short manager, factory implementations) + the Market Factory proxy (needs only the fee collector). Deploy = Safe Transaction Builder file calling the CREATE2
   deployer 0x4e59…956c (salt `backx.v1`), so addresses are known in advance and identical on every chain; the portal
   reads the chain to mark them deployed (`core_contracts` table, bookkeeping only) and hides the button. Init code lives
   in `server/src/artifacts.json`: after ANY contract change run `forge build && python3 script/export-artifacts.py`.
-  BLOCKER: BackxPositionManager is 29.5 KB (> 24 KB EIP-170), so it and the factory cannot deploy until it is split or
-  slimmed (removing the Short code is an open owner decision). The DEX pool hook is not written yet (shown as Planned).
+  Size: the old 29.5 KB BackxPositionManager was split into the Hedge and Short managers (owner 2026-10-25); each must
+  stay under 24 KB (EIP-170), check `forge build --sizes`. The DEX pool hook is not written yet (shown as Planned).
   Safe exists on Robinhood, BNB, Base, Ethereum; not yet on Arbitrum, OP, Polygon, Avalanche.
-- Issue page: "Issue" opens a choice of Hedge Pool (USDC reserve) or Liquidity Pool · DEX (PancakeSwap Infinity /
-  Uniswap v4, price range). Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
+- Issue page: "Issue" opens a choice of Hedge · USDC (USDC reserve), Short · <coin> (the coin itself, owner 2026-10-25) or
+  DEX pool (PancakeSwap Infinity / Uniswap v4, price range). "Your rewards" card (claimable USDC; Claim opens at launch).
+  Trade ticket: Buy (Hedge) / Sell (Short) tabs, optional "Buy/Sell at" price = entry order, take-profit, short roof row;
+  phone: sticky ▲ Buy / ▼ Sell buttons. Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
   Until launch: header stats blurred + "Coming soon" badge; DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (admins only until launch: everyone else sees a greyed-out "Coming soon" placeholder, `WhitepaperSite.tsx`; visual gate only, the text ships in the chunk; nav after Swap; timing table from sim/flash.py,
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
@@ -87,15 +99,15 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Fee model v4 (owner 2026-10-18/19): the amount the trader types IS what they pay; fees and validator gas come out of it
   (contract `_stakeFor`, web `marginFor`), the rest is the margin X and the position is m × X (holders 2 % of X to
   gazz.fun, borrow 0.25 % of lent to issuers, RSF 0.5 % of X + 0.03 % of lent), issuers' share of a gain p = 10 %.
-  Validator gas: flat keeperGasUsd per position (default $0.10, max $5, ≈ 2× one close) paid at open straight to the
-  validator wallet. The ticket shows the amount, the position size and "Gas" (other fees baked in).
+  Validator gas: flat `validation.gasUsd` per position (default $0.10, max $5, ≈ 2× one close), escrowed in the position
+  and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
   Limit (take-profit) orders fill via validator on the TWAP, at most 1 % worse than the limit.
 - Multiplication follows the issued USDC (owner 2026-10-19): the market cap (maxHedgeM) is the standard, but a hedge can
-  only borrow what the reserve can lend ((m − 1)·stake ≤ availableToLend, 90 % util cap): `maxHedgeMFor` in the
-  contract, `maxHedgeMFor` in web/src/lib/reserves.ts for the ticket. Issuer rewards go INTO the reserve (ERC-4626
-  share price), shared pro rata, withdrawn with the principal, never claimed; new rewards vest over 24 h.
+  only borrow what the reserve can lend ((m − 1)·stake ≤ availableToLend, 90 % util cap): `maxMFor` in each manager
+  (short: the coins issued), `maxHedgeMFor` in web/src/lib/reserves.ts for the ticket. Issuer rewards are claimable USDC
+  (owner 2026-10-25, replaces "into the share price"), see the contracts v2 note above.
 - Liquidation margin (owner 2026-10-19, raised 2026-10-20): each market has liqMarginBps (server LIQ_MARGIN: Major 1.5 %,
   Large 2 %, Mid 3 %, Small 4 %) and Hedge caps Major 20×, Large 5×, Mid 3×, Small 2×. Issuers are never at risk unless the
   price falls a further 2.7 % (Major 20×) / 8.2 % / 14.9 % / 24 % past the liquidation point before the sale.
@@ -161,9 +173,12 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Withdrawals are signed by the user's own Privy wallet with Privy's confirm screen (EVM: ETH/Base/BNB, native + USDC).
   Amounts are parsed to base units and rounded down. Solana withdrawals not built yet.
 - Multiplication 1× is allowed for Hedge: nothing is borrowed, no liquidation, issuers get 0 % (owner 2026-10-18).
-- Hedge only (owner 2026-10-19): Short is OFF in the product. No Short tab, no token reserve on Issue Reserve, server
-  shortMaxM = 0. The contracts keep the Short code (tested) but every market is configured with maxShortM = 0 and no
-  token vault until the owner turns it back on. Design kept in `docs/backx/SHORT-SPEC.md` for later.
+- Short is BACK (owner 2026-10-25, replaces "Hedge only" of 2026-10-19), old-school: borrow the coin from issuers who
+  deposited that coin (PONS, BTC …; only Hedge capital is USDC), sell it, buy exactly the same coins back; every swap
+  cost is the trader's, issuers earn USDC. Caps as Hedge (Major 20×, Large 5×, Mid 3×, Small 2×), short margin 2/3/4/5 %,
+  profit roof (auto-close at a fall of 80/70/60/50 %, `roofBps`, cannot be removed). RSF fee is baked into every short,
+  its own Short fund. No coins issued → place a sell order, it fills when they are. Sim: `docs/backx/sim/short_roof.py`,
+  spec `docs/backx/SHORT-SPEC.md`. Web Buy/Sell (Hedge/Short) and coin issuing on the Issue page follow the contracts.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.
 - Participation (owner 2026-10-20, moved to the front page 2026-10-22): "Participate" on backx.trade logs in (Privy)
   and records one participation per account. "Launch App" (header + hero) goes to app.backx.trade, where the login

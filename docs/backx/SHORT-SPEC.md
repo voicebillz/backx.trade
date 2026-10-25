@@ -163,6 +163,12 @@ Prinsipper som gjelder (som Hedge):
 - Issuers earn the borrow fee + 10 % of the trader's gain, in USDC, claimable.
 - Pump sim (+20…+300 % in 5…120 s, conditioned on a pump through the trigger): with the hedge margins (1.5–4 %)
   a 0.5 s validator still leaves 6–55 % of liquidations a little short of coins (avg 0.3–1.3 % of lent); a 3 s or
-  TWAP-speed sale is far worse. Short margins must be higher than hedge margins. Proposed: Major 5 % (max 3×),
-  Large 7 % (3×), Mid 10 % (2×), Small 15 % (1×): at 0.5 s avg shortfall 0.00–0.36 % of lent, covered by the RSF.
+  TWAP-speed sale is far worse. That random test is harsher than any real major coin.
+- DECIDED (owner 2026-10-25, "20× short"): caps as Hedge (Major 20×, Large 5×, Mid 3×, Small 2×), short margins
+  Major 2 %, Large 3 %, Mid 4 %, Small 5 % (server TIERS.shortMarginBps), roofs 80/70/60/50 % (TIERS.roofBps),
+  buffer as Hedge. Fixed pump scenarios (the same shape as the hedge flash-crash sim): with a 0.5 s validator the
+  issuers' coins come back in full up to +60 % in 5 min at every tier; only +100 % in 30 s on a Major at 20× leaves
+  0.14 % of lent, which the Short fund covers. A 3 s validator leaves 4–9 % in the fastest pumps.
   This needs the fast oracle (Pyth) as trigger; with a 60 s TWAP shorts are not safe for issuers.
+- Contracts: `BackxShortManager.sol` (spec above), issuer rewards claimable USDC, sell orders that wait for issued
+  coins, open validators (docs/backx/VALIDATORS.md).

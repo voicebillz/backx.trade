@@ -1,16 +1,16 @@
 // Hedge and Short math. Hedge: docs/backx/HEDGE-ISSUER-SPEC.md (§3–§5).
 // Short: docs/backx/SHORT-SPEC.md. Preview only: the contracts decide.
 
-// Same numbers as contracts/src/BackxPositionManager.sol and docs/backx/FEES-AND-MARGINS.md (v4).
+// Same numbers as contracts/src/BackxHedgeManager.sol / BackxShortManager.sol and docs/backx/FEES-AND-MARGINS.md (v4).
 // v4: exposure is exactly m × margin. The amount the trader types is what they pay (owner 2026-10-19): fees and
-// keeper gas come out of it, the rest is the margin. Same as the contract's _stakeFor.
+// validator gas come out of it, the rest is the margin. Same as the contract's _stakeFor.
 /** holders + Reserve Security Fund on the stake; borrow + RSF on the amount lent. */
 export const FEES = { holders: 0.02, borrow: 0.0025, rsfStake: 0.005, rsfLent: 0.0003 } as const;
-/** Keeper gas per position (contract keeperGasUsd, flat USD): ≈ 2× one close/liquidation; half pays it, half builds
- *  the keeper's balance. Goes straight to the keeper wallet. ÅPEN: set from measured gas at deploy. */
+/** Validator gas per position (contract validation.gasUsd, flat USD): ≈ 2× one close/liquidation. Escrowed in the
+ *  position, paid to whoever settles it, back to you when you close it yourself. ÅPEN: set from measured gas at deploy. */
 export const KEEPER_GAS = 0.1;
 /** Extra margin on the issuers' principal; grows 0.02 % per step past 10×. */
-export const buffer = (side: 'hedge' | 'short', m: number) => (side === 'hedge' ? 0.003 : 0.006) + 0.0002 * Math.max(m - 10, 0);
+export const buffer = (_side: 'hedge' | 'short', m: number) => 0.003 + 0.0002 * Math.max(m - 10, 0); // short: same since its margin is larger (2026-10-25)
 /** Max position (notional) per coin: keeps price impact ≈ ≤ 0.5 % per way. */
 export const maxNotional = (depthUsd: number) => depthUsd * 0.005;
 
@@ -116,7 +116,7 @@ export function quote(amount: number, m: number, entry: number, poolFee: number,
  * Closing buys q back and returns them to the issuer first; then p of the gain or s of the rest.
  * Liquidation when the buy-back cost (with fee, impact, buffer) leaves only e·E.
  */
-export function shortQuote(amount: number, m: number, entry: number, poolFee: number, depthUsd: number): Quote {
+export function shortQuote(amount: number, m: number, entry: number, poolFee: number, depthUsd: number, liqMargin = 0, roof = 0.8): Quote {
   const mm = Math.max(1, Math.round(m));
   const { e, s, p } = params(mm);
   const stake = marginFor(amount, mm);
@@ -130,8 +130,10 @@ export function shortQuote(amount: number, m: number, entry: number, poolFee: nu
   const cost = oneWay(notional, poolFee, depthUsd);
   const usdHeld = equity + notional * (1 - cost);
   const buyBack = (x: number) => notional * x * (1 + cost);
-  const liqRatio = (usdHeld - e * equity) / (notional * (1 + cost) * (1 + buffer('short', mm)));
-  const at = (x: number): Outcome => {
+  // Contract _threshold: (C − e·X − margin·N) / (1 + buf) is the buy-back cost that liquidates.
+  const liqRatio = (usdHeld - e * equity - liqMargin * notional) / (notional * (1 + cost) * (1 + buffer('short', mm)));
+  const at = (y: number): Outcome => {
+    const x = Math.max(y, 1 - roof); // the profit roof closes it: no gain past it
     if (x >= liqRatio) {
       const r = usdHeld - buyBack(liqRatio);
       return { trader: r * (1 - s) - paid, issuers: borrow + r * s, liquidated: true };
@@ -150,4 +152,9 @@ export function shortQuote(amount: number, m: number, entry: number, poolFee: nu
     ifLiquidated: { traderKeeps: rest * (1 - s), issuers: borrow + rest * s },
     at,
   };
+}
+
+/** Short per tier (owner 2026-10-25, server listing.js TIERS): margin and profit roof from the coin's cap. */
+export function shortTier(maxM: number) {
+  return maxM >= 20 ? { margin: 0.02, roof: 0.8 } : maxM >= 5 ? { margin: 0.03, roof: 0.7 } : maxM >= 3 ? { margin: 0.04, roof: 0.6 } : { margin: 0.05, roof: 0.5 };
 }

@@ -25,6 +25,7 @@ const log = (...a) => console.log(new Date().toISOString(), config.id, ...a);
 // ---- state ---------------------------------------------------------------------------------------------------
 const open = new Map(config.managers.map((m) => [m, new Set()]));     // manager → open position ids
 const withLimit = new Map(config.managers.map((m) => [m, new Set()]));
+const orders = new Map(config.managers.map((m) => [m, new Set()]));   // manager → waiting entry orders
 const firstDue = new Map();      // `${m}:${kind}:${id}` → { ms, block } when first seen due
 const inFlight = new Map();      // same key → ms sent (no resend for 10 s)
 const stats = { sent: 0, landed: 0, failed: 0, skipped: 0, latencies: [], block: 0n, balance: 0n, rpcErrors: 0 };
@@ -42,6 +43,8 @@ async function indexTo(head) {
       if (l.eventName === 'Opened') open.get(m)?.add(id);
       else if (l.eventName === 'Closed') { open.get(m)?.delete(id); withLimit.get(m)?.delete(id); }
       else if (l.eventName === 'LimitSet') { if (l.args.limitValue > 0n) withLimit.get(m)?.add(id); else withLimit.get(m)?.delete(id); }
+      else if (l.eventName === 'OrderPlaced') orders.get(m)?.add(l.args.orderId);
+      else if (l.eventName === 'OrderFilled' || l.eventName === 'OrderCancelled') orders.get(m)?.delete(l.args.orderId);
     }
     lastBlock = to;
   }
@@ -71,7 +74,7 @@ async function check(m, fn, ids) {
 // ---- send: wait for our rank, re-check, then one batch transaction ---------------------------------------------
 async function settle(m, kind, ids) {
   const now = Date.now();
-  const fn = kind === 'liq' ? 'liquidateBatch' : 'executeLimitBatch';
+  const fn = kind === 'liq' ? 'liquidateBatch' : kind === 'lim' ? 'executeLimitBatch' : 'fillOrderBatch';
   const ready = ids.filter((id) => {
     const k = `${m}:${kind}:${id}`;
     if (!firstDue.has(k)) firstDue.set(k, { ms: now, block: stats.block });
@@ -112,12 +115,13 @@ async function tick() {
   for (const m of config.managers) {
     const liq = await check(m, 'isLiquidatable', [...open.get(m)]);
     const lim = await check(m, 'isLimitReached', [...withLimit.get(m)].filter((id) => open.get(m).has(id)));
+    const ord = await check(m, 'isOrderFillable', [...orders.get(m)]);
     // Forget positions that are no longer due (closed or price recovered).
     for (const k of [...firstDue.keys()]) {
       const [mm, kind, id] = k.split(':');
-      if (mm === m && !(kind === 'liq' ? liq : lim).some((x) => String(x) === id)) firstDue.delete(k);
+      if (mm === m && !(kind === 'liq' ? liq : kind === 'lim' ? lim : ord).some((x) => String(x) === id)) firstDue.delete(k);
     }
-    await Promise.all([settle(m, 'liq', liq), settle(m, 'lim', lim)]);
+    await Promise.all([settle(m, 'liq', liq), settle(m, 'lim', lim), settle(m, 'ord', ord)]);
   }
 }
 
@@ -141,6 +145,18 @@ async function balance() {
   const value = need < spare ? need : spare;
   const hash = await wallet.sendTransaction({ to: poorest.p, value });
   log('topped up', poorest.p, formatEther(value), 'ETH', hash);
+}
+
+// ---- validator rewards: USDC (gas + accuracy bonus) is credited in each manager; claim it to the treasury -------
+// Claimed to SWEEP_TO (the Safe) when set, else to this wallet, once at least CLAIM_MIN (default $1) is waiting.
+async function claimRewards() {
+  for (const m of config.managers) {
+    const owed = await pub.readContract({ address: m, abi: managerAbi, functionName: 'claimable', args: [me] });
+    if (owed < config.claimMin) continue;
+    const { request } = await pub.simulateContract({ account, address: m, abi: managerAbi, functionName: 'claimTo', args: [config.sweepTo ?? me] });
+    const hash = await wallet.writeContract(request);
+    log('claimed', String(owed), 'USD units from', m, hash);
+  }
 }
 
 // ---- optional health report to api.backx.trade (signed, ed25519) ----------------------------------------------
@@ -174,4 +190,5 @@ multicallOk = ((await pub.getCode({ address: MULTICALL3 }).catch(() => undefined
 log(`keeper ${VERSION} rank ${config.rank} wallet ${me} watching ${config.managers.length} manager(s) on ${config.rpcs.length} RPC(s), multicall3 ${multicallOk ? 'on' : 'off'}`);
 loop('tick', tick, config.pollMs);
 loop('balance', balance, 60_000);
+loop('claim', claimRewards, 15 * 60_000);
 loop('report', report, config.reportEveryMs);

@@ -19,12 +19,14 @@ export const RULES = {
   maxOpenShareOfLiquidity: 0.10,
 };
 
-/** Tier from market cap AND liquidity: the stricter of the two decides. Max multiplication and minimum margin. */
+/** Tier from market cap AND liquidity: the stricter of the two decides. Max multiplication and minimum margin.
+ *  Short (owner 2026-10-25, sim docs/backx/sim/short_roof.py): same caps as Hedge, a slightly larger margin
+ *  (pumps gap harder than crashes) and a profit roof: the price fall at which a short closes automatically. */
 export const TIERS = [
-  { name: 'Major', minCap: 10e9, minLiq: 20e6, maxM: 20, minMarginBps: 150 },
-  { name: 'Large', minCap: 1e9, minLiq: 5e6, maxM: 5, minMarginBps: 200 },
-  { name: 'Mid', minCap: 100e6, minLiq: 2e6, maxM: 3, minMarginBps: 300 },
-  { name: 'Small', minCap: RULES.minMarketCapUsd, minLiq: RULES.minLiquidityUsd, maxM: 2, minMarginBps: 400 },
+  { name: 'Major', minCap: 10e9, minLiq: 20e6, maxM: 20, minMarginBps: 150, shortMarginBps: 200, roofBps: 8000 },
+  { name: 'Large', minCap: 1e9, minLiq: 5e6, maxM: 5, minMarginBps: 200, shortMarginBps: 300, roofBps: 7000 },
+  { name: 'Mid', minCap: 100e6, minLiq: 2e6, maxM: 3, minMarginBps: 300, shortMarginBps: 400, roofBps: 6000 },
+  { name: 'Small', minCap: RULES.minMarketCapUsd, minLiq: RULES.minLiquidityUsd, maxM: 2, minMarginBps: 400, shortMarginBps: 500, roofBps: 5000 },
 ];
 
 const num = (v) => (v == null || v === '' ? null : Number(v));
@@ -98,6 +100,8 @@ export async function listingReport(redis, chainId, token, opts = {}) {
     tier: tier?.name ?? null,
     maxM: tier?.maxM ?? 0,
     minMarginBps: tier?.minMarginBps ?? 500,
+    shortMarginBps: tier?.shortMarginBps ?? 500,
+    roofBps: tier?.roofBps ?? 5000,
     maxPositionUsd: liquidity ? Math.floor(liquidity * RULES.maxPositionShareOfLiquidity) : 0,
     maxOpenUsd: liquidity ? Math.floor(liquidity * RULES.maxOpenShareOfLiquidity) : 0,
     market: { marketCap, liquidity, volume, ageDays, logo: typeof a.image_url === 'string' && a.image_url.startsWith('https://coin-images.coingecko.com/') ? a.image_url.slice(0, 300) : null },

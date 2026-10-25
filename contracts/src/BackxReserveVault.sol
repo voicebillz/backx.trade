@@ -3,64 +3,69 @@ pragma solidity 0.8.24;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title Issue Reserve vault
-/// @notice One per coin per side. USD reserve (asset = USDC) lends dollars to Hedges; token reserve
-/// (asset = the coin) lends the coin itself to Shorts. Issuers hold ERC-4626 shares; what is lent out is
-/// still counted in totalAssets until it comes back. Only idle (not lent) assets can be withdrawn.
+/// @notice One per coin per side. Hedge reserve: asset = USDC, lent to Hedges. Short reserve: asset = the coin itself
+/// (PONS, BTC …), lent to Shorts and always returned as the same number of coins. Issuers hold ERC-4626 shares; what
+/// is lent out still counts in totalAssets until it comes back. Only free idle assets can be withdrawn at once.
 ///
-/// Rewards (owner 2026-10-19): every borrow fee, gain share and liquidation share goes INTO the vault, so it is
-/// split over all issuers pro rata to their shares and is withdrawn together with the principal. Nothing to
-/// claim. Each issuer's part is simply their shares × the share price (`convertToAssets(balanceOf(issuer))`).
-/// New rewards vest linearly over `vestPeriod` (default 24 h) so someone who deposits just before a large
-/// reward and leaves right after cannot take a share that belongs to the issuers who backed the position.
-/// A write-off first eats rewards that have not vested yet.
-/// Upgradeable: BeaconProxy per coin from BackxMarketFactory; the Safe upgrades all reserves on a chain at once
-/// through the beacon, no redeploy, shares and balances stay. Storage is APPEND-ONLY across versions.
-contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpgradeable {
+/// Rewards (owner 2026-10-25): every borrow fee and share of a gain or liquidation is paid in USDC and sits in this
+/// vault to be CLAIMED (claimRewards), by people and AI agents alike, on-chain or on the website. The share price
+/// tracks principal only. Rewards are split pro rata over the shares and stream in over `vestPeriod` (24 h), so
+/// someone who deposits just before a large reward and leaves right after gets only the part they were there for.
+/// Shares parked in the withdrawal queue stop earning rewards. A write-off on the USDC reserve first takes
+/// rewards that have not streamed out yet.
+/// Upgradeable: BeaconProxy per coin from BackxMarketFactory. Storage is APPEND-ONLY across versions.
+contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
-    /// @notice The PositionManager: the only address that can lend, repay or write off.
+    uint256 internal constant ACC = 1e36;
+
+    /// @notice The position manager: the only address that can lend, repay, write off or add rewards.
     address public manager;
     /// @notice Principal currently lent to open positions.
     uint256 public lent;
     /// @notice Lending stops above this utilisation so issuers can always leave with something.
     uint16 public maxUtilBps;
-    /// @notice Rewards not yet vested, as of `lastReward`; they count in totalAssets as they vest.
-    /// Packed in one storage slot with lastReward and vestPeriod: one write per reward instead of two.
-    uint176 public lockedRewards;
-    uint40 public lastReward;
     uint32 public vestPeriod;
 
+    // ---- rewards (USDC, claimable) --------------------------------------------------------------------------------
+    IERC20 public rewardToken;
+    uint256 public rewardRate;          // reward units per second × 1e18
+    uint40 public rewardEnd;
+    uint40 public rewardUpdated;
+    uint256 public accRewardPerShare;   // × 1e36
+    /// @notice Reward tokens in this vault that belong to issuers (streaming + not yet claimed).
+    uint256 public rewardHeld;
+    uint256 internal _stranded;         // streamed while nobody held shares: added to the next reward
+    mapping(address => uint256) internal _rewardDebt;
+    mapping(address => uint256) internal _rewardOwed;
+
     // ---- withdrawal queue (owner 2026-10-20) --------------------------------------------------------------------
-    // An issuer can ask to take out more than is idle right now. The shares are parked in the vault; the USDC owed
-    // to the queue is RESERVED: it can never be lent out again, and every time money comes back (a position repays,
-    // someone deposits) the queue is paid first, in order, straight to the wallet that asked. Partial fills are paid
-    // as they come. Until paid, a request keeps its share of gains and losses like any other share.
     struct Request {
         address owner;
         uint128 shares;   // still waiting
     }
 
     mapping(uint256 => Request) public requests;
-    uint64 public queueHead;          // next request to pay
-    uint64 public queueTail;          // next free slot
-    uint256 public queuedShares;      // all shares still waiting
-    /// @notice How many requests a settlement pays on its own (bounded gas); anyone can call processQueue for more.
+    uint64 public queueHead;
+    uint64 public queueTail;
+    uint256 public queuedShares;
     uint8 public constant AUTO_PROCESS = 3;
 
     event ManagerSet(address manager);
     event MaxUtilSet(uint16 bps);
     event Lent(uint256 amount);
-    event Repaid(uint256 principal, uint256 earnings);
-    event Earned(uint256 amount);
-    event WrittenOff(uint256 principal);
+    event Repaid(uint256 principal, uint256 extra);
+    event RewardAdded(uint256 amount);
+    event RewardClaimed(address indexed account, address to, uint256 amount);
+    event WrittenOff(uint256 principal, uint256 fromRewards);
     event VestPeriodSet(uint32 secs);
     event WithdrawRequested(uint256 indexed id, address indexed owner, uint256 shares);
     event WithdrawPaid(uint256 indexed id, address indexed owner, uint256 assets, uint256 shares, bool complete);
@@ -81,7 +86,7 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         _disableInitializers();
     }
 
-    function initialize(IERC20 asset_, string calldata name_, string calldata symbol_, address owner_, address manager_)
+    function initialize(IERC20 asset_, string calldata name_, string calldata symbol_, address owner_, address manager_, IERC20 rewardToken_)
         external
         initializer
     {
@@ -89,13 +94,14 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         __ERC4626_init(asset_);
         __Ownable_init(owner_);
         __Ownable2Step_init();
+        __ReentrancyGuard_init();
         maxUtilBps = 9_000;
         vestPeriod = 1 days;
         manager = manager_;
+        rewardToken = rewardToken_;
         emit ManagerSet(manager_);
     }
 
-    /// @notice The Safe can move lending to a new PositionManager (e.g. after a migration). Not locked.
     function setManager(address manager_) external onlyOwner {
         if (manager_ == address(0)) revert BadValue();
         manager = manager_;
@@ -104,8 +110,7 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
 
     function setVestPeriod(uint32 secs) external onlyOwner {
         if (secs > 7 days) revert BadValue();
-        // Keep what has vested so far; the rest vests over the new period from now.
-        (lockedRewards, lastReward, vestPeriod) = (uint176(lockedNow()), uint40(block.timestamp), secs);
+        vestPeriod = secs; // applies from the next reward
         emit VestPeriodSet(secs);
     }
 
@@ -117,35 +122,27 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
 
     // ---- accounting ---------------------------------------------------------------------------
 
+    /// @notice Principal sitting in the vault (rewards excluded when they are the same token).
     function idle() public view returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this));
-    }
-
-    /// @notice Rewards still vesting (in the vault, not yet in the share price).
-    function lockedNow() public view returns (uint256) {
-        (uint256 locked, uint256 last, uint256 period) = (lockedRewards, lastReward, vestPeriod); // one SLOAD
-        uint256 end = last + period;
-        if (block.timestamp >= end || period == 0) return 0;
-        return locked * (end - block.timestamp) / period;
+        uint256 b = IERC20(asset()).balanceOf(address(this));
+        if (address(rewardToken) == asset()) b = b > rewardHeld ? b - rewardHeld : 0;
+        return b;
     }
 
     function totalAssets() public view override returns (uint256) {
-        return idle() + lent - lockedNow();
+        return idle() + lent;
     }
 
-    /// @notice USDC owed to the withdrawal queue at today's share price. Reserved: never lent, never withdrawn by others.
     function reservedForQueue() public view returns (uint256) {
         return queuedShares == 0 ? 0 : _convertToAssets(queuedShares, Math.Rounding.Ceil);
     }
 
-    /// @notice Idle assets not reserved for the queue.
     function freeIdle() public view returns (uint256) {
         uint256 i = idle();
         uint256 r = reservedForQueue();
         return i > r ? i - r : 0;
     }
 
-    /// @notice What can be lent right now: free idle assets, capped so utilisation stays under maxUtilBps.
     function availableToLend() public view returns (uint256) {
         uint256 cap = totalAssets() * maxUtilBps / 10_000;
         if (cap <= lent) return 0;
@@ -154,12 +151,10 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         return a < f ? a : f;
     }
 
-    /// @dev Virtual shares/assets offset against the first-depositor inflation attack.
     function _decimalsOffset() internal pure override returns (uint8) {
         return 6;
     }
 
-    /// Instant withdrawals only from FREE idle assets: nobody can jump the queue.
     function maxWithdraw(address owner_) public view override returns (uint256) {
         return Math.min(super.maxWithdraw(owner_), freeIdle());
     }
@@ -168,13 +163,112 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         return Math.min(super.maxRedeem(owner_), _convertToShares(freeIdle(), Math.Rounding.Floor));
     }
 
+    // ---- rewards ------------------------------------------------------------------------------
+
+    /// Shares that earn rewards: all except those parked in the queue.
+    function _rewardShares() internal view returns (uint256) {
+        return totalSupply() - balanceOf(address(this));
+    }
+
+    function _streamed() internal view returns (uint256 amt, uint256 t) {
+        t = Math.min(block.timestamp, rewardEnd);
+        amt = t > rewardUpdated ? rewardRate * (t - rewardUpdated) / 1e18 : 0;
+    }
+
+    function _accrue() internal {
+        (uint256 amt, uint256 t) = _streamed();
+        if (amt > 0) {
+            uint256 sh = _rewardShares();
+            if (sh == 0) _stranded += amt;
+            else accRewardPerShare += amt * ACC / sh;
+        }
+        if (t > rewardUpdated) rewardUpdated = uint40(t);
+    }
+
+    function _settle(address a) internal {
+        if (a == address(0) || a == address(this)) return;
+        uint256 accrued = balanceOf(a) * accRewardPerShare / ACC;
+        _rewardOwed[a] += accrued - _rewardDebt[a];
+        _rewardDebt[a] = accrued;
+    }
+
+    function _resetDebt(address a) internal {
+        if (a == address(0) || a == address(this)) return;
+        _rewardDebt[a] = balanceOf(a) * accRewardPerShare / ACC;
+    }
+
+    /// Every share movement settles rewards for both sides first, so shares never carry someone else's rewards.
+    function _update(address from, address to, uint256 value) internal override {
+        _accrue();
+        _settle(from);
+        _settle(to);
+        super._update(from, to, value);
+        _resetDebt(from);
+        _resetDebt(to);
+    }
+
+    /// @notice USDC rewards `a` can claim right now.
+    function pendingRewards(address a) external view returns (uint256) {
+        uint256 acc = accRewardPerShare;
+        (uint256 amt,) = _streamed();
+        uint256 sh = _rewardShares();
+        if (amt > 0 && sh > 0) acc += amt * ACC / sh;
+        if (a == address(this)) return 0;
+        return _rewardOwed[a] + balanceOf(a) * acc / ACC - _rewardDebt[a];
+    }
+
+    /// @notice Rewards still streaming in (not yet claimable by anyone).
+    function rewardsStreaming() public view returns (uint256) {
+        return block.timestamp >= rewardEnd ? 0 : rewardRate * (rewardEnd - block.timestamp) / 1e18;
+    }
+
+    function claimRewards() external nonReentrant returns (uint256) {
+        return _claimRewards(msg.sender);
+    }
+
+    function claimRewardsTo(address to) external nonReentrant returns (uint256) {
+        return _claimRewards(to);
+    }
+
+    function _claimRewards(address to) internal returns (uint256 amt) {
+        _accrue();
+        _settle(msg.sender);
+        amt = _rewardOwed[msg.sender];
+        if (amt == 0) return 0;
+        _rewardOwed[msg.sender] = 0;
+        rewardHeld -= amt;
+        rewardToken.safeTransfer(to, amt);
+        emit RewardClaimed(msg.sender, to, amt);
+    }
+
+    /// @notice Borrow fees and shares of gains, in USDC: streamed to the shares over vestPeriod, then claimable.
+    function addRewards(uint256 amount) external onlyManager {
+        _accrue();
+        rewardToken.safeTransferFrom(msg.sender, address(this), amount);
+        rewardHeld += amount;
+        amount += _stranded; // already counted in rewardHeld
+        _stranded = 0;
+        uint256 p = vestPeriod;
+        if (p == 0) {
+            uint256 sh = _rewardShares();
+            if (sh == 0) _stranded = amount;
+            else accRewardPerShare += amount * ACC / sh;
+        } else {
+            uint256 left = block.timestamp < rewardEnd ? rewardRate * (rewardEnd - block.timestamp) : 0;
+            rewardRate = (amount * 1e18 + left) / p;
+            rewardEnd = uint40(block.timestamp + p);
+            rewardUpdated = uint40(block.timestamp);
+        }
+        emit RewardAdded(amount);
+    }
+
     // ---- withdrawal queue -----------------------------------------------------------------------
 
     /// @notice Take out `shares` (all or part). Whatever is free now is paid at once; the rest is reserved and paid
-    /// to msg.sender automatically as money comes back. Returns the request id (0 if it was paid in full at once).
+    /// to msg.sender automatically as money comes back. Your rewards so far stay claimable.
     function requestRedeem(uint256 shares) external returns (uint256 id) {
         if (shares == 0) revert BadValue();
-        _transfer(msg.sender, address(this), shares); // parked: cannot be sold or used twice
+        _transfer(msg.sender, address(this), shares);
         id = queueTail++;
         requests[id] = Request(msg.sender, SafeCast.toUint128(shares));
         queuedShares += shares;
@@ -182,7 +276,6 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         _processQueue(AUTO_PROCESS);
     }
 
-    /// @notice Give back the part of a request that has not been paid yet.
     function cancelRequest(uint256 id) external {
         Request memory r = requests[id];
         if (r.owner != msg.sender) revert NotYours();
@@ -194,7 +287,7 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         _skipEmpty();
     }
 
-    /// @notice Pay up to `maxItems` waiting requests from idle money. Anyone (the keeper) can call it.
+    /// @notice Pay up to `maxItems` waiting requests from idle assets. Anyone can call it.
     function processQueue(uint256 maxItems) external returns (uint256 paid) {
         return _processQueue(maxItems);
     }
@@ -214,12 +307,12 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
             requests[id].shares = r.shares - uint128(burn);
             queuedShares -= burn;
             _burn(address(this), burn);
-            IERC20(asset()).safeTransfer(r.owner, pay); // straight to the wallet that asked
+            IERC20(asset()).safeTransfer(r.owner, pay);
             bool complete = burn == r.shares;
             emit WithdrawPaid(id, r.owner, pay, burn, complete);
             emit Withdraw(address(this), r.owner, r.owner, pay, burn);
             unchecked { ++done; }
-            if (!complete) break; // out of idle money: the rest waits for the next settlement
+            if (!complete) break;
             queueHead++;
             _skipEmpty();
         }
@@ -229,7 +322,6 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         while (queueHead < queueTail && requests[queueHead].shares == 0) queueHead++;
     }
 
-    /// New deposits are a settlement point too: they pay the queue first.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         super._deposit(caller, receiver, assets, shares);
         _processQueue(AUTO_PROCESS);
@@ -244,35 +336,31 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
         emit Lent(amount);
     }
 
-    /// @notice Principal back first (reduces `lent`), plus any earnings on top.
-    function repay(uint256 principal, uint256 earnings) external onlyManager {
+    /// @notice Principal back first (reduces `lent`), plus any extra assets (e.g. coins bought beyond the principal
+    /// in a liquidation), which raise the share price.
+    function repay(uint256 principal, uint256 extra) external onlyManager {
         if (principal > lent) revert BadValue();
         lent -= principal;
-        IERC20(asset()).safeTransferFrom(msg.sender, address(this), principal + earnings);
-        _lock(earnings);
-        emit Repaid(principal, earnings);
-        _processQueue(AUTO_PROCESS); // a settlement point: money that came back pays the queue first
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), principal + extra);
+        emit Repaid(principal, extra);
+        _processQueue(AUTO_PROCESS);
     }
 
-    /// @notice Fees and shares paid to issuers (raise the share price).
-    function addEarnings(uint256 amount) external onlyManager {
-        IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
-        _lock(amount);
-        emit Earned(amount);
-    }
-
-    /// @notice Principal that could not be recovered after a gap and after the Reserve Security Fund.
+    /// @notice Principal that could not be recovered after a gap and after the Reserve Security Fund. On the USDC
+    /// reserve, rewards still streaming absorb the loss first.
     function writeOff(uint256 principal) external onlyManager {
         if (principal > lent) revert BadValue();
         lent -= principal;
-        // Rewards that have not vested yet absorb the loss first.
-        uint256 l = lockedNow();
-        (lockedRewards, lastReward) = (uint176(l > principal ? l - principal : 0), uint40(block.timestamp));
-        emit WrittenOff(principal);
-    }
-
-    function _lock(uint256 amount) internal {
-        if (amount == 0) return;
-        (lockedRewards, lastReward) = (SafeCast.toUint176(lockedNow() + amount), uint40(block.timestamp));
+        uint256 take;
+        if (address(rewardToken) == asset()) {
+            _accrue();
+            uint256 streaming = rewardsStreaming();
+            take = Math.min(streaming, principal);
+            if (take > 0) {
+                rewardHeld -= take; // becomes principal again (idle)
+                rewardRate = (streaming - take) * 1e18 / (rewardEnd - block.timestamp);
+            }
+        }
+        emit WrittenOff(principal, take);
     }
 }

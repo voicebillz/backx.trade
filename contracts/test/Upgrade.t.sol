@@ -3,13 +3,14 @@ pragma solidity 0.8.24;
 
 import {Base} from "./Base.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {BackxPositionManager} from "../src/BackxPositionManager.sol";
+import {BackxManagerBase} from "../src/BackxManagerBase.sol";
+import {BackxHedgeManager} from "../src/BackxHedgeManager.sol";
 import {BackxReserveVault} from "../src/BackxReserveVault.sol";
 import {BackxMarketFactory} from "../src/BackxMarketFactory.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-contract PositionManagerV2 is BackxPositionManager {
+contract HedgeManagerV2 is BackxHedgeManager {
     function version() external pure returns (uint256) {
         return 2;
     }
@@ -30,22 +31,20 @@ contract UpgradeTest is Base {
 
     function test_upgradeAllMarkets_positionsSurvive() public {
         uint256 id = _hedge(100 * USD, 5);
-        (,,,,,, uint128 equity, uint128 lent,,,,,) = pm.positions(id);
+        BackxManagerBase.Position memory p = _pos(hm, id);
         uint256 shares = usdVault.balanceOf(issuer);
-
-        address v2 = address(new PositionManagerV2());
-        UpgradeableBeacon beacon = factory.managerBeacon();
+        address v2 = address(new HedgeManagerV2());
+        UpgradeableBeacon beacon = factory.hedgeBeacon();
         vm.prank(safe);
         beacon.upgradeTo(v2);
-
-        assertEq(PositionManagerV2(address(pm)).version(), 2, "same address, new code");
-        (,,,,,, uint128 equity2, uint128 lent2,,,,,) = pm.positions(id);
-        assertEq(equity2, equity);
-        assertEq(lent2, lent);
+        assertEq(HedgeManagerV2(address(hm)).version(), 2, "same address, new code");
+        BackxManagerBase.Position memory p2 = _pos(hm, id);
+        assertEq(p2.stake, p.stake);
+        assertEq(p2.lent, p.lent);
         assertEq(usdVault.balanceOf(issuer), shares);
         _move(1_000);
         vm.prank(trader);
-        pm.close(id, 0); // still settles after the upgrade
+        hm.close(id, 0);
         assertEq(usdVault.lent(), 0);
     }
 
@@ -66,13 +65,13 @@ contract UpgradeTest is Base {
         vm.prank(safe);
         factory.upgradeToAndCall(v2, "");
         assertEq(FactoryV2(address(factory)).version(), 2);
-        assertEq(address(factory.setOf(address(coin)).manager), address(pm), "registry kept");
+        assertEq(address(factory.setOf(address(coin)).hedge), address(hm), "registry kept");
     }
 
     function test_onlySafeUpgradesOrCreates() public {
-        address v2 = address(new PositionManagerV2());
-        UpgradeableBeacon beacon = factory.managerBeacon();
-        BackxMarketFactory.NewMarket memory n = _newMarket(address(new MockERC20("X", "X", 18)));
+        address v2 = address(new HedgeManagerV2());
+        UpgradeableBeacon beacon = factory.hedgeBeacon();
+        BackxMarketFactory.NewMarket memory n = _newMarket(address(new MockERC20("X", "X", 18)), 0);
         vm.startPrank(trader);
         vm.expectRevert();
         beacon.upgradeTo(v2);
@@ -82,47 +81,53 @@ contract UpgradeTest is Base {
     }
 
     function test_implementationAndProxiesCannotBeReinitialised() public {
-        BackxPositionManager impl = new BackxPositionManager();
-        BackxPositionManager.Init memory a;
+        BackxHedgeManager impl = new BackxHedgeManager();
+        BackxManagerBase.Init memory a;
         vm.expectRevert();
         impl.initialize(a);
         vm.expectRevert();
-        pm.initialize(a);
+        hm.initialize(a);
         vm.expectRevert();
-        usdVault.initialize(IERC20(address(usd)), "x", "x", trader, trader);
+        usdVault.initialize(IERC20(address(usd)), "x", "x", trader, trader, IERC20(address(usd)));
     }
 
-    function test_onePerCoin_isolated() public {
+    function test_onePerCoin_isolated_shortAddedLater() public {
         vm.prank(safe);
         vm.expectRevert(BackxMarketFactory.Exists.selector);
-        factory.createMarket(_newMarket(address(coin)));
+        factory.createMarket(_newMarket(address(coin), 0));
 
         MockERC20 other = new MockERC20("Other", "OTH", 18);
         vm.prank(safe);
-        BackxMarketFactory.Set memory s = factory.createMarket(_newMarket(address(other)));
-        assertTrue(address(s.manager) != address(pm) && address(s.usdVault) != address(usdVault), "own contracts");
-        assertEq(address(s.tokenVault), address(0), "no Short side unless asked");
-        assertEq(s.usdVault.manager(), address(s.manager));
-        assertEq(s.manager.owner(), safe);
-        assertEq(s.usdVault.owner(), safe);
+        BackxMarketFactory.Set memory s = factory.createMarket(_newMarket(address(other), 0));
+        assertTrue(address(s.hedge) != address(hm) && address(s.usdVault) != address(usdVault), "own contracts");
+        assertEq(address(s.short), address(0), "no Short side unless asked");
+        assertEq(s.usdVault.manager(), address(s.hedge));
+        assertEq(s.hedge.owner(), safe);
         assertEq(factory.marketCount(), 2);
+
+        vm.prank(safe);
+        s = factory.addShort(address(other), address(pool), address(pool), _cfg(5, 300, 7_000));
+        assertEq(s.tokenVault.asset(), address(other), "short issuers deposit the coin itself");
+        assertEq(address(s.tokenVault.rewardToken()), address(usd), "and earn USDC");
+        assertEq(s.tokenVault.manager(), address(s.short));
+        vm.prank(safe);
+        vm.expectRevert(BackxMarketFactory.Exists.selector);
+        factory.addShort(address(other), address(pool), address(pool), _cfg(5, 300, 7_000));
     }
 
-    function _newMarket(address token) internal view returns (BackxMarketFactory.NewMarket memory) {
+    function _newMarket(address token, uint8 shortM) internal view returns (BackxMarketFactory.NewMarket memory) {
         return BackxMarketFactory.NewMarket({
-            token: token, adapter: address(pool), oracle: address(pool), maxHedgeM: 20, maxShortM: 0,
-            maxNotionalUsd: uint128(50_000 * USD), maxOpenHedgeUsd: uint128(2_000_000 * USD), maxOpenShortUsd: 0,
-            crashBps: 3_000, pumpBps: 3_000, liqMarginBps: 100
+            token: token, adapter: address(pool), oracle: address(pool), hedge: _cfg(20, 150, 0), short: _cfg(shortM, 200, 8_000)
         });
     }
 }
 
-contract KeeperBatchTest is Base {
+contract ValidatorBatchTest is Base {
     function setUp() public {
         _deploy(5, 10_000_000 * USD);
     }
 
-    /// One transaction liquidates the ones that can be liquidated and skips the rest.
+    /// One transaction liquidates the ones that can be liquidated and skips the rest; anyone can send it.
     function test_liquidateBatch() public {
         uint256[] memory ids = new uint256[](4);
         ids[0] = _hedge(100 * USD, 20);
@@ -130,30 +135,23 @@ contract KeeperBatchTest is Base {
         ids[2] = _hedge(100 * USD, 2);  // far from liquidation
         ids[3] = 999;                    // does not exist
         _move(-500);
-        vm.prank(keeper);
-        uint256 done = pm.liquidateBatch(ids);
-        assertEq(done, 2);
-        (address o0,,,,,,,,,,,,) = pm.positions(ids[0]);
-        (address o2,,,,,,,,,,,,) = pm.positions(ids[2]);
-        assertEq(o0, address(0));
-        assertEq(o2, trader, "skipped, still open");
-        vm.prank(trader);
-        vm.expectRevert(BackxPositionManager.NotKeeper.selector);
-        pm.liquidateBatch(ids);
-        vm.expectRevert(BackxPositionManager.NotKeeper.selector);
-        pm.selfSettle(ids[2], false);
+        vm.prank(validator);
+        assertEq(hm.liquidateBatch(ids), 2);
+        assertEq(_pos(hm, ids[0]).owner, address(0));
+        assertEq(_pos(hm, ids[2]).owner, trader, "skipped, still open");
+        assertGe(hm.claimable(validator), 2 * USD / 10, "paid for both");
     }
 
     function test_limitBatch() public {
         vm.startPrank(trader);
-        uint256 a = pm.openHedge(address(coin), 100 * USD, 5, 0, 2_200 * USD);
-        uint256 b = pm.openHedge(address(coin), 100 * USD, 5, 0, 2_600 * USD);
+        uint256 a = hm.open(100 * USD, 5, 0, 2_200 * USD);
+        uint256 b = hm.open(100 * USD, 5, 0, 2_600 * USD);
         vm.stopPrank();
         _move(1_500);
         uint256[] memory ids = new uint256[](2);
         ids[0] = a;
         ids[1] = b;
-        vm.prank(keeper);
-        assertEq(pm.executeLimitBatch(ids), 1);
+        vm.prank(validator);
+        assertEq(hm.executeLimitBatch(ids), 1);
     }
 }

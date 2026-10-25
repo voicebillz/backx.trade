@@ -11,7 +11,6 @@ contract WithdrawQueueTest is Base {
 
     function setUp() public {
         _deploy(5, 10_000_000 * USD);
-        // Small reserve so positions use most of it: issuer keeps $10,000, issuer2 adds $10,000.
         vm.startPrank(issuer);
         usdVault.withdraw(4_990_000 * USD, issuer, issuer);
         vm.stopPrank();
@@ -28,27 +27,27 @@ contract WithdrawQueueTest is Base {
 
     function test_requestPaysFreeNow_restOnSettlement() public {
         uint256 id = _hedge(1_000 * USD, 18); // lends ≈ $16.4k of $20k
+        vm.warp(block.timestamp + 12 hours); // half the borrow fee has streamed in
         uint256 free = usdVault.freeIdle();
         uint256 before = usd.balanceOf(issuer);
         uint256 shares = usdVault.balanceOf(issuer);
         vm.prank(issuer);
-        uint256 rid = usdVault.requestRedeem(shares); // take out everything
+        uint256 rid = usdVault.requestRedeem(shares);
         assertApproxEqAbs(usd.balanceOf(issuer) - before, free, 2, "what was free is paid at once");
         assertEq(usdVault.balanceOf(issuer), 0, "shares parked in the vault");
         assertEq(usdVault.availableToLend(), 0, "nothing free to lend while the queue waits");
+        assertEq(usdVault.maxWithdraw(issuer2), 0, "nobody jumps the queue");
 
-        // Nobody can jump the queue with an instant withdrawal.
-        assertEq(usdVault.maxWithdraw(issuer2), 0);
-
-        // The position closes: the money that comes back pays the queue first, straight to the wallet.
         _move(500);
         vm.prank(trader);
-        pm.close(id, 0);
+        hm.close(id, 0);
         (, uint128 left) = usdVault.requests(rid);
         assertEq(left, 0, "request fully paid");
         assertGt(usd.balanceOf(issuer) - before, 9_999 * USD, "all of it came to the issuer's wallet");
         vm.warp(block.timestamp + 1 days);
-        assertGt(_value(issuer2), 10_000 * USD, "the other issuer kept its share (and earned)");
+        assertGe(_value(issuer2), 10_000 * USD - 2, "the other issuer kept its principal");
+        assertGt(usdVault.pendingRewards(issuer2), 0, "and earns the rewards");
+        assertGt(usdVault.pendingRewards(issuer), 0, "rewards earned before asking stay claimable");
     }
 
     function test_queueIsFifo_andPartialFills() public {
@@ -63,7 +62,7 @@ contract WithdrawQueueTest is Base {
         assertEq(waiting2, s2, "second in line waits");
         _move(500);
         vm.prank(trader);
-        pm.close(id, 0);
+        hm.close(id, 0);
         assertEq(usdVault.queuedShares(), 0, "both paid once the loan came back");
         assertGt(usd.balanceOf(issuer2), 9_999 * USD);
     }
@@ -101,19 +100,16 @@ contract WithdrawQueueTest is Base {
         assertApproxEqRel(_value(newcomer), 50_000 * USD, 0.001e18, "newcomer keeps full value");
     }
 
-    function test_liquidationStillWorksWithAQueue() public {
-        uint256 id = _hedge(1_000 * USD, 18);
+    function test_rewardsNeverPayTheQueue() public {
+        _hedge(1_000 * USD, 18);
         uint256 own = usdVault.balanceOf(issuer);
         vm.prank(issuer);
         usdVault.requestRedeem(own);
-        // A gap that the fund cannot cover is shared by all shares, queued ones included: no one escapes by asking.
-        uint256 seed = hedgeFund.balance();
-        vm.prank(address(pm));
-        hedgeFund.cover(seed);
-        usd.burn(address(pm), usd.balanceOf(address(pm)));
-        _move(-2_000);
-        vm.prank(keeper);
-        pm.liquidate(id);
-        assertEq(usdVault.queuedShares() > 0 || usd.balanceOf(issuer) > 0, true);
+        uint256 held = usdVault.rewardHeld();
+        assertGt(held, 0, "borrow fee waiting to be claimed");
+        vm.prank(trader);
+        usdVault.processQueue(10);
+        assertEq(usdVault.rewardHeld(), held, "issuers' rewards are not principal");
+        assertGe(usd.balanceOf(address(usdVault)), held);
     }
 }

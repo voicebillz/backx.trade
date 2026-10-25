@@ -1206,3 +1206,44 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-page > .page-head, .wp-page > .wp-stats, .wp-page > .wp-contents { max-width: 760px; margin-left: auto; margin-right: auto; }
 .wp-page > .wp-contents ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) { .wp-page > .wp-contents ol { grid-template-columns: 1fr; } }
+
+/* Whitepaper tables (short roof, validator bonus, rewards) and line charts */
+.wp-table { display: grid; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin: 12px 0 4px; }
+.wp-table .wp-row { grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr)); }
+.wp-table.three .wp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+.wp-table.three.wide .wp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, .8fr); }
+@media (max-width: 640px) {
+  .wp-table .wp-row > span:nth-child(2) { grid-column: auto; order: 0; }
+  .wp-table .wp-row.wp-head > span:nth-child(2) { display: block; }
+  .wp-table .wp-row { gap: 8px; padding: 10px; font-size: 12px; }
+}
+.wp-chart svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
+.wp-chart .grid { stroke: var(--line); stroke-width: 1; }
+.wp-chart .ax { fill: var(--ink-3); font-size: 9px; font-family: var(--mono, ui-monospace, monospace); }
+.wp-chart .ax.r { text-anchor: end; }
+.wp-chart .ax.c { text-anchor: middle; }
+.wp-chart .line { fill: none; stroke: var(--brand); stroke-width: 2; stroke-linejoin: round; }
+.wp-chart .dot { fill: var(--brand); }
+.wp-chart .mark { stroke-width: 1; stroke-dasharray: 3 3; }
+.wp-chart .mark.roof { stroke: var(--price-up); }
+.wp-chart .mark.liq { stroke: var(--price-down); }
+.wp-chart-x { margin: 4px 0 0; text-align: center; font-size: 11px; color: var(--ink-3); }
+
+/* Ticket: Buy (Hedge) / Sell (Short) tabs and the Sell button. Direction never by colour alone: ▲/▼ in the label. */
+.side-tabs { margin-bottom: 12px; }
+.side-tabs button { min-height: 44px; }
+.side-tabs button.active.buy { color: var(--price-up); }
+.side-tabs button.active.sell { color: var(--price-down); }
+.btn-sell { background: var(--panel); color: var(--price-down); border: 1px solid var(--price-down); }
+.btn-sell:hover:not(:disabled) { background: color-mix(in srgb, var(--price-down) 10%, transparent); }
+
+/* Issue: Short Pool (the coin) column group and the rewards card */
+.grp-coin { color: var(--violet); }
+.issue-table td:nth-child(5), .issue-table th.grp-coin { border-left: 1px solid var(--line); }
+.kind-pill.short { background: color-mix(in srgb, var(--price-down) 14%, transparent); color: var(--price-down); }
+.rewards-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; }
+.rewards-amt { font-size: 22px; font-weight: 600; margin: 2px 0 4px; }
+.rewards-card .btn { min-height: 44px; flex: none; }
+
+.seg.issue-kind { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg.issue-kind button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }

@@ -869,7 +869,7 @@ function Contracts() {
 
 function DeployCore({ item, chain, onClose }: { item: CItem; chain: CChain; onClose: () => void }) {
   const isFactory = item.key === 'factory';
-  const [cfg, setCfg] = useState({ feeCollector: item.config?.feeCollector ?? '', keeper: item.config?.keeper ?? '', keeperWallet: item.config?.keeperWallet ?? '' });
+  const [cfg, setCfg] = useState({ feeCollector: item.config?.feeCollector ?? '' });
   const [state, setState] = useState<{ batch?: unknown; safeUrl?: string; address?: string; missing?: string[]; fields?: Record<string, string>; err?: string; live?: boolean }>({});
   const [busy, setBusy] = useState(false);
 
@@ -917,13 +917,11 @@ function DeployCore({ item, chain, onClose }: { item: CItem; chain: CChain; onCl
           <><p>Not ready to deploy:</p><ul className="missing-list">{state.missing.map((m) => <li key={m}>{m}</li>)}</ul></>
         ) : isFactory && !state.batch ? (
           <form onSubmit={(e) => { e.preventDefault(); void prepare(); }}>
-            <p className="muted small">The factory is set up once per chain with these addresses (they can be changed later by the Safe). Reserve currency: {chain.stable?.symbol}.</p>
-            {([['feeCollector', 'Fee collector', 'Receives the holders fee (gazz.fun / treasury split is open)'], ['keeper', 'Validator (ours)', 'Our validator address allowed to liquidate and fill limits (until execution is open to anyone)'], ['keeperWallet', 'Keeper gas wallet', 'Receives the per-position keeper gas']] as const).map(([k, l, h]) => (
-              <Field key={k} id={`cf-${k}`} label={l} hint={h} error={state.fields?.[k]}>
-                <input id={`cf-${k}`} className="num" value={cfg[k]} onChange={(e) => setCfg({ ...cfg, [k]: e.target.value.trim() })} placeholder="0x…" autoComplete="off" spellCheck={false} />
-              </Field>
-            ))}
-            <button className="btn btn-gold btn-block" disabled={busy || !ADDR.test(cfg.feeCollector) || !ADDR.test(cfg.keeper) || !ADDR.test(cfg.keeperWallet)}>{busy ? 'Preparing…' : 'Prepare Safe transaction'}</button>
+            <p className="muted small">The factory is set up once per chain (the Safe can change it later). Reserve currency: {chain.stable?.symbol}. Liquidations and fills are open to every validator; each position escrows its own gas, so no validator address is needed.</p>
+            <Field id="cf-feeCollector" label="Fee collector" hint="Receives the holders fee (gazz.fun / treasury split is open)" error={state.fields?.feeCollector}>
+              <input id="cf-feeCollector" className="num" value={cfg.feeCollector} onChange={(e) => setCfg({ feeCollector: e.target.value.trim() })} placeholder="0x…" autoComplete="off" spellCheck={false} />
+            </Field>
+            <button className="btn btn-gold btn-block" disabled={busy || !ADDR.test(cfg.feeCollector)}>{busy ? 'Preparing…' : 'Prepare Safe transaction'}</button>
           </form>
         ) : !state.batch && !state.err ? (
           <p className="muted" aria-busy="true"><span className="sk sk-w60" /></p>
