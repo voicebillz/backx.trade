@@ -217,7 +217,8 @@ const clampLayout = (p: Partial<Layout>): Partial<Layout> => {
   const out: Partial<Layout> = {};
   if (p.sideW !== undefined) out.sideW = c(p.sideW, LIMITS.sideW);
   if (p.ticketW !== undefined) out.ticketW = c(p.ticketW, LIMITS.ticketW);
-  if (p.bottomH !== undefined) out.bottomH = c(p.bottomH, LIMITS.bottomH);
+  // Keep at least 320 px above the bottom panel for the coin header and the chart.
+  if (p.bottomH !== undefined) out.bottomH = Math.min(c(p.bottomH, LIMITS.bottomH)!, Math.max(LIMITS.bottomH[0], innerHeight - 48 - 320));
   return out;
 };
 

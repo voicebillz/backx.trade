@@ -50,20 +50,20 @@ export function BottomPanel() {
       <div className="table-wrap" role="tabpanel">
         {tab === 'positions' && (
           <table>
-            <thead><tr><th>Market</th><th>Side</th><th className="r">Size</th><th className="r">Entry</th><th className="r">Mark</th><th className="r">Liq. price</th><th className="r">PnL</th><th /></tr></thead>
+            <thead><tr><th>Market</th><th className="c-sm">Side</th><th className="r">Size</th><th className="r c-md">Entry</th><th className="r c-md">Mark</th><th className="r c-sm">Liq. price</th><th className="r">PnL</th><th className="c-sm" /></tr></thead>
             <tbody>
               {POSITIONS.map((p) => {
                 const pnl = p.size * p.m * (p.mark / p.entry - 1);
                 return (
                   <tr key={p.sym + p.side}>
                     <td><Market sym={p.sym} m={p.m} /></td>
-                    <td><span className="side side-hedge">▲ Hedge</span></td>
+                    <td className="c-sm"><span className="side side-hedge">▲ Hedge</span></td>
                     <td className="r num">{usd(p.size)}</td>
-                    <td className="r num">{price(p.entry)}</td>
-                    <td className="r num">{price(p.mark)}</td>
-                    <td className="r num">{p.liq == null ? <span className="muted">None</span> : <span className="down">{price(p.liq)}</span>}</td>
-                    <td className={'r num ' + (pnl >= 0 ? 'up' : 'down')}>{arrow(pnl)} {signed(pnl)} <small>({(pnl / p.size * 100).toFixed(1)}%)</small></td>
-                    <td className="r"><button className="btn-mini" disabled>Close</button></td>
+                    <td className="r num c-md">{price(p.entry)}</td>
+                    <td className="r num c-md">{price(p.mark)}</td>
+                    <td className="r num c-sm">{p.liq == null ? <span className="muted">None</span> : <span className="down">{price(p.liq)}</span>}</td>
+                    <td className={'r num ' + (pnl >= 0 ? 'up' : 'down')}>{arrow(pnl)} {signed(pnl)} <small className="c-md">({(pnl / p.size * 100).toFixed(1)}%)</small></td>
+                    <td className="r c-sm"><button className="btn-mini" disabled>Close</button></td>
                   </tr>
                 );
               })}
@@ -72,15 +72,15 @@ export function BottomPanel() {
         )}
         {tab === 'history' && (
           <table>
-            <thead><tr><th>Time</th><th>Market</th><th>Action</th><th className="r">Size</th><th className="r">Price</th><th className="r">Result</th></tr></thead>
+            <thead><tr><th className="c-sm">Time</th><th>Market</th><th className="c-md">Action</th><th className="r">Size</th><th className="r c-md">Price</th><th className="r">Result</th></tr></thead>
             <tbody>
               {HISTORY.map((h) => (
                 <tr key={h.t + h.sym}>
-                  <td className="num muted">{h.t}</td>
+                  <td className="num muted c-sm">{h.t}</td>
                   <td><Market sym={h.sym} m={h.m} /></td>
-                  <td><span className={'side side-' + h.action.toLowerCase()}>{h.action}</span></td>
+                  <td className="c-md"><span className={'side side-' + h.action.toLowerCase()}>{h.action}</span></td>
                   <td className="r num">{usd(h.size)}</td>
-                  <td className="r num">{price(h.px)}</td>
+                  <td className="r num c-md">{price(h.px)}</td>
                   <td className={'r num ' + (h.pnl == null ? 'muted' : h.pnl >= 0 ? 'up' : 'down')}>{h.pnl == null ? 'Open' : `${arrow(h.pnl)} ${signed(h.pnl)}`}</td>
                 </tr>
               ))}
@@ -89,17 +89,17 @@ export function BottomPanel() {
         )}
         {tab === 'vaults' && (
           <table>
-            <thead><tr><th>Reserve</th><th>Backs</th><th className="r">Issued</th><th>Lent out</th><th className="r">Earned, realized</th><th className="r">Share</th><th /></tr></thead>
+            <thead><tr><th>Reserve</th><th className="c-sm">Backs</th><th className="r">Issued</th><th className="c-md">Lent out</th><th className="r">Earned</th><th className="r c-md">Share</th><th className="c-sm" /></tr></thead>
             <tbody>
               {VAULTS.map((v) => (
                 <tr key={v.sym + v.asset}>
                   <td><span className="cell-market"><CoinIcon symbol={v.sym} size={18} /><b>{v.sym}</b><span className="m-chip num">{v.asset}</span></span></td>
-                  <td><span className="side side-hedge">▲ Hedges</span></td>
+                  <td className="c-sm"><span className="side side-hedge">▲ Hedges</span></td>
                   <td className="r num">{v.deposited}</td>
-                  <td><span className="util"><span className="util-bar"><i style={{ width: `${v.util * 100}%` }} /></span><span className="num">{Math.round(v.util * 100)}%</span></span></td>
+                  <td className="c-md"><span className="util"><span className="util-bar"><i style={{ width: `${v.util * 100}%` }} /></span><span className="num">{Math.round(v.util * 100)}%</span></span></td>
                   <td className="r num gold">{v.earned}</td>
-                  <td className="r num">{(v.share * 100).toFixed(1)}%</td>
-                  <td className="r"><button className="btn-mini" disabled>Withdraw</button></td>
+                  <td className="r num c-md">{(v.share * 100).toFixed(1)}%</td>
+                  <td className="r c-sm"><button className="btn-mini" disabled>Withdraw</button></td>
                 </tr>
               ))}
             </tbody>

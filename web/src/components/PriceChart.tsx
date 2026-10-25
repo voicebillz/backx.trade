@@ -55,7 +55,18 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
     chart.current = c;
     series.current = c.addSeries(CandlestickSeries, { priceFormat: { type: 'price', precision: 6, minMove: 0.000001 } });
     setReady(true);
-    return () => { c.remove(); chart.current = null; series.current = null; lines.current = []; };
+    // Panels can be dragged to any size (terminal layout): refit the candles to the new width and height, so a smaller
+    // chart shows the same period instead of cutting off the oldest bars. Once per frame while dragging.
+    let raf = 0, w = 0, h = 0;
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect;
+      if (Math.abs(width - w) < 1 && Math.abs(height - h) < 1) return;
+      w = width; h = height;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => c.timeScale().fitContent());
+    });
+    ro.observe(el.current);
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); c.remove(); chart.current = null; series.current = null; lines.current = []; };
   }, []);
 
   // Theme and price colors come from CSS tokens.

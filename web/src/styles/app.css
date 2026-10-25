@@ -1368,3 +1368,40 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .candle-opt .swatch { flex: none; }
 .lay-h { margin: 4px 0 0; }
 @media (max-width: 699px) { .candle-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Desktop terminal: the chart shrinks with the layout instead of pushing panels out of the window */
+@media (min-width: 1200px) {
+  .terminal.custom .chart-panel { min-height: 0; }
+  .terminal.custom .center { min-height: 0; overflow: hidden; }
+  .terminal.custom .coin-header { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .terminal.custom .coin-header::-webkit-scrollbar { display: none; }
+}
+
+/* Panels adapt to their own width (terminal layouts and dragging): show less, never overlap */
+.markets, .bottom, .ticket-col, .center { container-type: inline-size; }
+.market-sym { overflow: hidden; }
+.market-row > .num { white-space: nowrap; }
+@container (max-width: 270px) {
+  .market-sym small, .markets-sort { display: none; }
+  .markets-head, .market-row { grid-template-columns: minmax(0, 1fr) auto 64px; gap: 6px; padding: 0 10px; }
+  .market-sym b { max-width: 64px; }
+}
+@container (max-width: 225px) {
+  .markets-head span:nth-child(2), .market-row > .num:not(.chg) { display: none; }
+  .markets-head, .market-row { grid-template-columns: minmax(0, 1fr) 70px; }
+  .market-sym b { max-width: none; }
+}
+@container (min-width: 380px) { .market-sym b { max-width: 140px; } }
+@container (max-width: 760px) { .bottom .c-md { display: none; } }
+@container (max-width: 480px) { .bottom .c-sm { display: none; } .bottom .tab-count, .bottom .demo-tag { display: none; } }
+.bottom td, .bottom th { white-space: nowrap; }
+@container (max-width: 300px) {
+  .ticket .side-opt { font-size: 12px; }
+  .ticket .chips .chip-btn { padding: 0 6px; font-size: 11px; }
+  .ticket .kv dd .liq-pct { display: none; }
+}
+@media (min-width: 900px) { .coin-stats { flex-wrap: nowrap; } .coin-stats > * { white-space: nowrap; } }
+@container (max-width: 900px) { .coin-stats > :nth-child(n+5) { display: none; } }
+@container (max-width: 760px) { .coin-stats > :nth-child(n+4) { display: none; } }
+@container (max-width: 600px) { .coin-stats > :nth-child(n+3) { display: none; } }
+@container (max-width: 460px) { .coin-stats { display: none; } }
