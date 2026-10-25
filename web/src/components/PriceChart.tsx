@@ -4,6 +4,7 @@ import {
   type IChartApi, type IPriceLine, type ISeriesApi, type SeriesType, type UTCTimestamp,
 } from 'lightweight-charts';
 import { demoCandles, type Market } from '../lib/markets';
+import { price } from '../lib/format';
 import { INDICATORS, INDICATOR_IDS } from '../lib/indicators';
 import type { Theme, PriceColors } from '../lib/theme';
 import { Dropdown } from './Dropdown';
@@ -189,7 +190,7 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice, tp = n
         <ShareButton symbol={market.symbol} name={market.name} />
         <IndicatorPicker active={active} onToggle={toggle} />
         <span className="chart-note">Demo data</span>
-        <SnapshotButton chart={chart} title={`${market.symbol} · ${frameLabel}`} />
+        <SnapshotButton chart={chart} info={{ symbol: market.symbol, name: market.name, frame: frameLabel, price: price(market.price), change24h: market.change24h }} />
       </div>
       {active.length > 0 && (
         <div className="chart-legend" aria-label="Indicators on the chart">

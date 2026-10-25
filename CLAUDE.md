@@ -98,7 +98,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown only). Chart toolbar (owner 2026-10-25):
   share (copies/shares the coin's page), "fx Indicators" (24 indicators in `lib/indicators.ts`, computed in the browser:
   overlays on the price pane, volume on its own scale, oscillators one pane each; saved in `backx.indicators`; legend
-  with remove), camera snapshot (Download image Ctrl+Alt+S / Copy image Ctrl+Shift+S, PNG with coin · timeframe header).
+  with remove), camera snapshot (Download image Ctrl+Alt+S / Copy image Ctrl+Shift+S): a square 1200×1200 share image
+  for X etc. (black frame, yellow logo tile + backx.trade, coin · name · timeframe · price · 24 h change, the chart
+  re-laid out to the square in a rounded card, motto and UTC time below).
   `.chart` resets the app's table styles (the chart lays out panes as a table). Each coin has its own address
   `/trade/<symbol>` (router `marketPath`/`showMarket`, title "ETH · Ethereum · BackX", Back returns to the last coin;
   vercel.json rewrites /trade/* on the app and redirects it from backx.trade). Preset previews are
