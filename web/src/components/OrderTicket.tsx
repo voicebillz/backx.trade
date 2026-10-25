@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Market } from '../lib/markets';
 import { price, usd, usdCompact } from '../lib/format';
-import { FEES, KEEPER_GAS, LIMIT_SLIP, maxNotional, shortTier, type Quote, type Side } from '../lib/hedge';
+import { feeRate as rateOf, KEEPER_GAS, LIMIT_SLIP, maxNotional, shortTier, type Quote, type Side } from '../lib/hedge';
 import type { usdcOf } from '../lib/useBalances';
 import { MultiplierSlider } from './MultiplierSlider';
 import { CoinIcon } from './CoinIcon';
@@ -41,6 +41,7 @@ const pct = (f: number) => (f >= 0 ? '+' : '−') + Math.abs(f * 100).toFixed(1)
 const STEPS = [0.1, 0.25, 0.5, 1];
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
 const clean = (v: string) => v.replace(/[^0-9.]/g, '');
+const coinAmt = (n: number) => (n >= 1000 ? n.toFixed(0) : n >= 1 ? n.toFixed(4) : n.toPrecision(4));
 
 /** A clean on/off switch: the knob carries a check when on. The whole row is the hit area. */
 function Toggle({ on, onChange, label, aside, children }: { on: boolean; onChange: (v: boolean) => void; label: string; aside?: string; children?: ReactNode }) {
@@ -64,7 +65,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
   const amount = parseFloat(stake) || 0;
   const lentMult = buy ? Math.max(m, 1) - 1 : Math.max(m, 1);
   const byReserve = max < (buy ? market.maxM : market.shortMaxM);
-  const feeRate = FEES.holders + FEES.rsfStake + lentMult * (FEES.borrow + FEES.rsfLent);
+  const feeRate = rateOf(lentMult);
   const maxStake = Math.floor((maxNotional(market.depth) / Math.max(m, 1)) * (1 + feeRate) + KEEPER_GAS);
   const tooBig = amount > maxStake;
   const maxByUsdc = usdc ? Math.floor(usdc.total * 100) / 100 : 0;
@@ -221,7 +222,14 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
           <div><dt>Liquidation</dt><dd className="num down">{price(liqPrice)} <span className="liq-pct">{buy ? '▼ −' : '▲ +'}{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
         )}
         {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} <span className="liq-pct">▼ −{roof * 100}%</span></dd></div>}
-        <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
+        {buy ? (<>
+          <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
+          {q.loan > 0 && <div><dt>Borrowed from issuers</dt><dd className="num">{usd(q.loan)} USDC</dd></div>}
+        </>) : (<>
+          <div><dt>Borrowed from issuers</dt><dd className="num">{coinAmt(q.notional / base)} {market.symbol}</dd></div>
+          <div><dt>Sold for</dt><dd className="num">{usd(q.notional)}</dd></div>
+          <div><dt>Buy back</dt><dd className="num">{coinAmt(q.notional / base)} {market.symbol} to return</dd></div>
+        </>)}
         <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas * (isOrder ? 2 : 1))}</dd></div>
       </dl>
 
@@ -245,7 +253,9 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, maxM
             <dl className="kv confirm-kv">
               <div><dt>You pay</dt><dd className="num"><CoinIcon symbol="USDC" size={14} /> {usd(amount)}</dd></div>
               <div><dt>{isOrder ? 'Buy at' : 'Price now'}</dt><dd className="num">{entryOk ? price(entryNum) : price(market.price)}</dd></div>
-              <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
+              {buy ? <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
+                : <div><dt>Borrow &amp; sell</dt><dd className="num">{coinAmt(q.notional / base)} {market.symbol} · {usd(q.notional)}</dd></div>}
+              {buy && q.loan > 0 && <div><dt>Borrowed from issuers</dt><dd className="num">{usd(q.loan)} USDC</dd></div>}
               {!q.noLiquidation && <div><dt>Liquidation</dt><dd className="num down">{`${price(liqPrice)} ${buy ? '▼ −' : '▲ +'}${(q.liqMove * 100).toFixed(1)}%`}</dd></div>}
               {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} ▼ −{roof * 100}%</dd></div>}
               {hasTp && !tpErr && <div><dt>Take profit</dt><dd className="num">{price(tpNum)}</dd></div>}

@@ -39,7 +39,7 @@ export function MultiplierSlider({ value, min, max, onChange, label = 'Multiplic
         className={'msl-track' + (dragging.current ? ' dragging' : '')} ref={track}
         role="slider" tabIndex={0} aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={`${value} times`}
         onKeyDown={onKey}
-        onPointerDown={(e) => { dragging.current = true; e.currentTarget.setPointerCapture(e.pointerId); fromPointer(e); }}
+        onPointerDown={(e) => { e.preventDefault(); dragging.current = true; e.currentTarget.setPointerCapture(e.pointerId); fromPointer(e); }}
         onPointerMove={(e) => dragging.current && fromPointer(e)}
         onPointerUp={() => { dragging.current = false; }}
         onPointerCancel={() => { dragging.current = false; }}

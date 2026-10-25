@@ -4,8 +4,13 @@
 // Same numbers as contracts/src/BackxHedgeManager.sol / BackxShortManager.sol and docs/backx/FEES-AND-MARGINS.md (v4).
 // v4: exposure is exactly m × margin. The amount the trader types is what they pay (owner 2026-10-19): fees and
 // validator gas come out of it, the rest is the margin. Same as the contract's _stakeFor.
-/** holders + Reserve Security Fund on the stake; borrow + RSF on the amount lent. */
-export const FEES = { holders: 0.02, borrow: 0.0025, rsfStake: 0.005, rsfLent: 0.0003 } as const;
+/** Platform (Treasury, $GAZZ holders' share) + Reserve Security Fund on the stake; borrow + RSF on the amount lent.
+ *  A 1× hedge borrows nothing and pays only `spot` (owner 2026-10-25, contract Fees.spotBps). */
+export const FEES = { platform: 0.02, spot: 0.003, borrow: 0.0025, rsfStake: 0.005, rsfLent: 0.0003 } as const;
+
+/** Fee rate on the margin for a position that lends lentMult × margin (contract _rates + _stakeFor). */
+export const feeRate = (lentMult: number) =>
+  (lentMult === 0 ? FEES.spot : FEES.platform + FEES.rsfStake) + lentMult * (FEES.borrow + FEES.rsfLent);
 /** Validator gas per position (contract validation.gasUsd, flat USD): ≈ 2× one close/liquidation. Escrowed in the
  *  position, paid to whoever settles it, back to you when you close it yourself. ÅPEN: set from measured gas at deploy. */
 export const KEEPER_GAS = 0.1;
@@ -68,17 +73,17 @@ const oneWay = (usd: number, poolFee: number, depthUsd: number) => poolFee + usd
 /** liqMargin: the market's execution margin (Market.liqMarginBps / 1e4); it moves liquidation earlier for the issuers' safety. */
 /** Margin left from `amount` once fees and gas are paid; lentMult = m − 1 for a Hedge, m for a Short. */
 export function marginFor(amount: number, lentMult: number): number {
-  return Math.max(0, (amount - KEEPER_GAS) / (1 + FEES.holders + FEES.rsfStake + lentMult * (FEES.borrow + FEES.rsfLent)));
+  return Math.max(0, (amount - KEEPER_GAS) / (1 + feeRate(lentMult)));
 }
 
 export function quote(amount: number, m: number, entry: number, poolFee: number, depthUsd: number, liqMargin = 0): Quote {
   const mm = Math.max(1, Math.round(m));
   const { e, s, p } = params(mm);
   const stake = marginFor(amount, mm - 1);
-  const holders = stake * FEES.holders;
   const loan = (mm - 1) * stake;
+  const holders = stake * (loan === 0 ? FEES.spot : FEES.platform);
   const borrow = loan * FEES.borrow;
-  const rsf = stake * FEES.rsfStake + loan * FEES.rsfLent;
+  const rsf = loan === 0 ? 0 : stake * FEES.rsfStake + loan * FEES.rsfLent;
   const gas = KEEPER_GAS;
   const paid = stake + holders + borrow + rsf + gas;
   const equity = stake;
@@ -120,7 +125,7 @@ export function shortQuote(amount: number, m: number, entry: number, poolFee: nu
   const mm = Math.max(1, Math.round(m));
   const { e, s, p } = params(mm);
   const stake = marginFor(amount, mm);
-  const holders = stake * FEES.holders;
+  const holders = stake * FEES.platform;
   const notional = mm * stake;
   const borrow = notional * FEES.borrow;
   const rsf = stake * FEES.rsfStake + notional * FEES.rsfLent;
