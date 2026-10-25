@@ -1451,11 +1451,20 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-print-only { display: none; }
 .wp-page > .page-head { align-items: center; }
 @media print {
-  @page { size: A4; margin: 12mm 0; background: var(--bg); }
+  /* Our own running header and footer in the theme's colours (they replace the browser's dark-on-dark ones). */
+  @page {
+    size: A4; margin: 20mm 16mm 18mm; background: var(--bg);
+    @top-left { content: "backx.trade"; color: var(--ink); font: 600 9pt "IBM Plex Sans", system-ui, sans-serif; vertical-align: bottom; padding-bottom: 5mm; }
+    @top-right { content: "Whitepaper"; color: var(--ink-3); font: 9pt "IBM Plex Sans", system-ui, sans-serif; vertical-align: bottom; padding-bottom: 5mm; }
+    @bottom-left { content: "Future Trading for Agents \21C4  Capital"; color: var(--ink-3); font: 8pt "IBM Plex Sans", system-ui, sans-serif; vertical-align: top; padding-top: 5mm; }
+    @bottom-right { content: counter(page) " / " counter(pages); color: var(--ink-3); font: 8pt "IBM Plex Mono", ui-monospace, monospace; vertical-align: top; padding-top: 5mm; }
+  }
   html, body, #root, .home, .app { background: var(--bg) !important; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .topbar, .h-header, .skip, .wp-pdf, .wp-toc, .mobile-bar, .h-footer, footer { display: none !important; }
   .wp-print-only { display: block; margin-bottom: 8px; }
-  .wp-page { padding: 0 14mm !important; max-width: none !important; }
+  .wp-page { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  .wp-page > .page-head { margin-top: 0; padding-top: 0; }
+  section { padding-top: 2mm; }
   .wp-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .wp-fig, .wp-table, .wp-row, .wp-callout, .wp-stats, .wp-flow, .callsheet tr { break-inside: avoid; }
   h2, h3 { break-after: avoid; }

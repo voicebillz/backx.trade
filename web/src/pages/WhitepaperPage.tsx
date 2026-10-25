@@ -57,6 +57,7 @@ function useInView<T extends Element>() {
 /** Number that counts up from 0 when it comes into view (ease-out, ~1.1 s). */
 function CountUp({ to, digits = 0, pre = '', post = '' }: { to: number; digits?: number; pre?: string; post?: string }) {
   const [ref, seen] = useInView<HTMLSpanElement>();
+  const isPrinting = usePrinting();
   const [v, setV] = useState(0);
   useEffect(() => {
     if (!seen) return;
@@ -66,7 +67,7 @@ function CountUp({ to, digits = 0, pre = '', post = '' }: { to: number; digits?:
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [seen, to]);
-  return <span ref={ref} className="num">{pre}{v.toFixed(digits)}{post}</span>;
+  return <span ref={ref} className="num">{pre}{(isPrinting ? to : v).toFixed(digits)}{post}</span>;
 }
 
 /** Wrapper that adds .in when visible, so CSS can grow bars. */
