@@ -1452,6 +1452,10 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-print-only { display: none; }
 .wp-page > .page-head { align-items: center; }
 @media print {
+  /* One flat page colour for the whole PDF, edges included (owner 2026-10-25): the front page's black in dark,
+     its off-white in light, set on the root so @page uses the same colour as the content. */
+  html:root:not([data-theme="light"]) { --bg: #070707; --panel: #0E0E0E; --raised: #151515; --ink: #F2F2F2; --ink-2: #A8A8A8; --ink-3: #6E6E6E; --line: rgba(255,255,255,.08); --brand-text: #FFD100; --brand-bg: rgba(255,209,0,.12); }
+  html:root[data-theme="light"] { --bg: #FAFAF7; --panel: #FFFFFF; --raised: #F0F0EC; --ink: #0A0A0A; --ink-2: #4A4A4A; --ink-3: #7A7A7A; --line: rgba(0,0,0,.09); --brand-text: #7A5E00; --brand-bg: rgba(255,209,0,.22); }
   /* Our own running header and footer in the theme's colours (they replace the browser's dark-on-dark ones). */
   @page {
     size: A4; margin: 20mm 16mm 18mm; background: var(--bg);

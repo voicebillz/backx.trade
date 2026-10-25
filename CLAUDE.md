@@ -97,7 +97,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   RSF note: in a 30–60 % flash crash issuers can expect a small loss).
   Motto (owner 2026-10-22): "Future Trading for Agents ⇄ Capital", flips every 2.6 s (`components/Motto.tsx`; app header box; removed from the Whitepaper 2026-10-25, whitepaper has no Draft badge).
   Whitepaper "Download PDF" (owner 2026-10-25): the browser's print / save-as-PDF in the current theme (print CSS in app.css,
-  `@page` background = `--bg`, own running header (backx.trade · Whitepaper) and footer (motto · page / pages) in the
+  `@page` background = `--bg` (print sets the front-page palette on :root: black #070707 in dark, #FAFAF7 in light,
+  so edges and content match), own running header (backx.trade · Whitepaper) and footer (motto · page / pages) in the
   theme colours via @page margin boxes, 20/18 mm top/bottom, chrome hidden, every animated figure and CountUp at its
   final value), so the PDF is always current.
   Rewards section shows "Issuers earn the most" with a live per-$100 split at 20× (issuers > platform > validator).
