@@ -83,7 +83,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   window with that coin preselected on the first launch chain that routes it; Back returns. Swap chains: Ethereum, Base,
   BNB Chain, Arbitrum. Coin logos: CoinIcon falls back to the listed market image (LISTED_LOGO). No under-texts (owner):
   keep only errors, warnings and numbers. App header: home icon (no text) before Trade → front page.
-  Terminal layout (owner 2026-10-25, `lib/layout.ts`, `components/LayoutPanel.tsx`): gear right of the profile opens 10
+  Settings gear (owner 2026-10-25, `lib/layout.ts`, `components/LayoutPanel.tsx`), right of the profile, also signed out: theme
+  (dark/light) and candle colours live here (no longer in the header), plus the terminal layout: 10
   presets + side panel / bottom panel (Moving markets, Positions, Off), ticket left/right, coin header on/off; chart and
   ticket are mandatory. Desktop (≥1200 px): drag panel edges and corners (Resizer in Terminal.tsx, arrow keys too);
   saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown only). Preset previews are
