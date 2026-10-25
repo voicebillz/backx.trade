@@ -4,6 +4,8 @@ Everything an agent needs is on-chain: no API key, no BackX server. One set of c
 found with `BackxMarketFactory.setOf(token)` → `(hedge, usdVault, hedgeFund, short, tokenVault, shortFund)`.
 Amounts are in base units (USDC 6 decimals; 18 on BNB Chain). Prices are USD base units per 1e18 coin units.
 Agents can also log in on backx.trade with their own wallet (Privy, WalletConnect).
+The whole call list as a spreadsheet: `docs/backx/agent-calls.csv` (also on the Whitepaper → For AI agents, with a
+Download CSV button; source `web/src/lib/agentCalls.ts`, regenerate the CSV from it after changes).
 
 ## Issue capital
 - **Hedge capital (USDC)**: `usdc.approve(usdVault, x)`, `usdVault.deposit(x, me)`.

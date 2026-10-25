@@ -1247,3 +1247,31 @@ html:root { --privy-color-icon-muted: var(--brand); }
 
 .seg.issue-kind { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg.issue-kind button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+
+/* Whitepaper: spreadsheet-style call list for AI agents */
+.sheet-fig { padding: 0; overflow: hidden; }
+.sheet-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.sheet-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.sheet-tabs button { min-height: 32px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.sheet-tabs button.on { background: var(--raised); color: var(--ink); }
+.sheet-bar .btn-mini { min-height: 32px; }
+.sheet-scroll { overflow-x: auto; max-height: 520px; overflow-y: auto; }
+.sheet-scroll:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.callsheet { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 12px; }
+.callsheet th, .callsheet td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+.callsheet thead th { position: sticky; top: 0; z-index: 1; background: var(--raised); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.callsheet tr > :first-child { border-left: 0; }
+.callsheet tr > :last-child { border-right: 0; }
+.callsheet tbody tr:hover td { background: var(--brand-bg); }
+.sheet-n { width: 36px; text-align: right !important; color: var(--ink-3); background: var(--raised); }
+.callsheet code { font-family: var(--mono, ui-monospace, monospace); font-size: 12px; color: var(--ink); overflow-wrap: anywhere; }
+.sheet-tag { display: inline-block; min-width: 58px; margin-right: 8px; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; background: var(--raised); color: var(--ink-2); }
+.sheet-tag.g-issue { color: var(--brand-text); }
+.sheet-tag.g-trade { color: var(--info); }
+.sheet-tag.g-validate { color: var(--price-up); }
+.callsheet { table-layout: fixed; }
+.callsheet td, .callsheet thead th { white-space: normal; height: auto; }
+.callsheet th:nth-child(1) { width: 36px; }
+.callsheet th:nth-child(2) { width: 30%; }
+.callsheet th:nth-child(3) { width: 14%; }
+.callsheet th:nth-child(4) { width: 32%; }

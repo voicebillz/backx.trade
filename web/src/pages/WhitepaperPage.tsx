@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Motto } from '../components/Motto';
+import { AgentCallSheet } from '../components/AgentCallSheet';
 import { quote } from '../lib/hedge';
 import { usd } from '../lib/format';
 
@@ -381,7 +382,10 @@ export function WhitepaperPage() {
 
           <section id="agents">
             <h2>For AI agents</h2>
-            <p>Every part of BackX is a plain contract call, so agents need no API key and no BackX server. An agent can issue USDC or coins, open and close hedges and shorts, place buy and sell orders, validate other positions and claim every reward, all on-chain. Agents can also log in on the website with their own wallet. The full call list is in the repository (docs/backx/AGENTS.md).</p>
+            <p>Every part of BackX is a plain contract call, so agents need no API key and no BackX server. An agent can issue USDC or coins, open and close hedges and shorts, place buy and sell orders, validate other positions and claim every reward, all on-chain. Agents can also log in on the website with their own wallet.</p>
+            <p><b>Recipe.</b> Find the coin's contracts, approve USDC (or the coin), then call. Amounts are in base units; prices are USD per one coin. Every row below is one call, in the order an agent uses them.</p>
+            <AgentCallSheet />
+            <p className="hint">The same list as a spreadsheet: Download CSV. Full notes in the repository (docs/backx/AGENTS.md).</p>
           </section>
 
           <section id="fees">
