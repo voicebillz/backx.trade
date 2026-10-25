@@ -86,7 +86,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   Terminal layout (owner 2026-10-25, `lib/layout.ts`, `components/LayoutPanel.tsx`): gear right of the profile opens 10
   presets + side panel / bottom panel (Moving markets, Positions, Off), ticket left/right, coin header on/off; chart and
   ticket are mandatory. Desktop (≥1200 px): drag panel edges and corners (Resizer in Terminal.tsx, arrow keys too);
-  saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown + quick buttons). Preset previews are
+  saved in localStorage `backx.layout.v1`. Chart timeframes 1m … 1 month (dropdown only). Preset previews are
   real screenshots, `web/public/layouts/0-9.webp` (640 px): retake them when the terminal changes. Live issuing opens at launch; Demo mode (10,000 play USDC, browser-only, nothing sent) works now.
   Until launch: "Coming soon" badge (header stats unblurred, owner 2026-10-25); DEX pool greyed out with "Soon" (`DEX_OPEN = false` in IssuePage).
   Partner plan: `docs/backx/PARTNERS.md`. Whitepaper page `/whitepaper` (admins only until launch: everyone else sees a greyed-out "Coming soon" placeholder, `WhitepaperSite.tsx`; visual gate only, the text ships in the chunk; nav after Swap; timing table from sim/flash.py,

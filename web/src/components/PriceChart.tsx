@@ -19,7 +19,6 @@ const FRAMES = [
   { id: '1M', label: '1 month', sec: 2592000 },
 ] as const;
 type FrameId = (typeof FRAMES)[number]['id'];
-const QUICK: FrameId[] = ['1m', '5m', '1h', '1d'];
 const FRAME_OPTIONS = FRAMES.map((f) => ({ value: f.id as FrameId, label: f.label }));
 
 interface Props {
@@ -96,11 +95,6 @@ export function PriceChart({ market, theme, priceColors, entry, liqPrice }: Prop
   return (
     <section className="panel chart-panel" aria-label={`${market.symbol} price chart`}>
       <div className="chart-toolbar">
-        <div className="chart-quick" role="group" aria-label="Quick timeframe">
-          {QUICK.map((id) => (
-            <button key={id} aria-pressed={frame === id} className={frame === id ? 'active' : ''} onClick={() => setFrame(id)}>{id}</button>
-          ))}
-        </div>
         <Dropdown label="Timeframe" value={frame} options={FRAME_OPTIONS} onChange={setFrame} compact />
         <span className="chart-note">Demo data</span>
       </div>
