@@ -112,8 +112,8 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
             <thead>
               <tr>
                 <th rowSpan={2}>Coin</th>
-                <th colSpan={3} className="grp grp-usd"><CoinIcon symbol="USDC" size={14} /> Hedge Pool · backs Buys ▲</th>
-                <th colSpan={2} className="grp grp-coin">Short Pool · the coin · backs Sells ▼</th>
+                <th colSpan={3} className="grp grp-usd"><CoinIcon symbol="USDC" size={14} /> Hedge Pool · backs Longs</th>
+                <th colSpan={2} className="grp grp-coin">Short Pool · the coin · backs Shorts</th>
                 <th colSpan={2} className={'grp grp-dex' + (DEX_OPEN ? '' : ' is-soon')}>Liquidity Pool · DEX {!DEX_OPEN && <span className="soon-badge">Soon</span>}</th>
                 <th rowSpan={2} />
               </tr>
@@ -196,7 +196,7 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue, onSwap 
 
         {done ? (
           <>
-            <p className="ok">▲ Demo issue added: {inCoins ? `${n} ${market.symbol}` : usd(Math.floor(n * 100) / 100)} into the {market.symbol} {kind === 'hedge' ? 'Hedge Pool' : kind === 'short' ? 'Short Pool' : `Liquidity Pool on ${VENUES[venue]}`}.</p>
+            <p className="ok">Demo issue added: {inCoins ? `${n} ${market.symbol}` : usd(Math.floor(n * 100) / 100)} into the {market.symbol} {kind === 'hedge' ? 'Hedge Pool' : kind === 'short' ? 'Short Pool' : `Liquidity Pool on ${VENUES[venue]}`}.</p>
             <button className="btn btn-gold btn-block" onClick={onClose}>Done</button>
           </>
         ) : (
@@ -253,7 +253,7 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue, onSwap 
             {kind === 'short' ? (
               <>
                 <dl className="kv">
-                  <div><dt>Backs</dt><dd><span className="down">▼</span> {market.symbol} Sells (shorts)</dd></div>
+                  <div><dt>Backs</dt><dd>{market.symbol} Shorts</dd></div>
                   <div><dt>Est. APR</dt><dd className="num gold">{v.coin.apr.toFixed(1)}%</dd></div>
                   <div><dt>Lent out</dt><dd className="num">{Math.round(v.coin.util * 100)}%</dd></div>
                   <div><dt>Comes back</dt><dd>The same number of {market.symbol}</dd></div>
@@ -263,7 +263,7 @@ function IssueModal({ market, usdc, demo, demoBal, onClose, onDemoIssue, onSwap 
             ) : kind === 'hedge' ? (
               <>
                 <dl className="kv">
-                  <div><dt>Backs</dt><dd><span className="up">▲</span> {market.symbol} Buys (hedges)</dd></div>
+                  <div><dt>Backs</dt><dd>{market.symbol} Longs</dd></div>
                   <div><dt>Est. APR</dt><dd className="num gold">{v.usd.apr.toFixed(1)}%</dd></div>
                   <div><dt>Lent out</dt><dd className="num">{Math.round(v.usd.util * 100)}%</dd></div>
                   <div><dt>Comes back first</dt><dd>Same dollars (USDC)</dd></div>

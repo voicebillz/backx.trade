@@ -816,8 +816,8 @@ function Contracts() {
           {chain.error && <p className="field-err">Could not read {chain.name} right now.</p>}
           {chain.items && (
             <p className="muted small">
-              Safe on this chain: {chain.safe ? <span className="ok-text">▲ yes</span> : <span className="down">▼ no</span>} ·
-              CREATE2 deployer: {chain.deployer ? <span className="ok-text">▲ yes</span> : <span className="down">▼ no</span>} ·
+              Safe on this chain: {chain.safe ? <span className="ok-text">yes</span> : <span className="down">no</span>} ·
+              CREATE2 deployer: {chain.deployer ? <span className="ok-text">yes</span> : <span className="down">no</span>} ·
               Reserve currency: {chain.stable ? chain.stable.symbol : 'not chosen yet'}
             </p>
           )}

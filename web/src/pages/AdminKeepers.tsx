@@ -11,7 +11,7 @@ interface Resp { keepers: Row[]; targetWei: string; lowWei: string; safe: string
 
 const eth = (wei: string | null) => (wei == null ? '—' : (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(4));
 const ago = (ms: number | null) => (ms == null ? 'never' : ms < 60_000 ? `${Math.round(ms / 1000)} s ago` : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min ago` : `${Math.round(ms / 3_600_000)} h ago`);
-const STATUS = { up: '▲ Up', late: '● Late', down: '▼ Down', never: '○ No report' } as const;
+const STATUS = { up: 'Up', late: '● Late', down: 'Down', never: '○ No report' } as const;
 
 export function AdminKeepers() {
   const [data, setData] = useState<Resp | null>(null);
@@ -77,7 +77,7 @@ export function AdminKeepers() {
                     <td><b>{r.id}</b><small className="muted block num">{r.address.slice(0, 8)}…{r.address.slice(-4)}</small></td>
                     <td className={'kp-' + r.status}>{STATUS[r.status]}</td>
                     <td className="num">{h?.rank ?? '—'}</td>
-                    <td className={'num r' + (isLow ? ' down' : '')}>{isLow ? '▼ ' : ''}{eth(r.balanceWei)}</td>
+                    <td className={'num r' + (isLow ? ' down' : '')}>{eth(r.balanceWei)}</td>
                     <td className="num r">{h?.open ?? '—'}</td>
                     <td className="num r">{h ? `${h.sent ?? 0} / ${h.landed ?? 0} / ${h.failed ?? 0}` : '—'}</td>
                     <td className="num r">{h?.p50ms != null ? `${(h.p50ms / 1000).toFixed(2)} / ${((h.p95ms ?? 0) / 1000).toFixed(2)} s` : '—'}</td>

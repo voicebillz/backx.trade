@@ -315,22 +315,6 @@ th { text-align: left; font-weight: 500; color: var(--ink-3); height: 32px; padd
 .swatch i { width: 6px; height: 14px; border-radius: 2px; display: block; }
 
 /* multiplier slider */
-.msl { padding: 6px 2px 0; }
-.msl-track { position: relative; height: 36px; cursor: grab; touch-action: none; outline: none; }
-.msl-track:active { cursor: grabbing; }
-.msl-rail { position: absolute; left: 0; right: 0; top: 16px; height: 6px; border-radius: 3px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
-.msl-fill { height: 100%; width: calc(var(--t) * 100%); border-radius: 3px; background: linear-gradient(90deg, var(--brand) 0%, #FF9F1C 60%, var(--down) 100%); background-size: calc(100% / max(var(--t), .02)) 100%; transition: width 140ms var(--ease-out); }
-.msl-dot { position: absolute; top: 17px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink-3); opacity: .5; pointer-events: none; }
-.msl-dot.on { background: #0A0A0A; opacity: .35; }
-.msl-thumb { position: absolute; top: 9px; left: calc(var(--t) * 100%); width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: #fff; border: 3px solid var(--brand); box-shadow: 0 2px 10px rgba(0,0,0,.35); transition: left 140ms var(--ease-out), transform 120ms var(--ease-out); }
-.msl-track:active .msl-thumb, .msl-track:focus-visible .msl-thumb { transform: scale(1.12); }
-.msl-track:focus-visible .msl-thumb { box-shadow: 0 0 0 4px var(--brand-bg), 0 2px 10px rgba(0,0,0,.35); }
-.msl-bubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(4px); padding: 2px 6px; border-radius: 4px; background: var(--brand); color: #0A0A0A; font-size: 11px; font-weight: 600; opacity: 0; transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out); pointer-events: none; white-space: nowrap; }
-.msl-track:active .msl-bubble, .msl-track:focus-visible .msl-bubble { opacity: 1; transform: translateX(-50%); }
-.msl-stops { position: relative; height: 22px; margin: 0 2px; }
-.msl-stops button { position: absolute; transform: translateX(-50%); font-family: var(--mono); font-size: 10px; color: var(--ink-3); padding: 2px 4px; border-radius: 4px; }
-.msl-stops button:hover { color: var(--ink); }
-.msl-stops button.on { color: #0A0A0A; background: var(--brand); font-weight: 600; }
 
 /* markets panel */
 .markets-title { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; }
@@ -410,7 +394,7 @@ tr.zero { opacity: .5; }
 .issue-table td { height: 52px; }
 .th-sort { color: inherit; font: inherit; }
 .th-sort.on { color: var(--gold); }
-.th-sort.on::after { content: " ▼"; font-size: 9px; }
+.th-sort.on::after { content: " ↓"; font-size: 9px; }
 .sheet-scrim.center { align-items: center; justify-content: center; padding: 16px; }
 .modal { position: relative; width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-pop); animation: pop-in 180ms var(--ease-out); }
 .modal-close { position: absolute; right: 10px; top: 10px; }
@@ -1229,7 +1213,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-chart .mark.liq { stroke: var(--price-down); }
 .wp-chart-x { margin: 4px 0 0; text-align: center; font-size: 11px; color: var(--ink-3); }
 
-/* Ticket: Buy (Hedge) / Sell (Short) tabs and the Sell button. Direction never by colour alone: ▲/▼ in the label. */
+/* Ticket: Buy (Hedge) / Sell (Short) tabs and the Sell button. Direction never by colour alone: +/− in the numbers. */
 .side-tabs { margin-bottom: 12px; }
 .side-tabs button { min-height: 44px; }
 .side-tabs button.active.buy { color: var(--price-up); }
@@ -1317,15 +1301,24 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .opt-tile.on .tgl { background: var(--brand); border-color: var(--brand); }
 .opt-tile.on .tgl-knob { transform: translateX(16px); background: var(--bg); color: var(--brand); }
 .opt-body { padding: 0 12px 12px; display: grid; gap: 8px; }
-/* Multiplication starts closed: one button opens the slider at 2×, dragging back to 1× closes it */
-.mult-activate { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; margin-bottom: 10px;
-  border: 1px dashed var(--ink-3); border-radius: var(--radius); color: var(--ink); text-align: left; transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
-.mult-activate:hover:not(:disabled) { border-style: solid; border-color: var(--brand); background: var(--brand-bg); }
-.mult-activate, .msl-track { user-select: none; -webkit-user-select: none; touch-action: none; }
-.mult-activate:disabled { opacity: .5; cursor: not-allowed; }
-.mult-x { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--action); color: var(--on-action); font-weight: 700; font-size: 14px; flex: none; }
-.mult-txt { font-size: 13px; font-weight: 600; }
-.mult-max { margin-left: auto; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+/* Multiplication dial (owner 2026-10-25): always on from 1×, values slide under a fixed centre mark */
+.mroll-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.mroll-max { font-size: 11px; color: var(--ink-3); }
+.mroll-dial { position: relative; height: 76px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised);
+  overflow: hidden; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+.mroll-dial.dragging { cursor: grabbing; }
+.mroll-dial:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.mroll-track { position: absolute; left: 50%; bottom: 0; height: 34px; transition: transform 180ms var(--ease-out); }
+.mroll-dial.dragging .mroll-track { transition: none; }
+.mroll-tick { position: absolute; bottom: 0; width: 0; display: flex; flex-direction: column-reverse; align-items: center; }
+.mroll-tick i { display: block; width: 1px; height: 8px; background: var(--ink-3); opacity: .5; }
+.mroll-tick.major i { height: 12px; opacity: .9; }
+.mroll-tick b { position: absolute; bottom: 16px; font-size: 10px; font-weight: 500; color: var(--ink-3); white-space: nowrap; transform: translateX(-50%); left: 0; }
+.mroll-tick.on b { color: var(--ink); }
+.mroll-mark { position: absolute; left: 50%; bottom: 0; width: 3px; height: 15px; margin-left: -1.5px; border-radius: 1px;
+  background: color-mix(in srgb, var(--price-down) calc(var(--heat) * 100%), var(--brand)); }
+.mroll-value { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-size: 22px; font-weight: 600; color: var(--ink); pointer-events: none; }
 /* Sell: the positions you hold on this side */
 .sell-list { display: grid; gap: 10px; }
 .sell-row { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 8px; }
@@ -1342,7 +1335,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .confirm-kv dd .coin-icon { vertical-align: -2px; }
 .eyebrow.up { color: var(--price-up); }
 .eyebrow.down { color: var(--price-down); }
-@media (prefers-reduced-motion: reduce) { .side-thumb, .tgl, .tgl-knob, .opt-tile, .act-tabs button, .mult-activate { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .side-thumb, .tgl, .tgl-knob, .opt-tile, .act-tabs button, .mroll-track { transition: none; } }
 .swap-link { margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
 .chart-quick { display: flex; gap: 2px; margin-right: 6px; }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CoinIcon } from './CoinIcon';
-import { arrow, price, usd } from '../lib/format';
+import { price, usd } from '../lib/format';
 import { DEMO_POSITIONS as POSITIONS, pnlOf } from '../lib/demoPositions';
 
 // Demo rows for admins until history and vaults come from the contracts.
@@ -52,12 +52,12 @@ export function BottomPanel() {
                 return (
                   <tr key={p.sym + p.side}>
                     <td><Market sym={p.sym} m={p.m} /></td>
-                    <td className="c-sm">{p.side === 'hedge' ? <span className="side side-hedge">▲ Hedge</span> : <span className="side side-short">▼ Short</span>}</td>
+                    <td className="c-sm">{p.side === 'hedge' ? <span className="side side-hedge">Long</span> : <span className="side side-short">Short</span>}</td>
                     <td className="r num">{usd(p.size)}</td>
                     <td className="r num c-md">{price(p.entry)}</td>
                     <td className="r num c-md">{price(p.mark)}</td>
                     <td className="r num c-sm">{p.liq == null ? <span className="muted">None</span> : <span className="down">{price(p.liq)}</span>}</td>
-                    <td className={'r num ' + (pnl >= 0 ? 'up' : 'down')}>{arrow(pnl)} {signed(pnl)} <small className="c-md">({(pnl / p.size * 100).toFixed(1)}%)</small></td>
+                    <td className={'r num ' + (pnl >= 0 ? 'up' : 'down')}>{signed(pnl)} <small className="c-md">({(pnl / p.size * 100).toFixed(1)}%)</small></td>
                     <td className="r c-sm"><button className="btn-mini" disabled>Close</button></td>
                   </tr>
                 );
@@ -76,7 +76,7 @@ export function BottomPanel() {
                   <td className="c-md"><span className={'side side-' + h.action.toLowerCase()}>{h.action}</span></td>
                   <td className="r num">{usd(h.size)}</td>
                   <td className="r num c-md">{price(h.px)}</td>
-                  <td className={'r num ' + (h.pnl == null ? 'muted' : h.pnl >= 0 ? 'up' : 'down')}>{h.pnl == null ? 'Open' : `${arrow(h.pnl)} ${signed(h.pnl)}`}</td>
+                  <td className={'r num ' + (h.pnl == null ? 'muted' : h.pnl >= 0 ? 'up' : 'down')}>{h.pnl == null ? 'Open' : signed(h.pnl)}</td>
                 </tr>
               ))}
             </tbody>
@@ -89,7 +89,7 @@ export function BottomPanel() {
               {VAULTS.map((v) => (
                 <tr key={v.sym + v.asset}>
                   <td><span className="cell-market"><CoinIcon symbol={v.sym} size={18} /><b>{v.sym}</b><span className="m-chip num">{v.asset}</span></span></td>
-                  <td className="c-sm"><span className="side side-hedge">▲ Hedges</span></td>
+                  <td className="c-sm"><span className="side side-hedge">Longs</span></td>
                   <td className="r num">{v.deposited}</td>
                   <td className="c-md"><span className="util"><span className="util-bar"><i style={{ width: `${v.util * 100}%` }} /></span><span className="num">{Math.round(v.util * 100)}%</span></span></td>
                   <td className="r num gold">{v.earned}</td>

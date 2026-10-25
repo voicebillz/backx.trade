@@ -54,7 +54,7 @@ export function AdminBestChain() {
                 <tr key={r.chainId} className={data.best === r.chainId ? 'best-row' : ''}>
                   <td><b>{r.chain}</b>{data.best === r.chainId && <span className="badge ok best-badge">Best</span>}</td>
                   <td className="num">{r.token ? <>{r.token.symbol} <small className="muted">{r.token.address.slice(0, 6)}…{r.token.address.slice(-4)}</small></> : <span className="muted">not found</span>}</td>
-                  <td className={r.pass ? 'up' : 'down'}>{r.pass ? '▲ Pass' : '▼ Fail'}</td>
+                  <td className={r.pass ? 'up' : 'down'}>{r.pass ? 'Pass' : 'Fail'}</td>
                   <td>{r.tier ?? '—'}</td>
                   <td className="num r">{r.maxM ? `${r.maxM}×` : '—'}</td>
                   <td className="num r">{usdM(r.liquidity)}</td>

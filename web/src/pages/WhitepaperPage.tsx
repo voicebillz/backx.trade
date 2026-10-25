@@ -99,7 +99,7 @@ function HedgeAnatomy() {
   const pct = (x: number) => `${(x / total) * 100}%`;
   return (
     <Reveal className="wp-fig wp-anatomy" label="Example hedge: 100 USDC at 5 times">
-      <div className="wp-fig-head"><span>Example · {usd(EX.amount, 0)} at {EX.m}×</span><span className="num down">Liquidation ▼ −{(EX.liqMove * 100).toFixed(1)}%</span></div>
+      <div className="wp-fig-head"><span>Example · {usd(EX.amount, 0)} at {EX.m}×</span><span className="num down">Liquidation −{(EX.liqMove * 100).toFixed(1)}%</span></div>
       <div className="wp-an-row"><span className="wp-an-label">You pay</span>
         <div className="wp-an-bar"><i className="pay" style={{ width: pct(EX.paid) }} /></div><b className="num"><CountUp to={EX.paid} digits={2} pre="$" /></b></div>
       <div className="wp-an-row"><span className="wp-an-label">Position</span>
@@ -152,8 +152,8 @@ function Results() {
         {items.map((r) => (
           <div className="wp-result" key={r.k}>
             <span className="wp-result-k">{r.k}</span>
-            <span className="wp-result-from num">{r.down ? '▼ −' : ''}{r.from.toFixed(r.digits)}{r.post}</span>
-            <b className="wp-result-to">{r.down ? '▼ −' : ''}<CountUp to={r.to} digits={r.digits} post={r.post} /></b>
+            <span className="wp-result-from num">{r.down ? '−' : ''}{r.from.toFixed(r.digits)}{r.post}</span>
+            <b className="wp-result-to">{r.down ? '−' : ''}<CountUp to={r.to} digits={r.digits} post={r.post} /></b>
             <span className="wp-result-tag">Today → launch design</span>
           </div>
         ))}
@@ -218,7 +218,7 @@ function ShortRoof() {
   const liq = shortPnl(100, 2, t.margin, t.roof, 0).liqMove;
   return (
     <Reveal className="wp-fig wp-chart" label="Short profit roof: result of a 100 USDC short at 2 times">
-      <div className="wp-fig-head"><span>$100 short at 2× · Major · roof −{t.roof * 100}%</span><span className="num">max <span className="up">▲ +${roofY.toFixed(0)}</span></span></div>
+      <div className="wp-fig-head"><span>$100 short at 2× · Major · roof −{t.roof * 100}%</span><span className="num">max <span className="up">+${roofY.toFixed(0)}</span></span></div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gain rises as the price falls and stops at the roof, +${roofY.toFixed(0)} dollars; at a rise of ${(liq * 100).toFixed(0)} percent the short is liquidated`}>
         {[-100, 0, 100].map((y) => <g key={y}><line x1={L} x2={W - 6} y1={py(y)} y2={py(y)} className="grid" /><text x={L - 4} y={py(y) + 3} className="ax r">{y > 0 ? '+' : y < 0 ? '−' : ''}${Math.abs(y)}</text></g>)}
         {[-0.8, -0.4, 0, 0.4].map((x) => <text key={x} x={px(x)} y={H - 6} className="ax c">{x > 0 ? '+' : x < 0 ? '−' : ''}{Math.abs(x * 100)}%</text>)}
@@ -226,7 +226,7 @@ function ShortRoof() {
         <line x1={px(liq)} x2={px(liq)} y1={6} y2={H - B} className="mark liq" />
         <path d={d} className="line" />
         <text x={px(-t.roof) + 4} y={14} className="ax">roof</text>
-        <text x={px(liq) - 4} y={14} className="ax r">liquidated ▲ +{(liq * 100).toFixed(0)}%</text>
+        <text x={px(liq) - 4} y={14} className="ax r">liquidated +{(liq * 100).toFixed(0)}%</text>
       </svg>
       <p className="wp-chart-x">Price move after opening</p>
     </Reveal>
@@ -243,9 +243,9 @@ function RoofTable() {
         return (
           <div className="wp-row" role="row" key={t.tier}>
             <span role="cell">{t.tier} · {t.maxM}×</span>
-            <span role="cell" className="r num down">▼ −{t.roof * 100}%</span>
-            <span role="cell" className="r num">▲ +{(top.liqMove * 100).toFixed(1)}%</span>
-            <span role="cell" className="r num up">▲ +${top.pnl.toFixed(0)}</span>
+            <span role="cell" className="r num down">−{t.roof * 100}%</span>
+            <span role="cell" className="r num">+{(top.liqMove * 100).toFixed(1)}%</span>
+            <span role="cell" className="r num up">+${top.pnl.toFixed(0)}</span>
           </div>
         );
       })}
@@ -390,7 +390,7 @@ export function WhitepaperPage() {
                     <span className="wp-bar"><i style={{ width: `${Math.max(Math.abs(t.s) / MAX_S, 0.03) * 100}%` }} className={t.s < 0 ? 'early' : ''} /></span>
                     <span className="num">{t.s > 0 ? '+' : '−'}{Math.abs(t.s)} s</span>
                   </span>
-                  <span role="cell" className="r num down">▼ −{t.drop.toFixed(1)}%</span>
+                  <span role="cell" className="r num down">−{t.drop.toFixed(1)}%</span>
                   <span role="cell" className="r num">{t.loss ? `${t.loss.toFixed(1)}%` : '0%'}</span>
                 </div>
               ))}
@@ -423,7 +423,7 @@ export function WhitepaperPage() {
             <p><b>Issuers earn the most.</b> Their capital makes multiplication possible, so they take the largest share of every outcome. A validator's bonus never takes more than 15 % of what is left, and the platform takes a small share. Example: $100 at 20× on a large coin.</p>
             <div className="wp-table four wide" role="table" aria-label="Who gets what from $100 at 20x">
               <div className="wp-row wp-head" role="row"><span role="columnheader">Outcome</span><span role="columnheader" className="r">Issuers</span><span role="columnheader" className="r">Platform</span><span role="columnheader" className="r">Validator</span></div>
-              {([['▲ Price rises 10 %, take-profit', SPLIT.win], ['▼ Liquidated', SPLIT.liq]] as const).map(([w, x]) => (
+              {([['Price rises 10 %, take-profit', SPLIT.win], ['Liquidated', SPLIT.liq]] as const).map(([w, x]) => (
                 <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell" className="r num gold">{usd(x.issuers)}</span><span role="cell" className="r num">{usd(x.platform)}</span><span role="cell" className="r num">{usd(x.validator)}</span></div>
               ))}
             </div>

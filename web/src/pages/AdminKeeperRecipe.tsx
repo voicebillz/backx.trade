@@ -65,7 +65,7 @@ export function AdminKeeperRecipe() {
         )}
         <li><b>Kontrakt-adresser:</b> når markedene er deployet, legg til <span className="num">MANAGERS_4663</span> osv. og kjør steg 5 på nytt, eller vent: uten adresser står validatorene i ro.</li>
         <li><b>Gass:</b> Admin → Validators → «Top up low validators» lager en Safe-fil. Etter det fyller validatorene på hverandre selv.</li>
-        <li><b>Sjekk:</b> Admin → Validators viser «▲ Up» for validatorene på denne serveren innen ett minutt.</li>
+        <li><b>Sjekk:</b> Admin → Validators viser «Up» for validatorene på denne serveren innen ett minutt.</li>
       </ol>
       <p className="hint">Ikke brukt: Koyeb (gratis-instansen sover etter 1 time), Render (sover), Fly.io (ingen gratisplan). Cloudflare/GitHub-cron går bare hvert minutt: for treigt til likvideringer.</p>
     </section>

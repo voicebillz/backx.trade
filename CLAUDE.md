@@ -18,7 +18,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 ## Design rules (DESIGN-KIT part A)
 - Colours only via tokens in `web/src/styles/tokens.css`; dark is the standard for everyone (owner 2026-10-18),
   the user's saved toggle wins. Browser preference is not followed.
-- Direction uses `--price-up`/`--price-down` and is never colour alone: always ▲/▼ and +/−.
+- Direction uses `--price-up`/`--price-down` and is never colour alone: always a + / − sign. No ▲/▼ triangles anywhere
+  (owner 2026-10-25, removed site-wide).
 - Skeletons for anything waiting on data, never an empty panel or bare "Loading…".
 - WCAG 2.1 AA: skip link, `<main id="main">`, `:focus-visible`, `aria-label` on icon buttons.
 - Money: round DOWN (`floorTo`) for any amount that is sent. Tabular mono numbers.
@@ -78,7 +79,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   Safe exists on Robinhood, BNB, Base, Ethereum; not yet on Arbitrum, OP, Polygon, Avalanche.
 - Issue page: "Issue" opens a choice of Hedge · USDC (USDC reserve), Short · <coin> (the coin itself, owner 2026-10-25) or
   DEX pool (PancakeSwap Infinity / Uniswap v4, price range). "Your rewards" card (claimable USDC; Claim opens at launch).
-  Trade ticket (owner 2026-10-25): one Hedge·Buy ⇄ Short·Sell switch at the top, "Limit order" switch (price required;
+  Trade ticket (owner 2026-10-25): Long | Short flip at the top (UI says Long; contracts and docs keep "Hedge"), Buy | Sell
+  tabs below, multiplication dial always on from 1× (`MultRoller`: values slide under a centre mark, drag/scroll/tap/keys;
+  hidden only when the coin's cap is 1×), "Limit order" switch (price required;
   warns above/below/at/far from today's price), take-profit (short: not past the roof), Buy/Sell opens a confirm overlay
   (portal; "Opens at launch" until contracts are live). Missing USDC or coin → "Swap" opens SwapOverlay in the same
   window with that coin preselected on the first launch chain that routes it; Back returns. Swap chains: Ethereum, Base,

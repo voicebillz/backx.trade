@@ -67,7 +67,7 @@ export function MultiplierBar() {
     <div className="mbar">
       <div className="mbar-head">
         <span className="mbar-label">Multiplication</span>
-        <span className="mbar-liq">{liq == null ? <>No liquidation <b className="ok-text">at 1×</b></> : <>Liquidation at <b>▼ −{liq.toFixed(1)}%</b></>}</span>
+        <span className="mbar-liq">{liq == null ? <>No liquidation <b className="ok-text">at 1×</b></> : <>Liquidation at <b>−{liq.toFixed(1)}%</b></>}</span>
       </div>
       <div className="mbar-value"><span>{m}</span>×</div>
       <div

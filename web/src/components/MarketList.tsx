@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Market } from '../lib/markets';
-import { arrow, pct, price } from '../lib/format';
+import { pct, price } from '../lib/format';
 import { CoinIcon } from './CoinIcon';
 
 interface Props {
@@ -29,7 +29,7 @@ export function MarketList({ items, hasMore, error, loadMore, selected, onSelect
       <div className="markets-title">
         <span className="pulse" aria-hidden="true" />
         <h2>Moving Markets</h2>
-        <span className="markets-sort">24h ▼</span>
+        <span className="markets-sort">24h ↓</span>
       </div>
       <div className="markets-head label"><span>Market</span><span>Price</span><span>24h</span></div>
       <ul className="markets-list" aria-busy={items.length === 0 && !error}>
@@ -43,7 +43,7 @@ export function MarketList({ items, hasMore, error, loadMore, selected, onSelect
                 <small>{m.maxM}×</small>
               </span>
               <span className="num">{price(m.price)}</span>
-              <span className={'chg num ' + (m.change24h >= 0 ? 'up' : 'down')}>{arrow(m.change24h)} {pct(m.change24h)}</span>
+              <span className={'chg num ' + (m.change24h >= 0 ? 'up' : 'down')}>{pct(m.change24h)}</span>
             </button>
           </li>
         ))}

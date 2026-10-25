@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { searchMarkets, type Market } from '../lib/markets';
-import { arrow, pct, price } from '../lib/format';
+import { pct, price } from '../lib/format';
 import { CoinIcon } from './CoinIcon';
 
 /** Topbar search: opens a panel with suggestions, narrows as you type. ⌘K / Ctrl+K focuses it. */
@@ -65,7 +65,7 @@ export function MarketSearch({ onSelect }: { onSelect: (m: Market) => void }) {
                 <CoinIcon symbol={m.symbol} src={m.image} size={22} />
                 <span className="msearch-name"><b>{m.symbol}</b><small>{m.name}</small></span>
                 <span className="num">{price(m.price)}</span>
-                <span className={'chg num ' + (m.change24h >= 0 ? 'up' : 'down')}>{arrow(m.change24h)} {pct(m.change24h)}</span>
+                <span className={'chg num ' + (m.change24h >= 0 ? 'up' : 'down')}>{pct(m.change24h)}</span>
               </li>
             ))}
             {items?.length === 0 && <li className="empty">No market matches “{q}”.</li>}

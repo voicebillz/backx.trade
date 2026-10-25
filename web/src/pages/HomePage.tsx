@@ -28,7 +28,7 @@ function Participate({ big = false }: { big?: boolean }) {
   const { me, joined, joinedAt, busy, err, canSignIn, participate } = useParticipate();
   if (joined) return (
     <span className={'h-joined' + (big ? ' big' : '')} aria-live="polite">
-      ▲ You're in{joinedAt ? ` · since ${new Date(joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}` : ''}
+      You're in{joinedAt ? ` · since ${new Date(joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}` : ''}
     </span>
   );
   return (

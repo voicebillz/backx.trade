@@ -25,7 +25,6 @@ export function pct(n: number, digits = 2): string {
   return (n >= 0 ? '+' : '−') + Math.abs(n).toFixed(digits) + '%';
 }
 
-export const arrow = (n: number) => (n >= 0 ? '▲' : '▼');
 
 /** Round DOWN to a number of decimals. Use for anything that becomes a sent amount. */
 export function floorTo(n: number, decimals: number): number {
