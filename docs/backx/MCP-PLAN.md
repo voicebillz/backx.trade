@@ -1,6 +1,8 @@
 # MCP and other AI connections (plan, owner 2026-10-26)
 
-Status: **planned, not built.** On-chain access for agents works today without any of this (`/skill.md`,
+Status: **v1 built 2026-10-26** (read tools, prepare tools, consent, sign page with the API's own check; code in
+`voicebillz/mcp.backx.trade`, Railway recipe in its README). **Signing by MCP via Privy policies: not built yet**
+(needs owner sign-off on the default limits). On-chain access for agents works today without any of this (`/skill.md`,
 `/agents.json`, `docs/backx/AGENTS.md`). This plan covers the extra, optional path: a user connects their own AI
 assistant (Claude, ChatGPT, Cursor, their own agent …) to **their own BackX account** through MCP. Only for
 accounts that log in with a social method; MCP may sign within limits but never holds a private key.

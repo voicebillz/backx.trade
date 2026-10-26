@@ -10,6 +10,7 @@ import { adminRouter } from './admin.js';
 import { ventureRouter } from './venture.js';
 import { stakeRouter, startTankScanner } from './stake.js';
 import { keeperReportRouter } from './keepers.js';
+import { mcpRouter, mcpPublicRouter, mcpInternalRouter, loadGrantKey } from './mcp.js';
 
 // family: 0 lets ioredis resolve Railway's IPv6 private network.
 const redis = new Redis(config.redisUrl, { family: 0, maxRetriesPerRequest: 2, lazyConnect: false });
@@ -47,6 +48,11 @@ app.get('/health', async (_req, res) => {
 // Keeper health reports (docs/KEEPERS.md): machines, not browsers, so outside /api and its origin guard.
 // Each report is signed with that keeper's own ed25519 key; own rate limit and replay guard in keepers.js.
 app.use('/keeper', keeperReportRouter);
+
+// MCP (docs/backx/MCP-PLAN.md): the public half of the grant key, and signed calls from mcp.backx.trade only
+// (ed25519 with MCP_PUBLIC_KEY, timestamp, replay guard, own rate limit in mcp.js). Machines, not browsers.
+app.use('/mcp', mcpPublicRouter);
+app.use('/internal/mcp', mcpInternalRouter);
 
 // --- Everything under /api is closed by default ---------------------------
 
@@ -110,6 +116,7 @@ app.use('/api/swap', swapRouter);
 app.use('/api/venture', ventureRouter);
 app.use('/api/stake', stakeRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/mcp', mcpRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }));
 app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
@@ -124,6 +131,7 @@ app.use((err, _req, res, _next) => {
 
 // '::' listens on IPv4 and IPv6 (Railway private networking is IPv6).
 await migrate();
+await loadGrantKey();
 const server = app.listen(config.port, process.env.HOST || '::', () => console.log(`backx api on :${config.port}`));
 startTankScanner(redis); // Profile → Staking: which Gazz Tanks each wallet holds
 

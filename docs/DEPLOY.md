@@ -131,3 +131,14 @@ Railway variable `KEEPERS` (optional): `id:gasAddress:reportPublicKey,...` from 
 Offentlige adresser som bare står i Railway må også legges inn som GitHub repo-**variabler** (Settings → Secrets and
 variables → Actions → Variables, ikke secrets): `RESERVE_STABLE_4663` (+ `RESERVE_STABLE_SYMBOL_4663`,
 `RESERVE_STABLE_DECIMALS_4663`), `GAZZ_TANKS`, `STAKING_TANK_POINTS`, `FACTORY_<chainId>`. Ingen nøkler der.
+
+## MCP (mcp.backx.trade, eget prosjekt)
+MCP-serveren ligger i eget repo `voicebillz/mcp.backx.trade` og eget Railway-prosjekt; full oppskrift står i README der.
+På API-tjenesten her:
+| Variabel | Påkrevd | Verdi |
+|---|---|---|
+| `MCP_PUBLIC_KEY` | Nei (uten den er MCP av) | `spki` fra `https://mcp.backx.trade/.well-known/backx-mcp-key` (offentlig nøkkel) |
+| `MCP_URL` | Nei | standard `https://mcp.backx.trade` |
+| `API_PUBLIC_URL` | Nei | standard `https://api.backx.trade` (må være lik MCP-serverens `API_URL`) |
+API-ets egen grant-nøkkel lages automatisk første gang og ligger i Postgres; den offentlige delen vises på
+`https://api.backx.trade/mcp/grant-key` og limes inn som `API_GRANT_PUBLIC_KEY` i MCP-prosjektet.

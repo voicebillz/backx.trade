@@ -43,6 +43,13 @@ function keeperList(raw) {
   return out;
 }
 
+function mcpKey(raw) {
+  const v = raw?.trim();
+  if (!v) return null;
+  if (!/^[A-Za-z0-9+/=]{40,80}$/.test(v)) throw new Error('MCP_PUBLIC_KEY must be the base64 SPKI from mcp.backx.trade/.well-known/backx-mcp-key');
+  return v;
+}
+
 export const config = {
   isProd,
   port: Number(process.env.PORT) || 8080,
@@ -56,4 +63,10 @@ export const config = {
   // Requests per minute per IP across /api.
   rateLimitPerMin: Number(process.env.RATE_LIMIT_PER_MIN) || 120,
   keepers: keeperList(process.env.KEEPERS),
+  // MCP (owner 2026-10-26): where mcp.backx.trade lives, and its public key (base64 SPKI ed25519, shown at
+  // <MCP_URL>/.well-known/backx-mcp-key). Without MCP_PUBLIC_KEY the internal MCP routes stay closed.
+  mcpUrl: (process.env.MCP_URL?.trim() || 'https://mcp.backx.trade').replace(/\/+$/, ''),
+  mcpPublicKey: mcpKey(process.env.MCP_PUBLIC_KEY),
+  // This API's own public address: the issuer of MCP grants (mcp.backx.trade's API_URL must be the same).
+  apiPublicUrl: (process.env.API_PUBLIC_URL?.trim() || 'https://api.backx.trade').replace(/\/+$/, ''),
 };

@@ -45,7 +45,7 @@ async function verifyPrivy(token) {
  * The user's Privy embedded Ethereum wallet and the login method used, read from Privy
  * itself, never from the client. The method is the linked account verified most recently.
  */
-async function privyAccount(did) {
+export async function privyAccount(did) {
   const r = await fetch(`https://api.privy.io/v1/users/${encodeURIComponent(did)}`, {
     headers: {
       Authorization: 'Basic ' + Buffer.from(`${config.privyAppId}:${config.privyAppSecret}`).toString('base64'),

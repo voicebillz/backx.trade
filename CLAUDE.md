@@ -211,11 +211,17 @@ The owner is not a developer: explain briefly, in Norwegian.
   addresses must also be GitHub repo *variables*), `/abi/<Name>.json` (from export-artifacts.py), `llms.txt`.
   CORS `*` on those static files only. The call list (`web/src/lib/agentCalls.ts` → Whitepaper sheet +
   `docs/backx/agent-calls.csv`) has Find, Issue, Trade, Orders, Stake, Claim, Validate.
-- Planned, not built: MCP at `mcp.backx.trade` on a separate project/server, OAuth 2.1 with the BackX login, a user's
-  agent sees only their own account; ONLY social-login accounts may connect (not external-wallet logins, owner
-  2026-10-26); MCP may sign (opt-in per account) through Privy policy-limited signing on the embedded wallet (BackX
-  contracts only, no transfers out, user limits), never holding a private key; talks to api.backx.trade only via
-  signed, read-only `/internal/mcp/*` routes; never DB/Redis. Plan: `docs/backx/MCP-PLAN.md`.
+- MCP (owner 2026-10-26), TWO REPOS KEPT APART: the server itself is `voicebillz/mcp.backx.trade` (own Railway project
+  "backx-mcp", own Redis, push to its own `main`; its README has the Railway recipe, its CLAUDE.md the rules). THIS repo
+  holds only the BackX side: `server/src/mcp.js` (`/api/mcp/me|consent|verify|disconnect` with session, `/mcp/grant-key`
+  public, `/internal/mcp/account` signed by MCP's ed25519 key = `MCP_PUBLIC_KEY`), the API's own grant key (made on
+  boot, Postgres `server_keys`), tables `mcp_consents`/`mcp_disconnects`, and app pages `/connect` + `/sign`
+  (`web/src/pages/McpPages.tsx`, any signed-in account, CSP connect-src has mcp.backx.trade). Only social-login
+  accounts may connect (Privy's latest verified login ≠ external `wallet`). v1: MCP prepares, the user signs on
+  /sign after `/api/mcp/verify` checks every step (only BackX contracts from the factory, allowed functions, money
+  back to the own wallet, Multicall3 only claimRewardsFor/claimFor). Next (needs owner sign-off on limits): MCP signs
+  via Privy policy-limited signing, never holding a key. Plan: `docs/backx/MCP-PLAN.md`. Change the grant/internal-call
+  format in both repos together.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.

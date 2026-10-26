@@ -1613,3 +1613,17 @@ html:root { --privy-color-icon-muted: var(--brand); }
 @media (max-width: 640px) { .tank-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tank-foot .btn { flex: 1; } }
 @media (prefers-reduced-motion: reduce) { .tank-card { transition: none; } }
 .stk-asset-num .sk, .stk-pick .sk { width: 48px; height: 14px; }
+
+/* MCP consent + sign pages (app.backx.trade/connect, /sign) */
+.mcp-card { text-align: left; justify-items: stretch; }
+.mcp-card > svg, .mcp-card > h1 { justify-self: center; text-align: center; }
+.mcp-scopes { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 8px; }
+.mcp-scopes li { padding: 10px 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; color: #D6D6D6; }
+.mcp-scopes label { display: flex; gap: 10px; align-items: center; min-height: 28px; cursor: pointer; }
+.mcp-scopes input { width: 18px; height: 18px; accent-color: var(--brand); }
+.mcp-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mcp-fine { font-size: 13px; color: #8A8A8A !important; text-align: center; }
+.mcp-steps { margin: 4px 0; padding-left: 20px; display: grid; gap: 8px; color: #A8A8A8; }
+.mcp-steps li.now { color: #F2F2F2; font-weight: 600; }
+.mcp-steps li.done { color: var(--price-up); }
+.mcp-steps small { display: block; font-weight: 400; }

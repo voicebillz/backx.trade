@@ -8,6 +8,9 @@ import { AppGate } from './components/AppGate';
 // The terminal is its own chunk, fetched only once /api/auth/me says admin; the server guards every /api call anyway.
 const Terminal = lazy(() => import('./Terminal'));
 const Whitepaper = lazy(() => import('./pages/WhitepaperSite'));
+// MCP consent and signing (docs/backx/MCP-PLAN.md): any signed-in account, not only admins; the API decides who may connect.
+const McpConnect = lazy(() => import('./pages/McpPages').then((m) => ({ default: m.ConnectPage })));
+const McpSign = lazy(() => import('./pages/McpPages').then((m) => ({ default: m.SignPage })));
 
 export function App() {
   const { me, status } = useAuth();
@@ -17,6 +20,10 @@ export function App() {
       : <HomePage />;
   }
   if (status === 'checking') return <div className="app-loading" aria-busy="true" />;
+  const path = location.pathname.replace(/\/+$/, '');
+  if (me && (path === '/connect' || path === '/sign')) {
+    return <Suspense fallback={<div className="app-loading" aria-busy="true" />}>{path === '/connect' ? <McpConnect /> : <McpSign />}</Suspense>;
+  }
   if (!me?.isAdmin) return <AppGate />;
   return (
     <Suspense fallback={<div className="app-loading" aria-busy="true" />}>

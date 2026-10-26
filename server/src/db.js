@@ -104,6 +104,25 @@ export async function migrate() {
       primary key (chain_id, name)
     );
 
+    -- MCP (owner 2026-10-26, docs/backx/MCP-PLAN.md): this API's own ed25519 key that signs consent grants for
+    -- mcp.backx.trade (made on first start, never leaves the server), and every connection a user approved.
+    create table if not exists server_keys (
+      name       text primary key,
+      pem        text not null,
+      created_at timestamptz not null default now()
+    );
+    create table if not exists mcp_consents (
+      id         bigserial primary key,
+      privy_did  text not null references users(privy_did) on delete cascade,
+      client     text not null,
+      scopes     text[] not null,
+      created_at timestamptz not null default now()
+    );
+    create table if not exists mcp_disconnects (
+      privy_did  text primary key references users(privy_did) on delete cascade,
+      at         timestamptz not null default now()
+    );
+
     -- Accounts created before sign-up methods were recorded: best known value is the latest login.
     update users set signup_method = last_login_method where signup_method is null and last_login_method is not null;
   `);
