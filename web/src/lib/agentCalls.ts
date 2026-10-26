@@ -14,6 +14,7 @@ export const AGENT_CALLS: AgentCall[] = [
   { group: 'Issue', step: 'Issue the coin (backs Sells)', contract: 'tokenVault', call: 'deposit(coins, me)', returns: 'shares · same coins back' },
   { group: 'Issue', step: 'Rewards waiting', contract: 'Vault', call: 'pendingRewards(me)', returns: 'USDC' },
   { group: 'Issue', step: 'Claim rewards', contract: 'Vault', call: 'claimRewards() · claimRewardsTo(to)', returns: 'USDC sent' },
+  { group: 'Issue', step: 'Claim all pools at once', contract: 'Multicall3', call: 'aggregate3([vault.claimRewardsFor(me), …, staking.claimFor(me)])', returns: 'USDC sent, one signature' },
   { group: 'Issue', step: 'Withdraw what is free', contract: 'Vault', call: 'maxWithdraw(me) → withdraw(amount, me, me)', returns: 'assets' },
   { group: 'Issue', step: 'Withdraw the rest', contract: 'Vault', call: 'requestRedeem(shares)', returns: 'request id · paid as positions close' },
   { group: 'Issue', step: 'Undo a request', contract: 'Vault', call: 'cancelRequest(id)', returns: 'unpaid shares back' },

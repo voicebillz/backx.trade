@@ -9,7 +9,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @title backx platform Treasury: one per chain, the fee collector of every market on it (owner 2026-10-25).
 /// @notice Every platform fee lands here in USDC. A share (holderBps, 10 % at deploy) goes to stakers: anyone (our
 /// validator weekly) can call `distribute(token)` to split everything that arrived since the last split and send that
-/// share to holderRewards = BackxStaking ($GAZZ + Gazz Tanks staking, owner 2026-10-26). The rest is the platform's
+/// share to holderRewards = BackxStaking ($GAZZ + Gazz Tanks staking, owner 2026-10-26), which starts streaming it at
+/// once. The rest is the platform's
 /// and only the Safe can withdraw it, to an address it chooses. While
 /// holderRewards is not set, the holders' share is kept aside (holdersOwed) and paid on the first split after it is.
 /// Not upgradeable: it only holds money, there is nothing to evolve.
@@ -77,7 +78,13 @@ contract BackxTreasury is Ownable2Step, ReentrancyGuard {
             toHolders = 0;
         } else {
             holdersOwed[token] = 0;
-            if (toHolders > 0) token.safeTransfer(holderRewards, toHolders);
+            if (toHolders > 0) {
+                token.safeTransfer(holderRewards, toHolders);
+                // Stakers earn continuously: tell the staking contract at once (owner 2026-10-26). A plain wallet or a
+                // contract without sync() just ignores it; a failing sync never blocks the Treasury.
+                (bool ok,) = holderRewards.call(abi.encodeWithSignature("sync()"));
+                ok;
+            }
         }
         if (fresh > 0 || toHolders > 0) emit Distributed(token, toHolders, fresh - share);
     }

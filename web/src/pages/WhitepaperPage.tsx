@@ -5,7 +5,7 @@ import { Logo } from '../components/Logo';
 import { OUTCOME, params, quote } from '../lib/hedge';
 import { usd } from '../lib/format';
 
-// Whitepaper (owner 2026-10-22). Plain copy, no yield promises, "multiplication" never "leverage".
+// Whitepaper (owner 2026-10-22). Plain copy, no yield promises, "Leverage" and "Long" in copy (owner 2026-10-26); contracts keep "Hedge".
 // Timing figures come from docs/backx/sim/flash.py (modelled latencies, synthetic crash): keep both in sync.
 
 /** −30 % in 60 s, Major coin at 20×: seconds from the liquidation trigger to the sale, price drop at the sale. */
@@ -98,7 +98,7 @@ function HedgeAnatomy() {
   const fees = EX.paid - EX.stake, total = EX.notional;
   const pct = (x: number) => `${(x / total) * 100}%`;
   return (
-    <Reveal className="wp-fig wp-anatomy" label="Example hedge: 100 USDC at 5 times">
+    <Reveal className="wp-fig wp-anatomy" label="Example long: 100 USDC at 5 times">
       <div className="wp-fig-head"><span>Example · {usd(EX.amount, 0)} at {EX.m}×</span><span className="num down">Liquidation −{(EX.liqMove * 100).toFixed(1)}%</span></div>
       <div className="wp-an-row"><span className="wp-an-label">You pay</span>
         <div className="wp-an-bar"><i className="pay" style={{ width: pct(EX.paid) }} /></div><b className="num"><CountUp to={EX.paid} digits={2} pre="$" /></b></div>
@@ -275,7 +275,7 @@ function RewardCurve() {
 }
 
 const TOC = [
-  ['overview', 'Overview'], ['hedge', 'Hedge'], ['short', 'Short'], ['issue', 'Issue'], ['orders', 'Orders'],
+  ['overview', 'Overview'], ['hedge', 'Long'], ['short', 'Short'], ['issue', 'Issue'], ['orders', 'Orders'],
   ['execution', 'Execution & liquidation'], ['validators', 'Validators'], ['timing', 'Speed in a flash crash'],
   ['safety', 'Reserve Security Fund'], ['rewards', 'Rewards & claims'], ['agents', 'For AI agents'],
   ['fees', 'Fees & revenue'], ['gazz', '$GAZZ'], ['risks', 'Risks'],
@@ -312,15 +312,15 @@ export function WhitepaperPage() {
         <article className="wp-body">
           <section id="overview">
             <h2>Overview</h2>
-            <p>Every trade has two sides: someone taking a position, and someone providing the capital that makes it possible. BackX connects the two on-chain. <b>Hedgers</b> buy with multiplication and <b>shorters</b> sell borrowed coins; <b>issuers</b> provide the USDC and the coins that back them and earn from that activity. Everything runs in open contracts, owned by a multisig (Safe), with each coin isolated in its own set of contracts.</p>
+            <p>Every trade has two sides: someone taking a position, and someone providing the capital that makes it possible. BackX connects the two on-chain. <b>Long traders</b> buy with leverage and <b>shorters</b> sell borrowed coins; <b>issuers</b> provide the USDC and the coins that back them and earn from that activity. Everything runs in open contracts, owned by a multisig (Safe), with each coin isolated in its own set of contracts.</p>
             <BeforeAfter title="Centralized exchange compared with BackX"
               before={[['Other side of your trade', 'The exchange'], ['Custody', 'Exchange account'], ['Rules', 'Private'], ['Liquidation leftovers', 'Kept by the venue']]}
               after={[['Other side of your trade', 'Issuers, on-chain'], ['Custody', 'Your own wallet'], ['Rules', 'Open contracts'], ['Liquidation leftovers', 'Repay issuers first']]} />
           </section>
 
           <section id="hedge">
-            <h2>Hedge</h2>
-            <p>You choose a coin, an amount and a multiplication (1× to the coin's cap). The amount you type is what you pay: fees and validator gas come out of it, and the rest is your margin. Your position is margin × multiplication; the part above your margin is lent by the issuers' reserve.</p>
+            <h2>Long</h2>
+            <p>You choose a coin, an amount and your leverage (1× to the coin's cap). The amount you type is what you pay: fees and validator gas come out of it, and the rest is your margin. Your position is margin × leverage; the part above your margin is lent by the issuers' reserve.</p>
             <p>Each position has a liquidation price, shown before you open. If the price falls to it, the position is closed early so the lent capital goes back to the issuers first. You can also set a take-profit and a stop-loss, both filled by a validator.</p>
             <HedgeAnatomy />
           </section>
@@ -331,12 +331,12 @@ export function WhitepaperPage() {
             <p><b>Profit roof.</b> Every short has one: when the price has fallen the tier's roof, the short closes itself and your gain is paid from the position, never from issuers. The coins are bought back while the market can still sell them. You can take profit earlier, never later than the roof. If the price rises to the liquidation price, the short is closed so the issuers' coins come back first.</p>
             <ShortRoof />
             <RoofTable />
-            <p className="hint">Modelled with the contract's formulas: $100 paid everything included, swap cost 0.35 % per way, issuers' share of a gain 10 %. Short margins are slightly larger than Hedge margins because a pump can gap harder than a crash (docs/backx/sim/short_roof.py: with a 0.5 s validator the issuers' coins came back in full in every scenario up to +60 % in 5 minutes).</p>
+            <p className="hint">Modelled with the contract's formulas: $100 paid everything included, swap cost 0.35 % per way, issuers' share of a gain 10 %. Short margins are slightly larger than Long margins because a pump can gap harder than a crash (docs/backx/sim/short_roof.py: with a 0.5 s validator the issuers' coins came back in full in every scenario up to +60 % in 5 minutes).</p>
           </section>
 
           <section id="issue">
             <h2>Issue</h2>
-            <p><b>Hedge capital (USDC).</b> Issuers deposit USDC into a coin's reserve. It is lent to hedgers and comes back first when positions close.</p>
+            <p><b>Long capital (USDC).</b> Issuers deposit USDC into a coin's reserve. It is lent to long traders and comes back first when positions close.</p>
             <p><b>Short capital (the coin).</b> Holders of a coin (PONS, BTC and every other listed coin) deposit the coin itself. It is lent to shorters and always comes back as the same number of coins. Their risk stays what it already was: the coin's price.</p>
             <p>Both earn in USDC: a borrow fee on what is lent and 10 % of traders' gains. Rewards stream in over 24 hours, are shared in proportion and are claimed whenever you like. Withdrawals are instant from free capital; the rest is queued and paid out as positions settle.</p>
             <Waterfall />
@@ -345,7 +345,7 @@ export function WhitepaperPage() {
 
           <section id="orders">
             <h2>Orders</h2>
-            <p>Buy and sell orders live on-chain. A <b>buy order</b> opens a hedge when the price reaches your level (below it to buy a dip, above it for a breakout); a <b>sell order</b> opens a short the same way. Your USDC waits in the contract until a validator fills the order; you can cancel any time, and an expired order goes back to you. A short order also waits until coins are issued, so you can place it before anyone has. Take-profits and stop-losses close positions the same way, at most 1 % worse than the price when they trigger.</p>
+            <p>Buy and sell orders live on-chain. A <b>buy order</b> opens a long when the price reaches your level (below it to buy a dip, above it for a breakout); a <b>sell order</b> opens a short the same way. Your USDC waits in the contract until a validator fills the order; you can cancel any time, and an expired order goes back to you. A short order also waits until coins are issued, so you can place it before anyone has. Take-profits and stop-losses close positions the same way, at most 1 % worse than the price when they trigger.</p>
           </section>
 
           <section id="execution">
@@ -400,7 +400,7 @@ export function WhitepaperPage() {
 
           <section id="safety">
             <h2>Reserve Security Fund</h2>
-            <p>Part of every hedge and every short goes into that coin's Reserve Security Fund, one for each side. It is for crises only: if a liquidation ever returns less than was lent, the fund covers the gap, so issuers are kept whole in normal and fast markets.</p>
+            <p>Part of every long and every short goes into that coin's Reserve Security Fund, one for each side. It is for crises only: if a liquidation ever returns less than was lent, the fund covers the gap, so issuers are kept whole in normal and fast markets.</p>
             <p><b>Guardrails.</b> Anyone can run the liquidation that uses the fund, but nobody can draw from it directly: only that coin's contract can, and only when a confirmed liquidation cannot repay the issuers. One payment is at most a quarter of the fund and all payments in a day at most half, so no single event or bug can empty it.</p>
             <p className="wp-callout">In an extreme flash crash, a drop of 30–60 % within minutes, which is very rare, a gap can be larger than the fund. In such an event issuers can expect a small loss, shared in proportion across the pool.</p>
           </section>
@@ -411,16 +411,16 @@ export function WhitepaperPage() {
             <div className="wp-table three wide" role="table" aria-label="Who earns what">
               <div className="wp-row wp-head" role="row"><span role="columnheader">Who</span><span role="columnheader">Earns</span><span role="columnheader" className="r">Claim</span></div>
               {[
-                ['Hedge issuers (USDC)', 'Borrow fee 0.25 % of what is lent + 10 % of hedgers\' gains', 'Reserve'],
+                ['Long issuers (USDC)', 'Borrow fee 0.25 % of what is lent + 10 % of long traders\' gains', 'Reserve'],
                 ['Short issuers (the coin)', 'Borrow fee 0.25 % of what is lent + 10 % of shorters\' gains, in USDC', 'Reserve'],
                 ['Validators', 'Each position\'s gas + accuracy bonus', 'Manager'],
                 ['Reserve Security Fund', '0.5 % of the margin + 0.03 % of what is lent', 'Crises only'],
-                ['BackX Treasury', '2 % of the margin with multiplication, 0.3 % on a 1× hedge; 2 % of gains and 5 % of what is left at a liquidation', 'Sent by the contract'],
+                ['BackX Treasury', '2 % of the margin with leverage, 0.3 % on a 1× long; 2 % of gains and 5 % of what is left at a liquidation', 'Sent by the contract'],
                 ['$GAZZ and Gazz Tanks stakers', '10 % of what the Treasury receives, in USDC', 'Staking'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
-            <p className="hint">After a liquidation, issuers also take a share of what is left (50–90 % depending on the multiplication). Rewards stream in over 24 hours so a deposit made just before a large reward cannot take what earlier issuers earned.</p>
-            <p><b>Issuers earn the most.</b> Their capital makes multiplication possible, so they take the largest share of every outcome. A validator's bonus never takes more than 15 % of what is left, and the platform takes a small share. Example: $100 at 20× on a large coin.</p>
+            <p className="hint">After a liquidation, issuers also take a share of what is left (50–90 % depending on the leverage). Rewards stream in over 24 hours so a deposit made just before a large reward cannot take what earlier issuers earned.</p>
+            <p><b>Issuers earn the most.</b> Their capital makes leverage possible, so they take the largest share of every outcome. A validator's bonus never takes more than 15 % of what is left, and the platform takes a small share. Example: $100 at 20× on a large coin.</p>
             <div className="wp-table four wide" role="table" aria-label="Who gets what from $100 at 20x">
               <div className="wp-row wp-head" role="row"><span role="columnheader">Outcome</span><span role="columnheader" className="r">Issuers</span><span role="columnheader" className="r">Platform</span><span role="columnheader" className="r">Validator</span></div>
               {([['Price rises 10 %, take-profit', SPLIT.win], ['Liquidated', SPLIT.liq]] as const).map(([w, x]) => (
@@ -431,7 +431,7 @@ export function WhitepaperPage() {
 
           <section id="agents">
             <h2>For AI agents</h2>
-            <p>Every part of BackX is a plain contract call, so agents need no API key and no BackX server. An agent can issue USDC or coins, open and close hedges and shorts, place buy and sell orders, validate other positions and claim every reward, all on-chain. Agents can also log in on the website with their own wallet.</p>
+            <p>Every part of BackX is a plain contract call, so agents need no API key and no BackX server. An agent can issue USDC or coins, open and close longs and shorts, place buy and sell orders, validate other positions and claim every reward, all on-chain. Agents can also log in on the website with their own wallet.</p>
             <p><b>Recipe.</b> Find the coin's contracts, approve USDC (or the coin), then call. Amounts are in base units; prices are USD per one coin. Every row below is one call, in the order an agent uses them.</p>
             <AgentCallSheet />
           </section>
@@ -442,8 +442,8 @@ export function WhitepaperPage() {
             <div className="wp-table three wide" role="table" aria-label="Platform fee">
               <div className="wp-row wp-head" role="row"><span role="columnheader">Position</span><span role="columnheader">Platform fee</span><span role="columnheader" className="r">Other fees</span></div>
               {[
-                ['Hedge 1×', '0.3 % of the amount', 'None, nothing is borrowed'],
-                ['Hedge with multiplication', '2 % of the margin + 2 % of a gain', 'Borrow 0.25 % + fund'],
+                ['Long 1×', '0.3 % of the amount', 'None, nothing is borrowed'],
+                ['Long with leverage', '2 % of the margin + 2 % of a gain', 'Borrow 0.25 % + fund'],
                 ['Short', '2 % of the margin + 2 % of a gain', 'Borrow 0.25 % + fund'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
@@ -453,7 +453,7 @@ export function WhitepaperPage() {
           <section id="gazz">
             <h2>$GAZZ</h2>
             <p><b>$GAZZ is the core token of BackX.</b> BackX is built inside the gazz.fun ecosystem, and $GAZZ ties the two together: it is the token future staking on BackX is built around, and the one that ecosystem holders share in.</p>
-            <p><b>Revenue shared with stakers.</b> Every hedge and short pays a platform fee into the BackX Treasury, and 10 % of it goes to <b>stakers</b>. Stake $GAZZ (1 point per token) and Gazz Tanks NFTs (each Tank counts as a fixed number of points) on BackX, and earn that share in USDC, pro rata to your points. Each payment streams in over 7 days, so staking just before a payment earns almost nothing. A stake is locked for 3 months from your latest stake; rewards can be claimed any time, also while locked. Nobody but you can move your staked $GAZZ or Tanks. The share is set in the Treasury contract and can be adjusted (at most half).</p>
+            <p><b>Revenue shared with stakers.</b> Every long and short pays a platform fee into the BackX Treasury, and 10 % of it goes to <b>stakers</b>. Stake $GAZZ (1 point per token) and Gazz Tanks NFTs (each Tank counts as a fixed number of points) on BackX, and earn that share in USDC, pro rata to your points. Rewards stream in continuously: every fee is passed on as it arrives and spread over 24 hours, so staking just before a payment earns almost nothing. A stake is locked for 3 months from your latest stake; rewards can be claimed any time, also while locked. Nobody but you can move your staked $GAZZ or Tanks. The share is set in the Treasury contract and can be adjusted (at most half).</p>
             <Reveal className="wp-fig wp-flow" label="How revenue reaches $GAZZ holders">
               <div className="wp-flow-step"><span className="wp-flow-n num">1</span><div><b>Position opens</b><small>fees come out of the amount the trader pays</small></div></div>
               <div className="wp-flow-step"><span className="wp-flow-n num">2</span><div><b>Platform fee to the Treasury</b><small>USDC, on every chain</small></div></div>
@@ -464,7 +464,7 @@ export function WhitepaperPage() {
 
           <section id="risks">
             <h2>Risks</h2>
-            <p>BackX is not live yet. Contracts are being finalised and will be audited before launch. Using multiplication can lose your whole margin. Issuing is not risk-free: crashes, oracle or chain outages and empty pools can cause losses. Nothing here is a promise of returns or financial advice.</p>
+            <p>BackX is not live yet. Contracts are being finalised and will be audited before launch. Using leverage can lose your whole margin. Issuing is not risk-free: crashes, oracle or chain outages and empty pools can cause losses. Nothing here is a promise of returns or financial advice.</p>
           </section>
         </article>
       </div>

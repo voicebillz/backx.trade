@@ -84,7 +84,7 @@ export function IssuePage({ markets, usdc }: { markets: Market[]; usdc: Usdc }) 
           <p className="label">Your rewards</p>
           <p className="num rewards-amt">{usd(demo.on ? Math.floor(demoRewards * 100) / 100 : 0)} <small className="muted">USDC{demo.on ? ' · demo' : ''}</small></p>
         </div>
-        <button className="btn btn-gold btn-sm" disabled>Claim</button>
+        <button className="btn btn-gold btn-sm" disabled title="Every pool and staking in one transaction, one signature">Claim all</button>
       </section>
 
       {demo.on && demo.items.length > 0 && (

@@ -26,4 +26,3 @@ export const treasuryAbi = parseAbi([
   'function distribute(address token) returns (uint256)',
   'function pending(address token) view returns (uint256)',
 ]);
-export const stakingAbi = parseAbi(['function sync() returns (uint256)']);

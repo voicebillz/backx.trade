@@ -11,7 +11,9 @@ Download CSV button; source `web/src/lib/agentCalls.ts`, regenerate the CSV from
 - **Hedge capital (USDC)**: `usdc.approve(usdVault, x)`, `usdVault.deposit(x, me)`.
 - **Short capital (the coin itself, e.g. PONS)**: `coin.approve(tokenVault, n)`, `tokenVault.deposit(n, me)`.
   You always get the same number of coins back; you earn USDC.
-- Rewards: `pendingRewards(me)`, then `claimRewards()` or `claimRewardsTo(to)`.
+- Rewards: `pendingRewards(me)`, then `claimRewards()` or `claimRewardsTo(to)`. `claimRewardsFor(owner)` (anyone may
+  call it, money only goes to `owner`) lets one Multicall3 transaction claim every pool plus staking (`BackxStaking.claimFor`):
+  the app's "Claim all" is one tap, one signature per chain.
 - Leave: `maxWithdraw(me)` is free now (`withdraw` / `redeem`); for the rest `requestRedeem(shares)`: paid straight
   to you as positions close (`cancelRequest(id)` to undo).
 

@@ -640,6 +640,19 @@ contract RewardsTest is Base {
         assertEq(usdVault.pendingRewards(issuer2), 0);
     }
 
+    function test_claimRewardsFor_paysOwnerOnly_oneTxForAllPools() public {
+        _reward(10_000 * USD);
+        vm.warp(block.timestamp + 1 days);
+        uint256 before = usd.balanceOf(issuer);
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger); // e.g. the app's Multicall3 batch: anyone can trigger it, the money goes to the issuer
+        uint256 got = usdVault.claimRewardsFor(issuer);
+        assertApproxEqAbs(got, 5_000 * USD, 2);
+        assertEq(usd.balanceOf(issuer) - before, got, "paid to the issuer");
+        assertEq(usd.balanceOf(stranger), 0, "never to the caller");
+        assertEq(usdVault.claimRewardsFor(issuer), 0, "nothing twice");
+    }
+
     function test_justInTimeDepositGetsLittle() public {
         _reward(10_000 * USD);
         usd.mint(jit, 10_000_000 * USD);

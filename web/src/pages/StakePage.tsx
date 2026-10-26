@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { usd } from '../lib/format';
 
 // $GAZZ + Gazz Tanks staking, under Profile → Staking (owner 2026-10-26, contracts/src/BackxStaking.sol on Robinhood
-// Chain). Stakers share the Treasury's holder share of platform revenue (10 %), in USDC, streamed over 7 days. A stake is
+// Chain). Stakers share the Treasury's holder share of platform revenue (10 %), in USDC, streamed continuously (each fee over 24 h). A stake is
 // locked for 3 months from the latest stake; rewards can be claimed any time. Opens at launch: nothing is sent yet.
 // Data: GET /api/stake/assets (server/src/stake.js) reads the user's own $GAZZ and Tanks on-chain (OpenSea later).
 //   $GAZZ 0x08a5…85f3 (ERC-20, 18 decimals) · GAZZ TANKS 0x2613…a9f4 (ERC-721, 1,000, art drawn on-chain)
@@ -30,7 +30,15 @@ const toTokens = (raw: string, dec: number) => {
   return Number(b / unit) + Number((b % unit) / 10n ** BigInt(Math.max(dec - 4, 0))) / 1e4;
 };
 
-type Asset = 'gazz' | 'tanks';
+
+/** Round check that draws itself in when ticked. */
+function Check({ on }: { on: boolean }) {
+  return (
+    <span className={'chk' + (on ? ' on' : '')} aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.4 6.6 11.4 12.5 4.8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    </span>
+  );
+}
 type Mode = 'stake' | 'unstake';
 
 function TankPicker({ tanks, loading, mode, picked, onDone, onClose }: {
@@ -55,10 +63,10 @@ function TankPicker({ tanks, loading, mode, picked, onDone, onClose }: {
           <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div className="tank-bar">
-          <label className="tank-all">
-            <input type="checkbox" checked={all} disabled={!tanks.length} onChange={() => setSel(all ? new Set() : new Set(tanks.map((t) => t.id)))} />
-            <span>Select all</span>
-          </label>
+          <button type="button" className="tank-all" role="checkbox" aria-checked={all} disabled={!tanks.length}
+            onClick={() => setSel(all ? new Set() : new Set(tanks.map((t) => t.id)))}>
+            <Check on={all} /><span>Select all</span>
+          </button>
           <span className="num muted small">{fmt(sel.size * TANK_POINTS)} points</span>
         </div>
         <div className="tank-grid" role="group" aria-label="Your Tanks">
@@ -69,7 +77,7 @@ function TankPicker({ tanks, loading, mode, picked, onDone, onClose }: {
               <button key={t.id} type="button" className={'tank-card' + (on ? ' on' : '')} aria-pressed={on} onClick={() => toggle(t.id)}>
                 {t.image ? <img src={t.image} alt="" loading="lazy" /> : <span className="tank-noimg" aria-hidden="true">#{t.id}</span>}
                 <span className="tank-name">{t.name}</span>
-                <span className="tank-check" aria-hidden="true">{on ? '✓' : ''}</span>
+                <span className="tank-check"><Check on={on} /></span>
               </button>
             );
           })}
@@ -93,7 +101,6 @@ function TankPicker({ tanks, loading, mode, picked, onDone, onClose }: {
 
 export function StakeTab() {
   const id = useId();
-  const [asset, setAsset] = useState<Asset>('gazz');
   const [mode, setMode] = useState<Mode>('stake');
   const [amount, setAmount] = useState('');
   const [picked, setPicked] = useState<number[]>([]);
@@ -118,7 +125,7 @@ export function StakeTab() {
   const gazzStaked = data ? toTokens(data.gazz.staked, data.gazz.decimals) : null;
   const tanks = data ? (mode === 'stake' ? data.tanks.owned : data.tanks.staked) : [];
   const stakedPts = (gazzStaked ?? 0) + (data?.tanks.staked.length ?? 0) * TANK_POINTS;
-  const delta = asset === 'gazz' ? Math.min(parseFloat(amount) || 0, (mode === 'stake' ? gazzWallet : gazzStaked) ?? Infinity) : picked.length * TANK_POINTS;
+  const delta = Math.min(parseFloat(amount) || 0, (mode === 'stake' ? gazzWallet : gazzStaked) ?? Infinity) + picked.length * TANK_POINTS;
   const after = Math.max(0, stakedPts + (mode === 'stake' ? delta : -delta));
   const max = mode === 'stake' ? gazzWallet : gazzStaked;
   const unlockAt = data?.staking?.unlockAt ? new Date(data.staking.unlockAt * 1000) : null;
@@ -144,61 +151,59 @@ export function StakeTab() {
           <div><span className="label">Unlocks</span><b className="num stk-unlock">{locked ? day(unlockAt!) : stakedPts > 0 ? 'Now' : '—'}</b></div>
           <div className="stk-claim">
             <span className="label">Claimable</span><b className="num">{usd(claimable)} <small>USDC</small></b>
-            <button className="btn btn-gold btn-sm" disabled>Claim</button>
+            <button className="btn btn-gold btn-sm" disabled title="One signature claims everything">Claim all</button>
           </div>
         </div>
       </section>
 
-      <div className="stk-assets" role="tablist" aria-label="What to stake">
-        <button role="tab" aria-selected={asset === 'gazz'} className={'stk-asset' + (asset === 'gazz' ? ' on' : '')} onClick={() => setAsset('gazz')}>
+      <div className="stk-assets" aria-label="Your $GAZZ and Tanks">
+        <div className="stk-asset">
           <img src="/gazz-logo.svg" alt="" width="40" height="40" />
           <span className="stk-asset-name">$GAZZ<small>1 point per token</small></span>
-          <span className="stk-asset-num num"><small>Wallet</small>{gazzWallet == null ? (failed ? '—' : <span className="sk sk-w40" />) : fmt(gazzWallet)}</span>
-        </button>
-        <button role="tab" aria-selected={asset === 'tanks'} className={'stk-asset' + (asset === 'tanks' ? ' on' : '')} onClick={() => setAsset('tanks')}>
+          <span className="stk-asset-num num"><small>Wallet · Staked</small>{gazzWallet == null ? (failed ? '—' : <span className="sk sk-w40" />) : `${fmt(gazzWallet)} · ${fmt(gazzStaked ?? 0)}`}</span>
+        </div>
+        <div className="stk-asset">
           <img src="/gazz-tank.svg" alt="" width="40" height="40" className="stk-tank-img" />
           <span className="stk-asset-name">Gazz Tanks<small>{fmt(TANK_POINTS)} points each</small></span>
-          <span className="stk-asset-num num"><small>Wallet</small>{!data ? (failed ? '—' : <span className="sk sk-w40" />) : data.tanks.loading ? <span className="sk sk-w40" /> : data.tanks.owned.length}</span>
-        </button>
+          <span className="stk-asset-num num"><small>Wallet · Staked</small>{!data ? (failed ? '—' : <span className="sk sk-w40" />) : data.tanks.loading ? <span className="sk sk-w40" /> : `${data.tanks.owned.length} · ${data.tanks.staked.length}`}</span>
+        </div>
       </div>
 
-      <section className="card stk-form" role="tabpanel">
+      <section className="card stk-form">
         <div className={'stk-mode' + (mode === 'unstake' ? ' right' : '')} role="radiogroup" aria-label="Stake or unstake">
           <span className="stk-mode-thumb" aria-hidden="true" />
           <button type="button" role="radio" aria-checked={mode === 'stake'} className={mode === 'stake' ? 'on' : ''} onClick={() => setMode('stake')}>Stake</button>
           <button type="button" role="radio" aria-checked={mode === 'unstake'} className={mode === 'unstake' ? 'on' : ''} onClick={() => setMode('unstake')}>Unstake</button>
         </div>
 
-        {asset === 'gazz' ? (
-          <div className="field">
-            <div className="field-head">
-              <label htmlFor={id + 'amt'} className="label">Amount</label>
-              <span className="label num">{mode === 'stake' ? 'Wallet' : 'Staked'} {max == null ? '—' : fmt(max)}</span>
-            </div>
-            <div className="input-wrap stk-input">
-              <input id={id + 'amt'} inputMode="decimal" className="num" placeholder="0" value={amount} onChange={(e) => setAmount(clean(e.target.value))} />
-              <span className="prefix unit"><img src="/gazz-logo.svg" alt="" width="16" height="16" /> GAZZ</span>
-              <button className="max-btn" disabled={!max} onClick={() => max && setAmount(String(Math.floor(max * 100) / 100))}>Max</button>
-            </div>
-            {max != null && (parseFloat(amount) || 0) > max && <span className="field-err">More than you have {mode === 'stake' ? 'in your wallet' : 'staked'}</span>}
+        <div className="field">
+          <div className="field-head">
+            <label htmlFor={id + 'amt'} className="label">$GAZZ</label>
+            <span className="label num">{mode === 'stake' ? 'Wallet' : 'Staked'} {max == null ? '—' : fmt(max)}</span>
           </div>
-        ) : (
-          <div className="field">
-            <div className="field-head">
-              <span className="label">Tanks</span>
-              <span className="label num">{mode === 'stake' ? 'Wallet' : 'Staked'} {data && !data.tanks.loading ? tanks.length : '—'}</span>
-            </div>
-            <button type="button" className="stk-pick" onClick={() => setPicker(true)}>
-              {pickedTanks.length ? (
-                <span className="stk-pick-thumbs">
-                  {pickedTanks.slice(0, 6).map((t) => t.image ? <img key={t.id} src={t.image} alt="" /> : <span key={t.id} className="tank-noimg">#{t.id}</span>)}
-                  {pickedTanks.length > 6 && <span className="stk-pick-more num">+{pickedTanks.length - 6}</span>}
-                </span>
-              ) : <span className="muted">Choose Tanks</span>}
-              <span className="stk-pick-count num">{picked.length ? `${picked.length} selected` : ''}</span>
-            </button>
+          <div className="input-wrap stk-input">
+            <input id={id + 'amt'} inputMode="decimal" className="num" placeholder="0" value={amount} onChange={(e) => setAmount(clean(e.target.value))} />
+            <span className="prefix unit"><img src="/gazz-logo.svg" alt="" width="16" height="16" /> GAZZ</span>
+            <button className="max-btn" disabled={!max} onClick={() => max && setAmount(String(Math.floor(max * 100) / 100))}>Max</button>
           </div>
-        )}
+          {max != null && (parseFloat(amount) || 0) > max && <span className="field-err">More than you have {mode === 'stake' ? 'in your wallet' : 'staked'}</span>}
+        </div>
+
+        <div className="field">
+          <div className="field-head">
+            <span className="label">Gazz Tanks</span>
+            <span className="label num">{mode === 'stake' ? 'Wallet' : 'Staked'} {data && !data.tanks.loading ? tanks.length : '—'}</span>
+          </div>
+          <button type="button" className="stk-pick" onClick={() => setPicker(true)}>
+            {pickedTanks.length ? (
+              <span className="stk-pick-thumbs">
+                {pickedTanks.slice(0, 6).map((t) => t.image ? <img key={t.id} src={t.image} alt="" /> : <span key={t.id} className="tank-noimg">#{t.id}</span>)}
+                {pickedTanks.length > 6 && <span className="stk-pick-more num">+{pickedTanks.length - 6}</span>}
+              </span>
+            ) : <span className="muted">Choose Tanks</span>}
+            <span className="stk-pick-count num">{picked.length ? `${picked.length} selected` : ''}</span>
+          </button>
+        </div>
 
         <div className="stk-after">
           <span>Points after</span>
@@ -207,6 +212,7 @@ export function StakeTab() {
         {mode === 'stake' && <p className="stk-lock">Locked until <b className="num">{day(new Date(Date.now() + LOCK_DAYS * 86_400_000))}</b> · rewards claimable any time</p>}
         {mode === 'unstake' && locked && <p className="stk-lock">Your stake unlocks on <b className="num">{day(unlockAt!)}</b></p>}
         <button className="btn btn-block btn-primary" disabled>Opens at launch</button>
+        <p className="stk-lock">$GAZZ and Tanks go in one transaction, one signature. The very first time, the wallet also approves BackX staking once.</p>
       </section>
 
       <section className="stk-how" aria-label="How staking works">
@@ -217,7 +223,7 @@ export function StakeTab() {
 
       <dl className="card kv stk-pool">
         <div><dt>Lock</dt><dd>3 months from your latest stake</dd></div>
-        <div><dt>Payouts</dt><dd>USDC, streamed over 7 days</dd></div>
+        <div><dt>Payouts</dt><dd>USDC, continuously (24 h stream)</dd></div>
         <div><dt>$GAZZ</dt><dd className="num">{short(GAZZ_CA)} · Robinhood Chain</dd></div>
         <div><dt>Gazz Tanks</dt><dd className="num"><a href="https://opensea.io/collection/gazztanks" target="_blank" rel="noopener noreferrer">{short(TANKS_CA)}</a> · 1,000 on-chain</dd></div>
       </dl>

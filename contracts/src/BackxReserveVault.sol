@@ -227,22 +227,28 @@ contract BackxReserveVault is Initializable, ERC4626Upgradeable, Ownable2StepUpg
     }
 
     function claimRewards() external nonReentrant returns (uint256) {
-        return _claimRewards(msg.sender);
+        return _claimRewards(msg.sender, msg.sender);
     }
 
     function claimRewardsTo(address to) external nonReentrant returns (uint256) {
-        return _claimRewards(to);
+        return _claimRewards(msg.sender, to);
     }
 
-    function _claimRewards(address to) internal returns (uint256 amt) {
+    /// @notice Pays `owner` their rewards. Anyone may call it, the money only ever goes to the owner: this is what lets
+    /// the app claim every pool on a chain in ONE transaction (Multicall3), one signature (owner 2026-10-26).
+    function claimRewardsFor(address owner) external nonReentrant returns (uint256) {
+        return _claimRewards(owner, owner);
+    }
+
+    function _claimRewards(address owner, address to) internal returns (uint256 amt) {
         _accrue();
-        _settle(msg.sender);
-        amt = _rewardOwed[msg.sender];
+        _settle(owner);
+        amt = _rewardOwed[owner];
         if (amt == 0) return 0;
-        _rewardOwed[msg.sender] = 0;
+        _rewardOwed[owner] = 0;
         rewardHeld -= amt;
         rewardToken.safeTransfer(to, amt);
-        emit RewardClaimed(msg.sender, to, amt);
+        emit RewardClaimed(owner, to, amt);
     }
 
     /// @notice Borrow fees and shares of gains, in USDC: streamed to the shares over vestPeriod, then claimable.

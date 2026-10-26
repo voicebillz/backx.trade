@@ -53,12 +53,6 @@ export function HomePage() {
       <a className="skip" href="#main">Skip to content</a>
       <header className="h-header">
         <span className="h-logo"><Logo /></span>
-        <nav className="h-nav" aria-label="Main">
-          <a href="#speed">Speed</a>
-          <a href="#chains">Chains</a>
-          <a href="#how">How it works</a>
-          <a href="/whitepaper">Whitepaper</a>
-        </nav>
         <div className="h-header-cta">
           <button className="h-icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
             {theme === 'dark' ? (
@@ -77,7 +71,7 @@ export function HomePage() {
           <div className="h-hero-art"><CircuitHero /></div>
           <div className="h-hero-copy">
             <h1 id="hero-title"><Motto className="h-motto" /></h1>
-            <p className="h-sub">Buy or sell with multiplication, or issue capital that backs traders, on Robinhood Chain and 20+ chains.</p>
+            <p className="h-sub">Go long or short with leverage, or issue capital that backs traders, on Robinhood Chain and 20+ chains.</p>
             <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
           </div>
         </section>
@@ -118,13 +112,13 @@ export function HomePage() {
             <li className="h-card">
               <span className="h-step-n">02</span>
               <h3>Issue</h3>
-              <p>Put USDC into a Hedge Pool that backs traders and earn from their activity.</p>
+              <p>Put USDC into a Long Pool that backs traders and earn from their activity.</p>
               <IssueVisual />
             </li>
             <li className="h-card">
               <span className="h-step-n">03</span>
-              <h3>Hedge</h3>
-              <p>Pick a coin, an amount and a multiplication.</p>
+              <h3>Long</h3>
+              <p>Pick a coin, an amount and your leverage.</p>
               <MultiplierBar />
             </li>
           </ol>
@@ -141,7 +135,7 @@ export function HomePage() {
       <footer className="h-footer">
         <Logo />
         <nav aria-label="Footer"><a href="/whitepaper">Whitepaper</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
-        <span className="h-footer-legal">Operated by GAZZFUN LLC. Not financial advice. Using multiplication can lose your whole margin.</span>
+        <span className="h-footer-legal">Operated by GAZZFUN LLC. Not financial advice. Using leverage can lose your whole margin.</span>
       </footer>
     </div>
   );

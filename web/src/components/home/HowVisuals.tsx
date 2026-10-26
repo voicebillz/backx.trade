@@ -56,7 +56,7 @@ export function WalletVisual() {
   );
 }
 
-/** Step 2: USDC coins flow into the Hedge Pool, BTC positions flow out to traders; the ring shows how much is lent. */
+/** Step 2: USDC coins flow into the Long Pool, BTC positions flow out to traders; the ring shows how much is lent. */
 export function IssueVisual() {
   const coin = (src: string, k: number) => <img key={k} src={src} alt="" width="16" height="16" />;
   return (
@@ -68,7 +68,7 @@ export function IssueVisual() {
           <circle cx="50" cy="50" r="44" className="track" />
           <circle cx="50" cy="50" r="44" className="lent" pathLength="100" />
         </svg>
-        <span className="hv-pool-t"><b>Hedge</b><b>Pool</b></span>
+        <span className="hv-pool-t"><b>Long</b><b>Pool</b></span>
       </div>
       <div className="hv-pipe out">{[0, 1].map((k) => coin(TOKEN_LOGO.BTC, k))}</div>
       <div className="hv-node"><span className="hv-traders"><i /><i /><i /></span><small>Traders</small></div>

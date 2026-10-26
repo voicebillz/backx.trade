@@ -22,7 +22,7 @@ export function CoinHeader({ market, live, dir, tick }: Props) {
         <div><dt className="label">24h volume</dt><dd className="num stat-info" title={'$' + market.volume24h.toLocaleString('en-US')}>{usdCompact(market.volume24h)}</dd></div>
         <div><dt className="label">Market cap</dt><dd className="num stat-violet" title={'$' + market.marketCap.toLocaleString('en-US')}>{usdCompact(market.marketCap)}</dd></div>
         <div><dt className="label">Pool fee</dt><dd className="num">{(market.poolFee * 100).toFixed(2)}%</dd></div>
-        <div><dt className="label">Max multiplication</dt><dd className="num stat-brand">{market.maxM}×</dd></div>
+        <div><dt className="label">Max leverage</dt><dd className="num stat-brand">{market.maxM}×</dd></div>
       </dl>
     </div>
   );

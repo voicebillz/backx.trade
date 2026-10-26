@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <title>BackX · Future Trading for Agents &amp; Capital</title>
-    <meta name="description" content="Hedge a coin with multiplication or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC." />
+    <meta name="description" content="Go long or short on a coin with leverage or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC." />
     <link rel="canonical" href="https://www.backx.trade/" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <meta name="application-name" content="backx.trade" />
@@ -22,7 +22,7 @@
     <meta property="og:site_name" content="backx.trade" />
     <meta property="og:url" content="https://www.backx.trade/" />
     <meta property="og:title" content="BackX · Future Trading for Agents &amp; Capital" />
-    <meta property="og:description" content="Hedge a coin with multiplication or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC." />
+    <meta property="og:description" content="Go long or short on a coin with leverage or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC." />
     <meta property="og:image" content="https://www.backx.trade/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -30,7 +30,7 @@
     <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="BackX · Future Trading for Agents &amp; Capital" />
-    <meta name="twitter:description" content="Hedge a coin with multiplication or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC." />
+    <meta name="twitter:description" content="Go long or short on a coin with leverage or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC." />
     <meta name="twitter:image" content="https://www.backx.trade/og.png" />
     <meta name="twitter:image:alt" content="BackX · Hedge &amp; Issuer Trading" />
 
@@ -69,7 +69,7 @@
           "url": "https://www.backx.trade/",
           "applicationCategory": "FinanceApplication",
           "operatingSystem": "Web",
-          "description": "A trading terminal to buy (hedge) or sell (short) coins with multiplication (up to 20× on major coins) backed by real tokens, and Issue reserves where users issue USDC or the coin itself to back traders and earn borrow fees in USDC. Open on-chain validators. Runs on Robinhood Chain with self-custodial wallets.",
+          "description": "A trading terminal to buy (long) or sell (short) coins with leverage (up to 20× on major coins) backed by real tokens, and Issue reserves where users issue USDC or the coin itself to back traders and earn borrow fees in USDC. Open on-chain validators. Runs on Robinhood Chain with self-custodial wallets.",
           "publisher": { "@id": "https://www.backx.trade/#org" },
           "isAccessibleForFree": true
         },
@@ -78,11 +78,11 @@
           "@id": "https://www.backx.trade/#faq",
           "mainEntity": [
             { "@type": "Question", "name": "What is backx.trade?",
-              "acceptedAnswer": { "@type": "Answer", "text": "backx.trade is a hedge and issuer trading platform on Robinhood Chain, built by GAZZFUN LLC. Traders hedge a coin (profit when its price rises) with multiplication. Issuers supply USDC that backs those hedges." } },
-            { "@type": "Question", "name": "What is a hedge with multiplication?",
-              "acceptedAnswer": { "@type": "Answer", "text": "A hedge buys real tokens worth your margin times the multiplication. You pay exactly the amount you enter; fees come out of it. At 5×, $100 opens a position of about $482; issuers lend the rest. If the price falls to the liquidation price the position is closed and issuers are repaid first. You can never lose more than you paid." } },
+              "acceptedAnswer": { "@type": "Answer", "text": "backx.trade is a hedge and issuer trading platform on Robinhood Chain, built by GAZZFUN LLC. Traders go long on a coin (profit when its price rises) or short (profit when it falls) with leverage. Issuers supply the USDC and coins that back them." } },
+            { "@type": "Question", "name": "What is a long with leverage?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A long buys real tokens worth your margin times the leverage. You pay exactly the amount you enter; fees come out of it. At 5×, $100 opens a position of about $482; issuers lend the rest. If the price falls to the liquidation price the position is closed and issuers are repaid first. You can never lose more than you paid." } },
             { "@type": "Question", "name": "What does an issuer do?",
-              "acceptedAnswer": { "@type": "Answer", "text": "An issuer supplies USDC to a coin's USD reserve on the Issue Reserve page. That USDC is lent to hedges and comes back first when they close. Issuers earn a borrow fee, a share of gains and a share of what is left after a liquidation. Earnings are not guaranteed." } },
+              "acceptedAnswer": { "@type": "Answer", "text": "An issuer supplies USDC to a coin's USD reserve on the Issue Reserve page. That USDC is lent to longs and comes back first when they close. Issuers earn a borrow fee, a share of gains and a share of what is left after a liquidation. Earnings are not guaranteed." } },
             { "@type": "Question", "name": "What does it cost?",
               "acceptedAnswer": { "@type": "Answer", "text": "You pay exactly the amount you enter. Fees, including a small gas amount for the validator that closes positions, are taken out of it once when the position opens. There are no funding fees." } },
             { "@type": "Question", "name": "Is backx.trade self-custodial?",
@@ -112,13 +112,13 @@
       <main>
         <p class="seo-brand"><img src="/icon-512.png" alt="BackX logo" width="40" height="40" /> BackX · backx.trade</p>
         <h1>Future Trading for Agents &amp; Capital</h1>
-        <p>Hedge with multiplication or issue capital that backs traders, on Robinhood Chain and 20+ chains.
+        <p>Go long or short with leverage, or issue capital that backs traders, on Robinhood Chain and 20+ chains.
           Everything settles on-chain in open contracts. Built by GAZZFUN LLC.</p>
         <h2>How it works</h2>
         <ol>
           <li><strong>Your wallet:</strong> log in with email, Google, X, passkey and more. Your own self-custody wallet is created for you via Privy.</li>
-          <li><strong>Issue:</strong> put USDC into a Hedge Pool that backs traders and earn from their activity. Not risk-free.</li>
-          <li><strong>Hedge:</strong> pick a coin, an amount and a multiplication (up to 20× on major coins). You never lose more than you paid.</li>
+          <li><strong>Issue:</strong> put USDC into a Long Pool that backs traders and earn from their activity. Not risk-free.</li>
+          <li><strong>Long:</strong> pick a coin, an amount and your leverage (up to 20× on major coins). You never lose more than you paid.</li>
         </ol>
         <h2>$GAZZ</h2>
         <p>$GAZZ is the core token of BackX. Contract on Robinhood Chain: 0x08a5d78a4bc7754e8aff87b4509e007baeb685f3.</p>

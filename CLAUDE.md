@@ -25,7 +25,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Money: round DOWN (`floorTo`) for any amount that is sent. Tabular mono numbers.
 - Mobile: 16px gutter, no horizontal scroll, inputs ≥16px, touch targets ≥44px, bottom sheets.
 - Motion < 300ms, ease-out, `prefers-reduced-motion` fallback.
-- Copy: "multiplication", never "leverage". Never "zero risk". No yield promises.
+- Copy (owner 2026-10-26): "Leverage" (not multiplication) and "Long" (not Hedge) in all UI copy; contracts, code and
+  internal docs keep "Hedge"/"multiplication". Never "zero risk". No yield promises.
 - Brand mark: racing yellow `#FFD100` on black.
 - Backgrounds stay clean and flat (owner 2026-10-22): no light circles, radial glows, spotlights or coloured
   light behind content, in the app, images and videos alike. No dark drop shadows behind logos or coins either.
@@ -63,7 +64,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   never above `restCapBps` 15 % of the rest: issuers get the most, owner 2026-10-25); own
   close refunds the gas. Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
   cancel; a short order waits until coins are issued). ALL rewards are claimable USDC: validators `claim()/claimTo()`
-  per manager; issuers (USDC reserve AND coin reserves) `claimRewards()/claimRewardsTo()` on the vault, streamed over
+  per manager; issuers (USDC reserve AND coin reserves) `claimRewards()/claimRewardsTo()` on the vault (+ `claimRewardsFor(owner)` and staking `claimFor(who)`, so "Claim all"
+  is one Multicall3 tx, one signature per chain, owner 2026-10-26), streamed over
   24 h, pro rata, queued shares stop earning; the share price is principal only. Fund guardrails: only its manager
   draws, only in a confirmed gap, ≤ 50 % of the position's lent (manager), ≤ 25 % of the fund per payment and ≤ 50 %
   per 24 h (fund; Safe can tune 5–100 %, never off). The admin portal never deploys with a server key: it builds
@@ -142,9 +144,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   issuers, validators and the RSF). holderBps 10 % (owner 2026-10-25, Safe can lower it, max 50 %) goes via
   the public `distribute(token)` to `holderRewards` = `BackxStaking` (owner 2026-10-26, replaces "send to gazz.fun"):
   stake $GAZZ (1 point per token) and Gazz Tanks NFTs (`tankPoints` per Tank, immutable) on Robinhood Chain, rewards in
-  the stable streamed over 7 days via public `sync()`, claim any time, stake LOCKED 3 months from the latest stake
+  the stable streamed continuously (each fee over 24 h; the Treasury calls `sync()` on every distribute), claim any time, stake LOCKED 3 months from the latest stake
   (`LOCK`, owner 2026-10-26; adding more restarts it), no owner/admin/upgrade, Tanks by
-  transferFrom or safeTransferFrom. One of our validators runs distribute + sync weekly (`keeper/src/revenueShare.js`,
+  transferFrom or safeTransferFrom. One of our validators runs distribute hourly (DISTRIBUTE_MIN) (`keeper/src/revenueShare.js`,
   env TREASURY + USD_TOKEN). Admin → Contracts shows it on Robinhood Chain once the stable is set (Tanks default
   GAZZ TANKS 0x2613…a9f4, override GAZZ_TANKS) (STAKING_TANK_POINTS, default 10,000 $GAZZ per Tank, OPEN); then the Safe calls
   Treasury.setHolders(staking, 1000). Other chains' Treasuries: holder share accrues until bridged (OPEN). Web: Profile →

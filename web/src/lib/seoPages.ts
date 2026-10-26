@@ -22,12 +22,12 @@ export const SEO_PAGES: SeoPage[] = [
   {
     path: '/', file: null, indexed: true, image: OG_IMAGE,
     title: 'BackX · Future Trading for Agents & Capital',
-    description: 'Hedge a coin with multiplication or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC.',
+    description: 'Go long or short on a coin with leverage or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC.',
   },
   {
     path: '/whitepaper', file: 'whitepaper.html', indexed: true, image: OG_IMAGE,
     title: 'Whitepaper · BackX',
-    description: 'How BackX works: Hedge with multiplication, Issue into Hedge Pools, execution and liquidation speed, the Reserve Security Fund, fees and $GAZZ.',
+    description: 'How BackX works: Long and Short with leverage, Issue into Long Pools, execution and liquidation speed, the Reserve Security Fund, fees and $GAZZ.',
   },
   {
     path: '/terms', file: null, indexed: true, image: OG_IMAGE,

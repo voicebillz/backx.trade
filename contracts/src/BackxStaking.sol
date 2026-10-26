@@ -10,18 +10,18 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @title $GAZZ and Gazz Tanks staking (owner 2026-10-26): replaces the plain $GAZZ holder share.
 /// @notice The Treasury's holder share (holderBps of all platform revenue, USDC) is paid to this contract. Stakers earn
 /// it pro rata to their points: 1 point per whole $GAZZ staked plus `tankPoints` per Gazz Tank NFT staked.
-///   - Rewards stream in over `DURATION` (7 days) from the moment they arrive, so staking just before a payment earns
-///     almost nothing.
+///   - Rewards stream in continuously, like the issuers' (owner 2026-10-26): every fee that reaches the Treasury is
+///     passed on and spread over the next `DURATION` (24 h), so there is no weekly payday to time.
 ///   - Staked $GAZZ and Tanks are locked for `LOCK` (3 months, owner 2026-10-26) from your latest stake; adding more
 ///     starts the 3 months again for everything you have staked.
 ///   - Rewards are claimable USDC (`claim` / `claimTo`), any time, also while locked. Unstaking never forfeits them.
 ///   - Nobody can move staked $GAZZ or Tanks but their owner. There is no owner, no admin and no upgrade: the settings
 ///     are fixed at deploy.
-/// `sync()` (anyone, our validator weekly right after Treasury.distribute) starts streaming whatever USDC arrived.
+/// `sync()` (called by Treasury.distribute, which anyone can call; our validator does every hour) streams what arrived.
 contract BackxStaking is ReentrancyGuard, IERC721Receiver {
     using SafeERC20 for IERC20;
 
-    uint256 public constant DURATION = 7 days;
+    uint256 public constant DURATION = 1 days;
     uint256 public constant LOCK = 90 days;
     uint256 private constant ACC = 1e36;
 
@@ -41,7 +41,7 @@ contract BackxStaking is ReentrancyGuard, IERC721Receiver {
     mapping(address => uint256) public unlockAt;
 
     // Reward stream (Synthetix style): rate × time is shared out per point.
-    uint256 public rate;                 // USD base units per second × 1e18 (precise over 7 days)
+    uint256 public rate;                 // USD base units per second × 1e18 (precise over 24 h)
     uint256 public periodFinish;
     uint256 public lastUpdate;
     uint256 public accPerPoint;          // × ACC
@@ -154,7 +154,8 @@ contract BackxStaking is ReentrancyGuard, IERC721Receiver {
 
     // ---- rewards ------------------------------------------------------------------------------------
 
-    /// @notice Starts streaming any USDC that arrived since the last sync (plus what was still streaming) over 7 days.
+    /// @notice Starts streaming any USDC that arrived since the last sync (plus what was still streaming) over 24 h.
+    /// The Treasury calls it on every distribute; anyone else may too.
     function sync() external nonReentrant returns (uint256 added) {
         _update(address(0));
         added = usd.balanceOf(address(this)) - reserved;
@@ -171,15 +172,25 @@ contract BackxStaking is ReentrancyGuard, IERC721Receiver {
         return claimTo(msg.sender);
     }
 
-    function claimTo(address to) public nonReentrant returns (uint256 amount) {
+    function claimTo(address to) public nonReentrant returns (uint256) {
         if (to == address(0)) revert BadParams();
-        _update(msg.sender);
-        amount = owed[msg.sender];
+        return _claim(msg.sender, to);
+    }
+
+    /// @notice Pays `who` their rewards; anyone may call it, the money only goes to `who`. Lets the app put the staking
+    /// claim and every issuer pool claim in one transaction (Multicall3), one signature.
+    function claimFor(address who) external nonReentrant returns (uint256) {
+        return _claim(who, who);
+    }
+
+    function _claim(address who, address to) internal returns (uint256 amount) {
+        _update(who);
+        amount = owed[who];
         if (amount == 0) return 0;
-        owed[msg.sender] = 0;
+        owed[who] = 0;
         reserved -= amount;
         usd.safeTransfer(to, amount);
-        emit Claimed(msg.sender, to, amount);
+        emit Claimed(who, to, amount);
     }
 
     function _update(address who) internal {

@@ -10,10 +10,10 @@ interface Props {
 const STEP = 30; // px between two whole values on the dial
 
 /**
- * Multiplication dial (owner 2026-10-25): always on, starts at 1×. A ruler of values slides under a fixed centre
+ * Leverage dial (owner 2026-10-25): always on, starts at 1×. A ruler of values slides under a fixed centre
  * mark: drag sideways, scroll, tap a value or use the arrow keys. Snaps to whole values.
  */
-export function MultRoller({ value, max, onChange, label = 'Multiplication' }: Props) {
+export function MultRoller({ value, max, onChange, label = 'Leverage' }: Props) {
   const drag = useRef<{ x: number; v: number } | null>(null);
   const [live, setLive] = useState<number | null>(null); // fractional position while dragging
   const pos = live ?? value;

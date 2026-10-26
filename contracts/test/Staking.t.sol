@@ -57,7 +57,7 @@ contract StakingTest is Test {
         vm.prank(bob);
         st.stake(10_000e18, _ids(1));                 // 10k + one Tank (10k) = 20k points
         _pay(700e6);
-        vm.warp(block.timestamp + 7 days);
+        vm.warp(block.timestamp + 1 days);
         assertApproxEqAbs(st.earned(alice), 233_333_333, 10, "a third");
         assertApproxEqAbs(st.earned(bob), 466_666_666, 10, "two thirds");
         vm.prank(bob);
@@ -71,12 +71,12 @@ contract StakingTest is Test {
         uint256 t0 = 1_000_000;
         vm.warp(t0);
         _pay(700e6);
-        vm.warp(t0 + 6 days);
+        vm.warp(t0 + 18 hours);
         vm.prank(bob);
-        st.stake(10_000e18, _none());                 // joins on day 6 with the same stake
-        vm.warp(t0 + 7 days);
-        assertApproxEqAbs(st.earned(bob), 50e6, 10, "half of the last day only");
-        assertApproxEqAbs(st.earned(alice), 650e6, 10);
+        st.stake(10_000e18, _none());                 // joins after 18 h with the same stake
+        vm.warp(t0 + 1 days);
+        assertApproxEqAbs(st.earned(bob), 87_500_000, 10, "half of the last 6 h only");
+        assertApproxEqAbs(st.earned(alice), 612_500_000, 10);
     }
 
     function test_unstakeReturnsEverything_rewardsKept() public {
@@ -85,7 +85,7 @@ contract StakingTest is Test {
         vm.prank(bob);
         st.stake(5_000e18, _ids(2));
         _pay(70e6);
-        vm.warp(t0 + 7 days);
+        vm.warp(t0 + 1 days);
         vm.prank(bob);
         vm.expectRevert(abi.encodeWithSelector(BackxStaking.Locked.selector, t0 + 90 days));
         st.unstake(5_000e18, _ids(2));
@@ -131,11 +131,11 @@ contract StakingTest is Test {
         uint256 t0 = 1_000_000;
         vm.warp(t0);
         _pay(70e6);
-        vm.warp(t0 + 7 days);
+        vm.warp(t0 + 1 days);
         vm.prank(alice);
         st.stake(1e18, _none());
         assertApproxEqAbs(st.sync(), 70e6, 2, "the unstreamed week goes out again");
-        vm.warp(t0 + 14 days);
+        vm.warp(t0 + 2 days);
         assertApproxEqAbs(st.earned(alice), 70e6, 10);
     }
 
@@ -156,9 +156,21 @@ contract StakingTest is Test {
         vm.prank(alice);
         st.stake(1_000e18, _none());
         usd.mint(address(t), 1_000e6);
-        t.distribute(IERC20(address(usd)));
-        assertEq(st.sync(), 100e6, "10 % of platform revenue");
-        vm.warp(block.timestamp + 7 days);
+        t.distribute(IERC20(address(usd))); // the Treasury starts the stream itself
+        assertEq(st.sync(), 0, "already streaming: nothing new");
+        assertEq(st.reserved(), 100e6, "10 % of platform revenue");
+        vm.warp(block.timestamp + 1 days);
         assertApproxEqAbs(st.earned(alice), 100e6, 10);
+    }
+
+    function test_claimFor_paysOnlyTheStaker() public {
+        vm.prank(alice);
+        st.stake(1_000e18, _none());
+        _pay(24e6);
+        vm.warp(block.timestamp + 1 days);
+        vm.prank(bob); // anyone can trigger it
+        st.claimFor(alice);
+        assertApproxEqAbs(usd.balanceOf(alice), 24e6, 10, "alice got her own rewards");
+        assertEq(usd.balanceOf(bob), 0, "the caller gets nothing");
     }
 }

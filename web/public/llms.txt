@@ -1,24 +1,24 @@
 # BackX (backx.trade)
 
 > BackX is a Hedge & Issuer trading platform on Robinhood Chain and 20+ chains, built by GAZZFUN LLC.
-> Motto: "Future Trading for Agents & Capital". Traders buy (hedge, profit when the price rises) or sell (short,
-> profit when it falls) with multiplication, backed by real tokens. Issuers supply USDC for hedges and the coin itself
+> Motto: "Future Trading for Agents & Capital". Traders buy (long, profit when the price rises) or sell (short,
+> profit when it falls) with leverage, backed by real tokens. Issuers supply USDC for longs and the coin itself
 > for shorts. Everything settles on-chain in open contracts
 > owned by a multisig (Safe). Status: private beta; the app runs at app.backx.trade (admins only for now).
 
 ## Product
-- **Hedge**: buys real tokens worth stake × multiplication. Up to 20× on major coins (BTC/ETH-type pools), 5× on large
+- **Long** (contracts: Hedge): buys real tokens worth stake × leverage. Up to 20× on major coins (BTC/ETH-type pools), 5× on large
   coins, 3× on mid caps, 2× on small caps. The amount entered is what is paid; fees and validator
   gas come out of it and the rest is the margin. At 5×, $100 opens a position of about $482; issuers lend the rest.
 - **Liquidation**: if the price falls to the liquidation price, a validator sells the position and the issuers are repaid
   first. The trader keeps part of what is left. A trader can never lose more than they paid.
-- **1× hedge**: borrows nothing, has no liquidation, issuers get nothing from it.
+- **1× long**: borrows nothing, has no liquidation, issuers get nothing from it.
 - **Short (sell)**: old-school: the coin is borrowed from issuers who deposited it, sold, and later exactly the same
-  number of coins is bought back and returned. Same caps as hedges. Every short has a profit roof (it closes itself
+  number of coins is bought back and returned. Same caps as longs. Every short has a profit roof (it closes itself
   after a fall of 80 % on major coins, 70 / 60 / 50 % on smaller tiers); the gain is paid from the position.
 - **Orders and limits**: buy and sell orders at a price (USDC waits in the contract until a validator fills it; a
   short order also waits until coins are issued) and take-profits, filled at most 1 % worse than the price.
-- **Issue**: users issue USDC to a coin's Hedge reserve, or the coin itself to its Short reserve. It is lent out and
+- **Issue**: users issue USDC to a coin's Long (USDC) reserve, or the coin itself to its Short reserve. It is lent out and
   returned first (shorts always return the same number of coins). Issuers earn a borrow fee, 10 % of traders' gains
   and most of what is left after a liquidation, paid in USDC, shared in proportion and claimed any time. Earnings
   are not guaranteed.
@@ -26,7 +26,7 @@
   position's gas fee plus an accuracy bonus that is largest right at the trigger price. Nothing depends on BackX servers.
 - **AI agents**: every action is a plain contract call (issue, trade, orders, validate, claim); agents can also log in
   with their own wallet.
-- **Available multiplication**: each coin has a cap, but a hedge can only borrow what the issuers' reserve can lend
+- **Available leverage**: each coin has a cap, but a long can only borrow what the issuers' reserve can lend
   right now, so the maximum shown can be lower when the reserve is busy.
 - **Reserve Security Fund**: funded by every position; covers the rare case where a crash moves faster than a
   liquidation can execute, before any issuer loses.
@@ -38,15 +38,15 @@
 - **Liquidity Pool (DEX)**: issuing into DEX liquidity pools (PancakeSwap Infinity / Uniswap v4) is planned, not live.
 - **Speed**: Robinhood Chain has ~250 ms blocks; BackX targets about 0.5 s for a trade or a liquidation (launch
   targets from a flash-crash simulation, not measurements). Liquidations use a fast reference price (Pyth).
-- **Fees**: a 1× hedge pays a 0.3 % platform fee (nothing is borrowed); with multiplication and on shorts the platform
+- **Fees**: a 1× long pays a 0.3 % platform fee (nothing is borrowed); with leverage and on shorts the platform
   fee is 2 % of the margin plus a 0.25 % borrow fee to issuers and a small Reserve Security Fund fee. Platform fees go
   on-chain to the BackX Treasury (USDC, one per chain, owned by the BackX Safe).
 - **$GAZZ**: the core token of BackX and part of the gazz.fun ecosystem. 10 % of what the Treasury receives goes to stakers:
-  stake $GAZZ and Gazz Tanks NFTs on BackX (app.backx.trade/profile/stake) and earn it in USDC, streamed over 7 days; stakes are locked for 3 months, rewards claimable any time. Contract on Robinhood Chain:
+  stake $GAZZ and Gazz Tanks NFTs on BackX (app.backx.trade/profile/stake) and earn it in USDC, streamed continuously (each fee spread over 24 hours); stakes are locked for 3 months, rewards claimable any time. Contract on Robinhood Chain:
   0x08a5d78a4bc7754e8aff87b4509e007baeb685f3. Not a promise of returns.
 
 ## Terminology
-- "Multiplication" is the platform's word for the position size relative to the stake.
+- "Leverage" is the position size relative to the stake; "Long" is called "Hedge" in the contracts.
 
 ## Links
 - Website: https://www.backx.trade/
