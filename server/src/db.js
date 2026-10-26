@@ -118,6 +118,13 @@ export async function migrate() {
       scopes     text[] not null,
       created_at timestamptz not null default now()
     );
+    -- Platform switches the admin portal flips (owner 2026-10-26: "mcp_paused" turns every AI connection off).
+    create table if not exists app_settings (
+      key        text primary key,
+      value      jsonb not null,
+      updated_by text,
+      updated_at timestamptz not null default now()
+    );
     create table if not exists mcp_disconnects (
       privy_did  text primary key references users(privy_did) on delete cascade,
       at         timestamptz not null default now()

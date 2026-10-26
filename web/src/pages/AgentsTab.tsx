@@ -8,7 +8,7 @@ import { ConnectMcp } from '../components/ConnectMcp';
 // "Disconnect all". A new connection always starts in the assistant itself and is approved on /connect.
 
 interface Conn { client: string; scopes: string[]; created_at: string; active: boolean }
-interface McpMe { eligible: boolean; reason: string | null; disconnectedAt: string | null; connections: Conn[] }
+interface McpMe { paused: boolean; eligible: boolean; reason: string | null; disconnectedAt: string | null; connections: Conn[] }
 
 const day = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -35,9 +35,10 @@ export function AgentsTab() {
     <>
       <section className="card">
         <div className="row-between">
-          <h2>AI agents</h2>
-          <span className={active.length ? 'ok' : 'muted'}>{active.length ? `${active.length} connected` : 'None connected'}</span>
+          <h2>AI agents {d.paused && <span className="chip chip-warn">MCP Paused</span>}</h2>
+          <span className={active.length && !d.paused ? 'ok' : 'muted'}>{active.length ? `${active.length} connected` : 'None connected'}</span>
         </div>
+        {d.paused && <p className="warn" role="status">BackX has paused AI-agent access. Your assistants cannot read or prepare anything until it is turned back on.</p>}
         {!d.eligible ? (
           <p className="warn">Your account logs in with its own wallet, so it cannot connect an assistant over MCP. Let your agent use <a href={`${SITE_URL}/skill.md`}>backx.trade/skill.md</a> with that wallet instead.</p>
         ) : active.length ? (
@@ -67,7 +68,7 @@ export function AgentsTab() {
         <section className="card">
           <div className="row-between">
             <h2>Add an assistant</h2>
-            <button className="btn btn-primary" onClick={() => setOpen(true)}>Connect with MCP</button>
+            <button className="btn btn-primary" onClick={() => setOpen(true)} disabled={d.paused}>Connect with MCP</button>
           </div>
         </section>
       )}

@@ -18,6 +18,7 @@ const SCOPE_TEXT: Record<string, string> = {
   'claim:prepare': 'Prepare "Claim all" for you to sign',
 };
 const REASON: Record<string, string> = {
+  paused: 'BackX has paused AI-agent access (MCP) for now. Try again later.',
   external_wallet_login: 'AI assistants can only be connected to accounts that log in with email, phone, Google, X, Discord, Twitch, Telegram, Farcaster or a passkey. Your account logs in with its own wallet: let your agent use backx.trade/skill.md with that wallet instead.',
   no_embedded_wallet: 'Your BackX wallet is not ready yet. Log out and in again, then retry.',
 };
@@ -37,7 +38,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 export function ConnectPage() {
   const request = new URLSearchParams(location.search).get('request') ?? '';
   const [info, setInfo] = useState<{ client: string; redirectHost: string; scopes: string[] } | null>(null);
-  const [eligible, setEligible] = useState<{ eligible: boolean; reason: string | null } | null>(null);
+  const [eligible, setEligible] = useState<{ paused: boolean; eligible: boolean; reason: string | null } | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,7 @@ export function ConnectPage() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('expired'))))
       .then((j) => { setInfo(j); setPicked(j.scopes); })
       .catch(() => setErr('This link has expired. Start the connection again from your assistant.'));
-    api<{ eligible: boolean; reason: string | null }>('/api/mcp/me').then(setEligible).catch(() => setErr('Could not check your account. Try again.'));
+    api<{ paused: boolean; eligible: boolean; reason: string | null }>('/api/mcp/me').then(setEligible).catch(() => setErr('Could not check your account. Try again.'));
   }, [request]);
 
   const approve = async () => {
@@ -68,6 +69,7 @@ export function ConnectPage() {
 
   if (err) return <Card title="Connect an assistant"><p role="alert">{err}</p><a className="h-signout" href={SITE_URL}>← backx.trade</a></Card>;
   if (!info || !eligible) return <Card title="Connect an assistant"><div className="skel" style={{ width: '100%', height: 160 }} aria-busy="true" /></Card>;
+  if (eligible.paused) return <Card title="MCP Paused"><p>{REASON.paused}</p><button className="h-btn big" onClick={deny}>Back to the assistant</button></Card>;
   if (!eligible.eligible) return <Card title="Not available for this account"><p>{REASON[eligible.reason ?? ''] ?? 'This account cannot connect an assistant.'}</p><button className="h-btn big" onClick={deny}>Back to the assistant</button></Card>;
 
   return (
@@ -120,7 +122,7 @@ export function SignPage() {
         });
         setProblems(v.problems);
       })
-      .catch(() => setErr('This link has expired (15 minutes). Ask your assistant to prepare it again.'));
+      .catch((e) => setErr(e instanceof ApiError && e.code === 'paused' ? REASON.paused : 'This link has expired (15 minutes). Ask your assistant to prepare it again.'));
   }, [id]);
 
   if (err) return <Card title="Sign"><p role="alert">{err}</p></Card>;

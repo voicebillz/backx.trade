@@ -163,6 +163,28 @@ adminRouter.delete('/assets/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---- MCP switch (owner 2026-10-26): pause every AI-agent connection at once ------------------------
+
+adminRouter.get('/mcp', async (_req, res, next) => {
+  try {
+    const { rows } = await db.query(`select value, updated_by, updated_at from app_settings where key = 'mcp_paused'`);
+    res.json({ paused: rows[0]?.value === true, updatedBy: rows[0]?.updated_by ?? null, updatedAt: rows[0]?.updated_at ?? null });
+  } catch (e) { next(e); }
+});
+
+adminRouter.post('/mcp', async (req, res, next) => {
+  if (typeof req.body?.paused !== 'boolean') return res.status(400).json({ error: 'invalid' });
+  try {
+    await db.query(
+      `insert into app_settings (key, value, updated_by, updated_at) values ('mcp_paused', $1, $2, now())
+       on conflict (key) do update set value = excluded.value, updated_by = excluded.updated_by, updated_at = now()`,
+      [JSON.stringify(req.body.paused), req.user.address]);
+    await req.app.locals.redis.del('mcp:paused');
+    await audit(req, req.body.paused ? 'mcp.pause' : 'mcp.resume', 'mcp', {});
+    res.json({ paused: req.body.paused });
+  } catch (e) { next(e); }
+});
+
 // ---- users ------------------------------------------------------------------------------------
 
 const PAGE = 50;

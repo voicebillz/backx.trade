@@ -1685,3 +1685,8 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .mcpc-custom .lab { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
 .mcpc-custom pre { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); overflow-x: auto; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .mcpc-btn { transition: none; } }
+
+/* MCP pause (owner 2026-10-26) */
+.chip-warn { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning); }
+.chip-on { background: var(--up-bg); color: var(--up); }
+.mcp-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }

@@ -589,6 +589,33 @@ function DeleteAsset({ asset, onClose, onDone }: { asset: Asset; onClose: () => 
 
 // ---- Users ------------------------------------------------------------------------------------
 
+/** Admin switch (owner 2026-10-26): pause every AI-agent (MCP) connection at once. Acts within seconds. */
+function McpSwitch() {
+  const [st, setSt] = useState<{ paused: boolean; updatedBy: string | null; updatedAt: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(false);
+  useEffect(() => { api<typeof st>('/api/admin/mcp').then(setSt).catch(() => setErr(true)); }, []);
+  const flip = async (paused: boolean) => {
+    setBusy(true);
+    try {
+      await api('/api/admin/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paused }) });
+      setSt(await api('/api/admin/mcp'));
+    } catch { setErr(true); }
+    setBusy(false);
+  };
+  return (
+    <section className="card mcp-switch">
+      <label className="switch-row">
+        <input type="checkbox" checked={!!st && !st.paused} disabled={!st || busy} onChange={(e) => flip(!e.target.checked)} />
+        <span className="switch" aria-hidden="true" />
+        <span><b>AI agents (MCP)</b> {st && (st.paused ? <span className="chip chip-warn">Paused</span> : <span className="chip chip-on">On</span>)}</span>
+      </label>
+      {st?.updatedAt && <span className="muted small num">{st.paused ? 'Paused' : 'Turned on'} {when(st.updatedAt)} by {st.updatedBy?.slice(0, 6)}…{st.updatedBy?.slice(-4)}</span>}
+      {err && <p className="field-err" role="alert">Could not load or change the MCP switch.</p>}
+    </section>
+  );
+}
+
 function Users() {
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
@@ -613,6 +640,7 @@ function Users() {
   const s = data?.stats;
   return (
     <>
+      <McpSwitch />
       <section className="admin-tiles">
         {[['Users', s?.total], ['New 24 h', s?.day], ['New 7 days', s?.week], ['Active 24 h', s?.active_day]].map(([label, v]) => (
           <div className="card tile" key={label as string}><span className="label">{label}</span><span className="num tile-value">{v ?? <span className="sk sk-w30" />}</span></div>

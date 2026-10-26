@@ -90,7 +90,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   +25/50/100/200 % and −10/15/25/50 %, potential profit/loss, drawn on the chart as TP (--up) and SL (--warning)
   lines next to Entry and Liq. (all four come from the ticket and start at the limit price when one is set, labelled
   "Limit"); the price scale stretches to keep every line in view; contracts `setStop(id, price)`, `stopValue`, filled by
-  validators through executeLimit like a take-profit; ShortManager is ~23.8 KB, ~0.8 KB left under EIP-170), "Limit order" switch (price required;
+  validators through executeLimit like a take-profit; ShortManager is ~24.1 KB, only ~0.5 KB left under EIP-170), "Limit order" switch (price required;
   warns above/below/at/far from today's price), take-profit (short: not past the roof), Buy/Sell opens a confirm overlay
   (portal; "Opens at launch" until contracts are live). Missing USDC or coin → "Swap" opens SwapOverlay in the same
   window with that coin preselected on the first launch chain that routes it; Back returns. Swap chains: Ethereum, Base,
@@ -233,6 +233,9 @@ The owner is not a developer: explain briefly, in Norwegian.
   `vscode:mcp/install` link) with their real app icons (`web/public/ai/`, simple-icons marks on brand tiles; Copilot = the colour Copilot icon from @lobehub/icons-static-svg 1.95.1) + Custom
   (address, Claude Code command, mcp.json). One address for everyone (https://mcp.backx.trade/mcp): identity comes from
   the OAuth login, never from a per-user link (a per-user link would be a secret that leaks).
+- MCP pause (owner 2026-10-26): Admin → Users → "AI agents (MCP)" switch (`/api/admin/mcp`, Postgres `app_settings`
+  key `mcp_paused`, audited, Redis cache 10 s). Paused = consent, /verify and token refresh refused, mcp.backx.trade
+  refuses every call (internal `status` op, fail closed), Profile → AI agents shows an "MCP Paused" badge.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.

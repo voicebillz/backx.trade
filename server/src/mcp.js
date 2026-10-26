@@ -28,6 +28,17 @@ export async function loadGrantKey() {
   signer = { key, spki: createPublicKey(key).export({ format: 'der', type: 'spki' }).toString('base64') };
 }
 
+/** Admin switch (Admin → Users → AI agents): while paused nobody can connect, sign prepared steps or refresh a token,
+ *  and mcp.backx.trade refuses every tool call. Cached 10 s in Redis so the switch acts within seconds. */
+export async function mcpPaused(redis) {
+  const hit = await redis.get('mcp:paused');
+  if (hit != null) return hit === '1';
+  const { rows } = await db.query(`select value from app_settings where key = 'mcp_paused'`);
+  const paused = rows[0]?.value === true;
+  await redis.set('mcp:paused', paused ? '1' : '0', 'EX', 10);
+  return paused;
+}
+
 /** Social login + embedded wallet = may connect. The method is Privy's most recently verified login. */
 async function eligibility(did) {
   const { address, method } = await privyAccount(did);
@@ -62,6 +73,7 @@ mcpRouter.get('/me', async (req, res, next) => {
     ]);
     const cut = d[0]?.at ?? null;
     res.json({
+      paused: await mcpPaused(req.app.locals.redis),
       eligible: e.eligible, reason: e.reason ?? null, mcpUrl: config.mcpUrl, disconnectedAt: cut,
       // A connection approved after the last "Disconnect all" is active; older ones were cut off.
       connections: rows.map((r) => ({ ...r, active: !cut || r.created_at > cut })),
@@ -76,6 +88,7 @@ mcpRouter.post('/consent', async (req, res, next) => {
     if (typeof request !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(request)) return res.status(400).json({ error: 'bad_request' });
     if (!Array.isArray(scopes) || !scopes.length || scopes.length > SCOPES.length || !scopes.every((s) => SCOPES.includes(s))) return res.status(400).json({ error: 'bad_scopes' });
     if (!signer) return res.status(503).json({ error: 'unavailable' });
+    if (await mcpPaused(req.app.locals.redis)) return res.status(403).json({ error: 'paused' });
     const e = await eligibility(req.user.did);
     if (!e.eligible) return res.status(403).json({ error: e.reason });
     if (e.wallet !== req.user.address) return res.status(409).json({ error: 'wallet_mismatch' });
@@ -122,7 +135,9 @@ mcpInternalRouter.post('/:op', express.raw({ type: 'application/json', limit: '4
   }
   if ((await redis.set(`mcpint:seen:${createHash('sha256').update(sig).digest('hex')}`, '1', 'EX', 120, 'NX')) !== 'OK') return res.status(409).json({ error: 'replay' });
   try {
+    if (b.op === 'status') return res.json({ paused: await mcpPaused(redis) });
     if (b.op === 'account') {
+      if (await mcpPaused(redis)) return res.json({ eligible: false, paused: true });
       if (typeof b.sub !== 'string' || !/^did:privy:[A-Za-z0-9]{10,64}$/.test(b.sub)) return res.status(400).json({ error: 'bad_request' });
       const { rows } = await db.query(
         `select u.wallet_address, d.privy_did as disconnected from users u left join mcp_disconnects d on d.privy_did = u.privy_did where u.privy_did = $1`, [b.sub]);
@@ -229,6 +244,7 @@ export function checkCall(k, wallet, to, data, inMulticall = false) {
 mcpRouter.post('/verify', async (req, res, next) => {
   try {
     const { chainId, steps } = req.body ?? {};
+    if (await mcpPaused(req.app.locals.redis)) return res.status(403).json({ error: 'paused' });
     if (!LAUNCH_CHAIN_IDS.includes(chainId)) return res.status(400).json({ error: 'bad_chain' });
     if (!Array.isArray(steps) || !steps.length || steps.length > 10) return res.status(400).json({ error: 'bad_request' });
     const k = await knownContracts(req.app.locals.redis, chainId);
