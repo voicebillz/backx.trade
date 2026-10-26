@@ -2,12 +2,18 @@
 
 Status: **planned, not built.** On-chain access for agents works today without any of this (`/skill.md`,
 `/agents.json`, `docs/backx/AGENTS.md`). This plan covers the extra, optional path: a user connects their own AI
-assistant (Claude, ChatGPT, Cursor, their own agent …) to **their own BackX account** through MCP.
+assistant (Claude, ChatGPT, Cursor, their own agent …) to **their own BackX account** through MCP. Only for
+accounts that log in with a social method; MCP may sign within limits but never holds a private key.
 
 ## Goals
 - A user's agent sees and acts only on that user's account. Never anyone else's, never admin.
-- No private keys anywhere outside the user's own wallet. MCP never signs on its own by default.
-- A break-in on the MCP server cannot move money and cannot reach Postgres, Redis or the main API's secrets.
+- MCP **can sign transactions** for the user (owner 2026-10-26), but never sees or holds a private key: signing
+  goes through Privy's policy-limited signing on the user's embedded wallet (below). The key stays inside Privy.
+- **Only social-login accounts can connect MCP** (owner 2026-10-26): email, SMS, Google, X, Discord, Twitch,
+  Telegram, Farcaster, passkey. Accounts that log in with their own external wallet (MetaMask, WalletConnect …)
+  cannot connect: their agent already has its own wallet and uses the plain on-chain path (`/skill.md`).
+- A break-in on the MCP server can at most do what the user's Privy policy allows (BackX contracts only, daily cap,
+  never a transfer out), and cannot reach Postgres, Redis or the main API's secrets.
 - Easy: one URL, `https://mcp.backx.trade/mcp`, log in with the same BackX login, approve, done.
 
 ## Architecture
@@ -36,11 +42,16 @@ Chain RPCs ◀── read-only calls (positions, rewards, prices) ── mcp.bac
   consent page on `app.backx.trade/connect`: the user logs in, sees which assistant asks for what, and approves.
 - PKCE required, short-lived access tokens (15 min) bound to the MCP audience (`resource` indicator), refresh
   tokens rotated, revocable from Profile → Connected apps (planned). Only hashes stored, like sessions.
+- Eligibility is checked at consent and on every token refresh, from Privy's API with the app secret (never from the
+  client): the account must have logged in with a social method and have its BackX embedded wallet. An account whose
+  login is an external wallet (`wallet` linked account used as the login method) gets "MCP is for social-login
+  accounts; your agent can use backx.trade/skill.md with its own wallet" and no token.
 - Dynamic client registration allowed but every client starts with read scopes only.
 - Scopes:
   - `account:read` positions, orders, rewards, staking, balances of the user's own wallet.
   - `trade:prepare` / `issue:prepare` / `stake:prepare` / `claim:prepare` build unsigned transactions.
-  - (later, opt-in) `trade:execute` see "Signing" below.
+  - `trade:sign` / `issue:sign` / `stake:sign` / `claim:sign` sign and send, within the user's limits ("Signing" below).
+    Each is a separate tick on the consent page; off unless the user turns it on.
 
 ## Tools (first version)
 | Tool | Scope | What it does |
@@ -52,16 +63,31 @@ Chain RPCs ◀── read-only calls (positions, rewards, prices) ── mcp.bac
 | `prepare_issue`, `prepare_withdraw` | `issue:prepare` | same for vaults |
 | `prepare_stake`, `prepare_unstake` | `stake:prepare` | same for staking, incl. the one-time approvals |
 | `prepare_claim_all` | `claim:prepare` | one Multicall3 tx with `claimRewardsFor` + `claimFor` |
+| `send_prepared` | the matching `*:sign` | signs and sends a transaction prepared above, via Privy, within the policy |
 
 Every prepared transaction is built for the user's own address only, simulated with `eth_call` first, uses exact
-approvals and only targets addresses from `agents.json` / `factory.setOf`. The user signs it in their own wallet
-(app.backx.trade opens a "Sign this" link, or their agent's own wallet if the login wallet is the agent's).
+approvals and only targets addresses from `agents.json` / `factory.setOf`. Without a `*:sign` scope the user signs it
+on app.backx.trade ("Sign this" link); with it, `send_prepared` signs it through Privy (below).
 
-## Signing (later, opt-in only)
-If owners want agents to act without a click each time: Privy session signers / server-side wallet policies on the
-user's embedded wallet, set up by the user, with hard limits enforced by Privy (allowed contracts = BackX only,
-max amount per day, no transfers to other addresses, expiry). Off by default, revocable any time. Needs owner
-sign-off and a security review before it is built.
+## Signing (owner 2026-10-26: MCP may sign, never holds a key)
+How: Privy server-side signing on the user's **embedded** wallet (Privy "session signers" / authorization keys with
+wallet policies). The private key stays split inside Privy's secure enclave; neither mcp.backx.trade nor
+api.backx.trade ever sees it. MCP holds only an authorization key that Privy accepts for that one wallet, and only
+for requests that pass the policy.
+
+- **Opt-in per account**: the user turns it on in Profile → Connected apps (planned) and confirms with their own
+  login. That adds the MCP signer to their wallet; "Disconnect" removes it at once (and revokes the tokens).
+- **Policy enforced by Privy, not by our code** (so a bug or break-in on MCP cannot widen it):
+  - allowed chains: the launch chains; allowed `to`: BackX contracts from `agents.json` / `factory.setOf`, the
+    stable and coin contracts only for `approve` to those, Multicall3 only with `claimRewardsFor` / `claimFor`;
+  - allowed methods: open, close, setLimit, setStop, placeOrder, cancelOrder, deposit, withdraw, requestRedeem,
+    cancelRequest, stake, unstake, claim*, approve (exact amount, spender = a BackX contract);
+  - never: plain transfers of USDC/ETH/coins/Tanks to any address, `setApprovalForAll` except to staking,
+    withdrawals to another address (`withdraw(…, receiver ≠ own wallet)` denied);
+  - limits the user sets: max USD per transaction and per day, max leverage, expiry (default 30 days).
+- Every signed transaction is simulated first, logged (user, client, tool, tx hash) and shown in Profile.
+- External-wallet accounts never get a signer (they cannot connect at all, see Goals).
+- Needs owner sign-off on the default limits and a security review of the policy before launch.
 
 ## Other AI connection methods (same rules)
 - **Plain on-chain** (works now): `/skill.md` + `/agents.json` + ABIs. Best for autonomous agents with their own wallet.
@@ -83,4 +109,5 @@ sign-off and a security review before it is built.
 1. `/internal/mcp/*` read routes + signed-request middleware on api.backx.trade.
 2. mcp.backx.trade: MCP server (TypeScript MCP SDK, Streamable HTTP), OAuth with Privy login + consent page.
 3. Read tools → prepare tools → Profile → Connected apps (revoke).
-4. Only after sign-off: optional policy-limited signing.
+4. Signing: Privy signer + policy per account, consent ticks, limits in Profile, then `send_prepared`
+   (after sign-off on the default limits and a policy review).

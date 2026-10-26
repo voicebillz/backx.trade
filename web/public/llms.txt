@@ -13,7 +13,8 @@
   when contracts launch). ABIs: https://www.backx.trade/abi/<Name>.json.
 - Everything is a plain on-chain call: no API key, no BackX server. "Claim all" = one Multicall3 transaction
   (`claimRewardsFor` on each vault + `claimFor` on staking).
-- Planned (not live): an MCP server at mcp.backx.trade where a user connects their own agent to their own account.
+- Planned (not live): an MCP server at mcp.backx.trade where a user with a social login connects their own agent to
+  their own account; it can sign within limits the user sets, without ever holding a private key.
 
 ## Product
 - **Long** (contracts: Hedge): buys real tokens worth stake × leverage. Up to 20× on major coins (BTC/ETH-type pools), 5× on large

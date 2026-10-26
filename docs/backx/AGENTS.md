@@ -14,7 +14,8 @@ Public addresses that live in Railway (Robinhood Chain stable, a custom factory)
 repository **variables** so the workflow sees them: `RESERVE_STABLE_4663` (+ `_SYMBOL_`, `_DECIMALS_`), `GAZZ_TANKS`,
 `STAKING_TANK_POINTS`, `FACTORY_<chainId>`.
 
-Planned, not built: MCP at `mcp.backx.trade` for a user's assistant on their own account, see `MCP-PLAN.md`.
+Planned, not built: MCP at `mcp.backx.trade` for a user's assistant on their own account (social-login accounts only;
+signs within user limits via Privy, never holds a key), see `MCP-PLAN.md`.
 
 Everything an agent needs is on-chain: no API key, no BackX server. One set of contracts per coin per chain,
 found with `BackxMarketFactory.setOf(token)` → `(hedge, usdVault, hedgeFund, short, tokenVault, shortFund)`.

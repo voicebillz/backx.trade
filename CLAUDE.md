@@ -212,8 +212,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   CORS `*` on those static files only. The call list (`web/src/lib/agentCalls.ts` → Whitepaper sheet +
   `docs/backx/agent-calls.csv`) has Find, Issue, Trade, Orders, Stake, Claim, Validate.
 - Planned, not built: MCP at `mcp.backx.trade` on a separate project/server, OAuth 2.1 with the BackX login, a user's
-  agent sees only their own account, prepares unsigned txs (user signs), talks to api.backx.trade only via signed,
-  read-only `/internal/mcp/*` routes; never DB/Redis/keys. Plan: `docs/backx/MCP-PLAN.md`.
+  agent sees only their own account; ONLY social-login accounts may connect (not external-wallet logins, owner
+  2026-10-26); MCP may sign (opt-in per account) through Privy policy-limited signing on the embedded wallet (BackX
+  contracts only, no transfers out, user limits), never holding a private key; talks to api.backx.trade only via
+  signed, read-only `/internal/mcp/*` routes; never DB/Redis. Plan: `docs/backx/MCP-PLAN.md`.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.
