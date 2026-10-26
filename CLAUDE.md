@@ -270,7 +270,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 - Short is BACK (owner 2026-10-25, replaces "Hedge only" of 2026-10-19), old-school: borrow the coin from issuers who
   deposited that coin (PONS, BTC …; only Hedge capital is USDC), sell it, buy exactly the same coins back; every swap
   cost is the trader's, issuers earn USDC. Caps as Hedge (Major 20×, Large 5×, Mid 3×, Small 2×), short margin 2/3/4/5 %,
-  profit roof (auto-close at a fall of 80/70/60/50 %, `roofBps`, cannot be removed). RSF fee is baked into every short,
+  profit roof (auto-close at a fall of 80/70/60/50 %, `roofBps`, cannot be removed; UI and public copy call it "Max profit"
+  and show only the gain in dollars, never the word roof, owner 2026-10-26). RSF fee is baked into every short,
   its own Short fund. No coins issued → place a sell order, it fills when they are. Sim: `docs/backx/sim/short_roof.py`,
   spec `docs/backx/SHORT-SPEC.md`. Web Buy/Sell (Hedge/Short) and coin issuing on the Issue page follow the contracts.
 - Server never decides outcomes from client-sent numbers; on-chain state is the source of truth for balances.

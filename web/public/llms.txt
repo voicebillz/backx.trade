@@ -24,7 +24,7 @@
   first. The trader keeps part of what is left. A trader can never lose more than they paid.
 - **1× long**: borrows nothing, has no liquidation, issuers get nothing from it.
 - **Short (sell)**: old-school: the coin is borrowed from issuers who deposited it, sold, and later exactly the same
-  number of coins is bought back and returned. Same caps as longs. Every short has a profit roof (it closes itself
+  number of coins is bought back and returned. Same caps as longs. Every short has a max profit (it closes itself
   after a fall of 80 % on major coins, 70 / 60 / 50 % on smaller tiers); the gain is paid from the position.
 - **Orders and limits**: buy and sell orders at a price (USDC waits in the contract until a validator fills it; a
   short order also waits until coins are issued) and take-profits, filled at most 1 % worse than the price.

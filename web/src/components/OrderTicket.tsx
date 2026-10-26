@@ -112,7 +112,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
     : tpNum <= 0 ? 'Enter a price above 0'
     : buy && tpNum <= base ? `Above ${price(base)}`
     : !buy && tpNum >= base ? `Below ${price(base)}`
-    : !buy && tpNum < base * (1 - roof) ? `The roof closes it at ${price(base * (1 - roof))}`
+    : !buy && tpNum < base * (1 - roof) ? `Max profit is reached at ${price(base * (1 - roof))}`
     : null;
   const ratio = hasTp && !tpErr ? tpNum / base : null;
   const preview = ratio ? q.at(ratio * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
@@ -262,8 +262,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
         {!q.noLiquidation && (
           <div><dt>Liquidation</dt><dd className="num down">{price(liqPrice)} <span className="liq-pct">{buy ? '−' : '+'}{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
         )}
-        {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} <span className="liq-pct">−{roof * 100}%</span></dd></div>}
-        {!buy && <div><dt>Max gain at the roof</dt><dd className="num up">{signed(q.at(1 - roof).trader)}</dd></div>}
+        {!buy && <div><dt>Max profit</dt><dd className="num up">{signed(q.at(1 - roof).trader)}</dd></div>}
         {buy ? (<>
           <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
           {q.loan > 0 && <div><dt>Borrowed from issuers</dt><dd className="num">{usd(q.loan)} USDC</dd></div>}
@@ -299,8 +298,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
                 : <div><dt>Borrow &amp; sell</dt><dd className="num">{coinAmt(q.notional / base)} {market.symbol} · {usd(q.notional)}</dd></div>}
               {buy && q.loan > 0 && <div><dt>Borrowed from issuers</dt><dd className="num">{usd(q.loan)} USDC</dd></div>}
               {!q.noLiquidation && <div><dt>Liquidation</dt><dd className="num down">{`${price(liqPrice)} ${buy ? '−' : '+'}${(q.liqMove * 100).toFixed(1)}%`}</dd></div>}
-              {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} −{roof * 100}%</dd></div>}
-              {!buy && <div><dt>Max gain at the roof</dt><dd className="num up">{signed(q.at(1 - roof).trader)}</dd></div>}
+              {!buy && <div><dt>Max profit</dt><dd className="num up">{signed(q.at(1 - roof).trader)}</dd></div>}
               {hasTp && !tpErr && <div><dt>Take profit</dt><dd className="num">{price(tpNum)}</dd></div>}
               {hasSl && !slErr && <div><dt>Stop loss</dt><dd className="num">{price(slNum)}</dd></div>}
               <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas * (isOrder ? 2 : 1))}</dd></div>

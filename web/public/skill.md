@@ -44,8 +44,8 @@ Units: amounts are base units of the token. The stable is `chains[i].stable` (US
 | Max leverage for an amount now | `hedge.maxMFor(amount)` / `short.maxMFor(amount)` (0 = nothing to borrow yet) |
 | Approve | `usdc.approve(manager, amount)` (exact amount, never unlimited) |
 | Long now | `hedge.open(amount, m, minOut, takeProfitPrice)` → position id |
-| Short now | `short.open(amount, m, minOut, takeProfitPrice)` → position id (a profit roof is set automatically) |
-| Take profit / stop loss | `setLimit(id, price)` / `setStop(id, price)` (0 = none; short limit 0 = back to the roof) |
+| Short now | `short.open(amount, m, minOut, takeProfitPrice)` → position id (a max profit is set automatically: it closes itself at an 80 % fall on major coins) |
+| Take profit / stop loss | `setLimit(id, price)` / `setStop(id, price)` (0 = none; short limit 0 = back to the max profit) |
 | Read | `positions(id)`, `threshold(id)` (liquidation value), `isLiquidatable(id)`, `isLimitReached(id)` |
 | Close | `close(id, limit)` (long: minimum USDC out; short: maximum USDC in) → USDC to you (the $0.50 gas escrow goes to the Treasury) |
 | Limit entry order | `placeOrder(m, amount, trigger, above, expiry, takeProfitPrice, slipBps)` → order id (USDC escrowed) |

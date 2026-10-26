@@ -217,9 +217,9 @@ function ShortRoof() {
   const roofY = shortPnl(100, 2, t.margin, t.roof, -t.roof).pnl;
   const liq = shortPnl(100, 2, t.margin, t.roof, 0).liqMove;
   return (
-    <Reveal className="wp-fig wp-chart" label="Short profit roof: result of a 100 USDC short at 2 times">
-      <div className="wp-fig-head"><span>$100 short at 2× · Major · roof −{t.roof * 100}%</span><span className="num">max <span className="up">+${roofY.toFixed(0)}</span></span></div>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gain rises as the price falls and stops at the roof, +${roofY.toFixed(0)} dollars; at a rise of ${(liq * 100).toFixed(0)} percent the short is liquidated`}>
+    <Reveal className="wp-fig wp-chart" label="Short max profit: result of a 100 USDC short at 2 times">
+      <div className="wp-fig-head"><span>$100 short at 2× · Major · max profit at −{t.roof * 100}%</span><span className="num">max <span className="up">+${roofY.toFixed(0)}</span></span></div>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gain rises as the price falls and stops at the max profit, +${roofY.toFixed(0)} dollars; at a rise of ${(liq * 100).toFixed(0)} percent the short is liquidated`}>
         {[-100, 0, 100].map((y) => <g key={y}><line x1={L} x2={W - 6} y1={py(y)} y2={py(y)} className="grid" /><text x={L - 4} y={py(y) + 3} className="ax r">{y > 0 ? '+' : y < 0 ? '−' : ''}${Math.abs(y)}</text></g>)}
         {[-0.8, -0.4, 0, 0.4].map((x) => <text key={x} x={px(x)} y={H - 6} className="ax c">{x > 0 ? '+' : x < 0 ? '−' : ''}{Math.abs(x * 100)}%</text>)}
         <line x1={px(-t.roof)} x2={px(-t.roof)} y1={6} y2={H - B} className="mark roof" />
@@ -236,8 +236,8 @@ function ShortRoof() {
 /** Max result per tier at the cap and at 2×, for $100 paid, at the roof. */
 function RoofTable() {
   return (
-    <div className="wp-table" role="table" aria-label="Short roof per tier">
-      <div className="wp-row wp-head" role="row"><span role="columnheader">Tier</span><span role="columnheader" className="r">Roof</span><span role="columnheader" className="r">Liquidated at</span><span role="columnheader" className="r">Max result, $100</span></div>
+    <div className="wp-table" role="table" aria-label="Short max profit per tier">
+      <div className="wp-row wp-head" role="row"><span role="columnheader">Tier</span><span role="columnheader" className="r">Max profit at</span><span role="columnheader" className="r">Liquidated at</span><span role="columnheader" className="r">Max result, $100</span></div>
       {SHORT_TIERS.map((t) => {
         const top = shortPnl(100, t.maxM, t.margin, t.roof, -t.roof);
         return (
@@ -331,7 +331,7 @@ export function WhitepaperPage() {
           <section id="short">
             <h2>Short</h2>
             <p>Old-school shorting, on-chain. You borrow the coin itself from issuers who deposited that coin, it is sold for USDC, and later exactly the same number of coins is bought back and returned. If the price fell, the difference is yours. Every swap cost, both ways, is yours too, so issuers always get the same coins back and earn USDC on top: a borrow fee and 10 % of your gain.</p>
-            <p><b>Profit roof.</b> Every short has one: when the price has fallen the tier's roof, the short closes itself and your gain is paid from the position, never from issuers. The coins are bought back while the market can still sell them. You can take profit earlier, never later than the roof. If the price rises to the liquidation price, the short is closed so the issuers' coins come back first.</p>
+            <p><b>Max profit.</b> Every short has one: when the price has fallen a set share (80 % on major coins, 70 / 60 / 50 % on smaller ones), the short closes itself and your gain is paid from the position, never from issuers. The coins are bought back while the market can still sell them. You can take profit earlier, never later than that. If the price rises to the liquidation price, the short is closed so the issuers' coins come back first.</p>
             <ShortRoof />
             <RoofTable />
             <p className="hint">Modelled with the contract's formulas: $100 paid everything included, swap cost 0.35 % per way, issuers' share of a gain 10 %. Short margins are slightly larger than Long margins because a pump can gap harder than a crash (docs/backx/sim/short_roof.py: with a 0.5 s validator the issuers' coins came back in full in every scenario up to +60 % in 5 minutes).</p>
@@ -367,7 +367,7 @@ export function WhitepaperPage() {
 
           <section id="validators">
             <h2>Validators</h2>
-            <p>Anyone can be a validator: a person, a bot or an AI agent, on every chain BackX runs on. Validators liquidate positions, fill take-profits and stop-losses, close shorts at their roof and fill buy and sell orders. There is no allow list and nothing depends on BackX servers: if ours stop, everyone else keeps the market running. Everything they do is visible on-chain.</p>
+            <p>Anyone can be a validator: a person, a bot or an AI agent, on every chain BackX runs on. Validators liquidate positions, fill take-profits and stop-losses, close shorts at their max profit and fill buy and sell orders. There is no allow list and nothing depends on BackX servers: if ours stop, everyone else keeps the market running. Everything they do is visible on-chain.</p>
             <p><b>What a validator earns.</b> Every position puts its gas fee aside when it opens; whoever settles it gets it. On top comes an accuracy bonus, largest when the execution lands right at the trigger price and falling to a floor of 20 % of the max from 1 % past it. Every settlement pays at least $0.50, however late, so an overdue liquidation is always worth picking up. The fastest, most accurate validator earns the most, which is exactly what keeps issuers safe.</p>
             <RewardCurve />
             <div className="wp-table three" role="table" aria-label="Validator bonus by distance">
@@ -376,7 +376,7 @@ export function WhitepaperPage() {
                 <div className="wp-row" role="row" key={d}><span role="cell" className="num">{d}%</span><span role="cell" className="r num">{Math.round((d as number) >= 1 ? 0 : (1 - (d as number)) ** 2 * 100)}%</span><span role="cell" className="r num">{v} + gas</span></div>
               ))}
             </div>
-            <p className="hint">Liquidation bonus up to 0.5 % of the position, from what is left for the trader after the issuers are repaid; take-profit, roof and order fills up to 0.1 %. A bonus never takes more than 15 % of what is left, so issuers always get the largest share. The issuers' principal never pays a bonus.</p>
+            <p className="hint">Liquidation bonus up to 0.5 % of the position, from what is left for the trader after the issuers are repaid; take-profit, max-profit and order fills up to 0.1 %. A bonus never takes more than 15 % of what is left, so issuers always get the largest share. The issuers' principal never pays a bonus.</p>
           </section>
 
           <section id="timing">
