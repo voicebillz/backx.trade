@@ -87,7 +87,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   +25/50/100/200 % and −10/15/25/50 %, potential profit/loss, drawn on the chart as TP (--up) and SL (--warning)
   lines next to Entry and Liq. (all four come from the ticket and start at the limit price when one is set, labelled
   "Limit"); the price scale stretches to keep every line in view; contracts `setStop(id, price)`, `stopValue`, filled by
-  validators through executeLimit like a take-profit; ShortManager is ~23.6 KB, ~1 KB left under EIP-170), "Limit order" switch (price required;
+  validators through executeLimit like a take-profit; ShortManager is ~23.8 KB, ~0.8 KB left under EIP-170), "Limit order" switch (price required;
   warns above/below/at/far from today's price), take-profit (short: not past the roof), Buy/Sell opens a confirm overlay
   (portal; "Opens at launch" until contracts are live). Missing USDC or coin → "Swap" opens SwapOverlay in the same
   window with that coin preselected on the first launch chain that routes it; Back returns. Swap chains: Ethereum, Base,
