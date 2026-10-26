@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -32,6 +33,7 @@ contract BackxTreasury is Ownable2Step, ReentrancyGuard {
     event HoldersSet(address indexed to, uint16 bps);
     event Distributed(IERC20 indexed token, uint256 toHolders, uint256 toTreasury);
     event Withdrawn(IERC20 indexed token, address indexed to, uint256 amount);
+    event CallerPaid(IERC20 indexed token, address indexed caller, uint256 amount);
 
     error BadParams();
     error TooMuch();
@@ -54,8 +56,19 @@ contract BackxTreasury is Ownable2Step, ReentrancyGuard {
     }
 
     /// @notice Splits everything that arrived since the last call: holderBps to holderRewards, the rest to the platform.
+    /// Whoever calls it is paid $0.50 from the platform's part (owner 2026-10-26: every validator action pays, so no
+    /// company money is needed to keep it running), but only when at least $50 arrived since the last split: the pay
+    /// is at most 1 % of what came in, and sending money here to farm it always loses (it becomes platform revenue).
     function distribute(IERC20 token) external nonReentrant returns (uint256 toHolders) {
-        return _distribute(token);
+        uint256 fresh = pending(token);
+        toHolders = _distribute(token);
+        uint256 pay;
+        try IERC20Metadata(address(token)).decimals() returns (uint8 d) { pay = 10 ** uint256(d) / 2; } catch {}
+        if (pay != 0 && fresh >= 100 * pay && kept[token] >= pay) {
+            kept[token] -= pay;
+            token.safeTransfer(msg.sender, pay);
+            emit CallerPaid(token, msg.sender, pay);
+        }
     }
 
     /// @notice The Safe takes the platform's part (never the holders'): pending money is split first.

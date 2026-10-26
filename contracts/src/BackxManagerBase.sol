@@ -99,6 +99,8 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         uint128 amount;       // everything the trader pays, incl. both gas fees
         uint128 trigger;      // USD base units per 1e18 coin base units
         uint128 limitPrice;   // take-profit for the new position (0 = none)
+        uint64 gas;           // validator gas escrowed at placement (owner 2026-10-26): what the filler, or whoever
+                              // clears it once expired, is paid, even if validation.gasUsd changes later
     }
 
     IERC20 public usd;
@@ -159,6 +161,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
     uint8 internal constant K_LIQ = 1;
     uint8 internal constant K_LIMIT = 2;
     uint8 internal constant K_FILL = 3;
+    uint8 internal constant K_EXPIRE = 4;
 
     error MarketOff();
     error BadM();
@@ -441,18 +444,24 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         orderId = nextOrderId++;
         orders[orderId] = Order({
             owner: msg.sender, m: m, above: above, expiry: expiry, slipBps: slipBps, amount: SafeCast.toUint128(amount),
-            trigger: SafeCast.toUint128(trigger), limitPrice: SafeCast.toUint128(limitPrice)
+            trigger: SafeCast.toUint128(trigger), limitPrice: SafeCast.toUint128(limitPrice), gas: validation.gasUsd
         });
         emit OrderPlaced(orderId, msg.sender, m, amount, trigger, above, expiry);
     }
 
-    /// @notice The owner can cancel any time; anyone can clear an expired order (the USDC goes back to its owner).
+    /// @notice The owner can cancel any time for a full refund. Anyone can clear an expired order and earns the
+    /// order's escrowed gas for it; the rest goes back to its owner (owner 2026-10-26: every validator action pays).
     function cancelOrder(uint256 orderId) external nonReentrant {
         Order memory o = orders[orderId];
         if (o.owner == address(0)) revert NotFillable();
-        if (o.owner != msg.sender && block.timestamp < o.expiry) revert NotOwner();
+        uint256 back = o.amount;
+        if (o.owner != msg.sender) {
+            if (block.timestamp < o.expiry) revert NotOwner();
+            back -= o.gas;
+            _payValidator(msg.sender, orderId, K_EXPIRE, o.gas, 0);
+        }
         delete orders[orderId];
-        usd.safeTransfer(o.owner, o.amount);
+        usd.safeTransfer(o.owner, back);
         emit OrderCancelled(orderId);
     }
 
@@ -467,14 +476,14 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
             uint256 p = price();
             if (o.above ? p < o.trigger : p > o.trigger) return false;
         }
-        return _canOpen(o.m, o.amount - validation.gasUsd);
+        return _canOpen(o.m, o.amount - o.gas);
     }
 
     function _fillOrder(uint256 orderId, address v) internal returns (uint256 id) {
         if (!isOrderFillable(orderId)) revert NotFillable();
         Order memory o = orders[orderId];
         delete orders[orderId];
-        uint256 gas = validation.gasUsd;
+        uint256 gas = o.gas;
         uint256 bonus;
         if (o.trigger != 0) {
             // Bonus from the order, of the position value, largest right at the trigger.

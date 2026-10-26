@@ -44,6 +44,8 @@ export const AGENT_CALLS: AgentCall[] = [
   { group: 'Validate', step: 'Is it due?', contract: 'Hedge / Short', call: 'isLiquidatable(id) · isLimitReached(id) · isOrderFillable(id)', returns: 'true / false' },
   { group: 'Validate', step: 'Settle many', contract: 'Hedge / Short', call: 'liquidateBatch(ids) · executeLimitBatch(ids) · fillOrderBatch(ids)', returns: 'how many settled' },
   { group: 'Validate', step: 'Settle one', contract: 'Hedge / Short', call: 'liquidate(id) · executeLimit(id) · fillOrder(orderId)', returns: 'reverts with the reason' },
+  { group: 'Validate', step: 'Clear an expired order', contract: 'Hedge / Short', call: 'cancelOrder(orderId)', returns: '$0.50 to you · rest to its owner' },
+  { group: 'Validate', step: 'Split platform revenue', contract: 'Treasury', call: 'distribute(stable)', returns: '$0.50 to you when ≥ $50 arrived' },
   { group: 'Validate', step: 'Earned', contract: 'Hedge / Short', call: 'claimable(me)', returns: 'USDC (gas + accuracy bonus)' },
   { group: 'Validate', step: 'Claim', contract: 'Hedge / Short', call: 'claim() · claimTo(to)', returns: 'USDC sent' },
 ];

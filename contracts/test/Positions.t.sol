@@ -528,9 +528,34 @@ contract OrderTest is Base {
         hm.cancelOrder(oid);
         vm.warp(block.timestamp + 2 hours);
         assertFalse(hm.isOrderFillable(oid), "expired");
-        vm.prank(makeAddr("stranger"));
-        hm.cancelOrder(oid); // anyone clears an expired order, the money goes home
-        assertEq(usd.balanceOf(trader), before);
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        hm.cancelOrder(oid); // anyone clears an expired order: paid the order's gas, the rest goes home
+        assertEq(hm.claimable(stranger), USD / 2, "whoever clears it earns the escrowed $0.50");
+        assertEq(usd.balanceOf(trader), before - USD / 2);
+    }
+
+    function test_ownCancelIsFullRefund() public {
+        uint256 before = usd.balanceOf(trader);
+        vm.prank(trader);
+        uint256 oid = hm.placeOrder(2, 100 * USD, 2_500 * USD, true, uint40(block.timestamp + 1 hours), 0, 0);
+        vm.prank(trader);
+        hm.cancelOrder(oid);
+        assertEq(usd.balanceOf(trader), before, "own cancel: everything back");
+    }
+
+    /// The gas is fixed when the order is placed: a later change of validation.gasUsd never strands or shortchanges it.
+    function test_orderGasFixedAtPlacement() public {
+        vm.prank(trader);
+        uint256 oid = hm.placeOrder(2, 100 * USD, 0, true, uint40(block.timestamp + 1 hours), 0, 0);
+        BackxManagerBase.Validation memory v;
+        (v.gasUsd, v.liqBonusBps, v.fillBonusBps, v.accuracyBps, v.restCapBps, v.lateBps) = hm.validation();
+        v.gasUsd = uint64(2 * USD);
+        vm.prank(safe);
+        hm.setValidation(v);
+        vm.prank(validator);
+        hm.fillOrder(oid);
+        assertEq(hm.claimable(validator), USD / 2, "filler gets the $0.50 escrowed at placement");
     }
 }
 

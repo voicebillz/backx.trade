@@ -109,7 +109,9 @@ Validator rewards (`claimable(me)` → `claim()` on each manager) are paid to `m
 Execution is open to anyone. Watch the managers' `Opened`, `LimitSet`, `StopSet`, `OrderPlaced` events; each block
 check `isLiquidatable(id)`, `isLimitReached(id)`, `isOrderFillable(orderId)`; settle many per transaction with
 `liquidateBatch(ids)`, `executeLimitBatch(ids)`, `fillOrderBatch(orderIds)`. You earn that position's escrowed gas fee
-plus an accuracy bonus. `claimable(me)` → `claim()`. Our own validators are the reference
+plus an accuracy bonus (at least $0.50 per settlement, however late). Clearing an expired order with
+`cancelOrder(orderId)` pays $0.50 too, and `treasury.distribute(stable)` pays $0.50 when at least $50 arrived.
+`claimable(me)` → `claim()`. Our own validators are the reference
 implementation (`keeper/` in the BackX repository).
 
 ## Safety rules for agents

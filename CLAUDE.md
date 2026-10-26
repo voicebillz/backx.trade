@@ -62,7 +62,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   allow list); each position escrows its validator gas, paid to whoever settles it + an accuracy bonus
   (max·((W−d)/W)², W 1 %, never below the late floor `lateBps` 20 % of the max, owner 2026-10-26; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal, and
   never above `restCapBps` 15 % of the rest: issuers get the most, owner 2026-10-25); own
-  close refunds the gas. Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
+  close refunds the gas. Every validator action pays from its own escrow (owner 2026-10-26, VALIDATORS.md "Who pays"):
+  orders escrow their gas at placement (`Order.gas`), clearing an expired order pays that $0.50 (rest to the owner),
+  Treasury `distribute` pays the caller $0.50 from the platform part when ≥ $50 arrived; no pooled validator reserve
+  (nothing to drain, no company capital; the Safe cannot take escrows). Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
   cancel; a short order waits until coins are issued). ALL rewards are claimable USDC: validators `claim()/claimTo()`
   per manager; issuers (USDC reserve AND coin reserves) `claimRewards()/claimRewardsTo()` on the vault (+ `claimRewardsFor(owner)` and staking `claimFor(who)`, so "Claim all"
   is one Multicall3 tx, one signature per chain, owner 2026-10-26), streamed over

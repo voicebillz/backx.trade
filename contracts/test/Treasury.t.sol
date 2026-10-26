@@ -21,13 +21,28 @@ contract TreasuryTest is Test {
         usd.mint(address(t), 1_000e6);
         assertEq(t.distribute(IERC20(address(usd))), 0, "no address yet: kept aside");
         assertEq(t.holdersOwed(IERC20(address(usd))), 250e6);
-        assertEq(t.kept(IERC20(address(usd))), 750e6);
+        assertEq(t.kept(IERC20(address(usd))), 749.5e6, "platform part minus the caller's $0.50");
         vm.prank(safe);
         t.setHolders(holders, 2_500);
         usd.mint(address(t), 400e6);
         assertEq(t.distribute(IERC20(address(usd))), 350e6, "owed 250 + 25 % of 400");
         assertEq(usd.balanceOf(holders), 350e6);
-        assertEq(t.kept(IERC20(address(usd))), 1_050e6);
+        assertEq(t.kept(IERC20(address(usd))), 1_049e6);
+    }
+
+    function test_callerPaid_onlyWhenEnoughArrived() public {
+        address bot = makeAddr("bot");
+        usd.mint(address(t), 49e6);
+        vm.prank(bot);
+        t.distribute(IERC20(address(usd)));
+        assertEq(usd.balanceOf(bot), 0, "under $50 new: no pay");
+        usd.mint(address(t), 60e6);
+        vm.prank(bot);
+        t.distribute(IERC20(address(usd)));
+        assertEq(usd.balanceOf(bot), 0.5e6, "$0.50 for the split");
+        vm.prank(bot);
+        t.distribute(IERC20(address(usd)));
+        assertEq(usd.balanceOf(bot), 0.5e6, "nothing new: no pay again");
     }
 
     function test_safeWithdrawsOnlyPlatformPart() public {

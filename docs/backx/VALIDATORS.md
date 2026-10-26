@@ -37,6 +37,24 @@ maxBonus: liquidation 0.5 % of the position value (liqBonusBps), fills 0.1 % (fi
 | Share of the max bonus | 100 % | 81 % | 56 % | 25 % | 20 % (floor) | 20 % (floor) |
 | $1,000 position liquidated (bonus + $0.50 gas) | $5.50 | $4.55 | $3.31 | $1.75 | $1.50 | $1.50 |
 
+## Who pays the validator, for every action (owner 2026-10-26)
+Every action is paid from money set aside by the position or order itself when it was created, out of what the
+trader paid. Nothing is pooled, so there is no reserve to drain, the company puts in no capital, and nobody (not the
+Safe, not a hacker) can take a position's escrow: it goes only to whoever settles it, or back to the trader.
+
+| Action | Who may do it | Paid | From |
+|---|---|---|---|
+| Liquidation | anyone | $0.50 + accuracy bonus (late floor 20 %) | the position's escrowed gas; bonus from the trader's rest |
+| Take-profit / stop-loss / short roof | anyone | $0.50 + accuracy bonus | the position's escrowed gas; bonus from the payout |
+| Fill a buy / sell (limit) order | anyone | $0.50 + accuracy bonus | the order's escrow (the order holds 2 × $0.50: one for the filler, one for the new position) |
+| Clear an expired order | anyone | $0.50 | the order's escrow; the rest goes back to its owner |
+| Treasury `distribute` (+ staking stream) | anyone | $0.50 when ≥ $50 arrived | the platform's part of the revenue (≤ 1 %) |
+| Issuer queue `processQueue` | anyone | nothing | runs by itself at every repay, deposit and settlement |
+
+The gas is fixed when the position or order is created, so a later change of `validation.gasUsd` never strands it.
+Validators pay network gas in ETH/BNB up front per transaction and are paid back in USDC (`claim`), so a validator
+needs only a small gas balance, refilled from what it earns.
+
 Where the bonus comes from: a liquidation's bonus comes out of the trader's rest after the issuers' principal is
 repaid (never out of the principal; capped by that rest). A take-profit / roof bonus comes out of the trader's
 payout, an entry-order bonus out of the order's amount. Issuers are never paid less principal because of it.

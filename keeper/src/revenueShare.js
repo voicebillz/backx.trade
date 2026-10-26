@@ -4,8 +4,9 @@
 // Safe has not pointed the Treasury at the staking contract.
 import { treasuryAbi } from './abi.js';
 
-// Below this (USD base units; default $1 with 6-decimal USDC, set DISTRIBUTE_MIN = 1e18 on BNB Chain) it waits an hour.
-const MIN_UNITS = BigInt(process.env.DISTRIBUTE_MIN || '1000000');
+// Below this (USD base units; default $50 with 6-decimal USDC, set DISTRIBUTE_MIN = 50e18 on BNB Chain) it waits an hour.
+// $50 is also where the Treasury starts paying the caller $0.50, so our validator never spends gas unpaid.
+const MIN_UNITS = BigInt(process.env.DISTRIBUTE_MIN || '50000000');
 
 export function makeRevenueShareJob({ pub, wallet, account, cfg, log }) {
   return async function revenueShare() {
