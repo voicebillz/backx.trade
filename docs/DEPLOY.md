@@ -125,3 +125,9 @@ select signup_method, count(*) from users group by 1 order by 2 desc;
 
 ## Validators (2026-10-23)
 Railway variable `KEEPERS` (optional): `id:gasAddress:reportPublicKey,...` from `npm run keygen` in `keeper/`. Setup per host: `docs/KEEPERS.md`.
+
+## Agent address book (agents.json)
+`www.backx.trade/agents.json` oppdateres av GitHub-workflowen `agent-manifest` (hver 6. time og ved kontraktendringer).
+Offentlige adresser som bare står i Railway må også legges inn som GitHub repo-**variabler** (Settings → Secrets and
+variables → Actions → Variables, ikke secrets): `RESERVE_STABLE_4663` (+ `RESERVE_STABLE_SYMBOL_4663`,
+`RESERVE_STABLE_DECIMALS_4663`), `GAZZ_TANKS`, `STAKING_TANK_POINTS`, `FACTORY_<chainId>`. Ingen nøkler der.

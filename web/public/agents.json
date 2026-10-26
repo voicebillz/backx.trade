@@ -1,0 +1,244 @@
+{
+  "name": "BackX",
+  "site": "https://www.backx.trade",
+  "app": "https://app.backx.trade",
+  "skill": "https://www.backx.trade/skill.md",
+  "docs": "https://www.backx.trade/whitepaper",
+  "abi": "https://www.backx.trade/abi/",
+  "status": "pre-launch",
+  "note": "Addresses are CREATE2 and known before launch. deployed: true = code found on-chain at the last check, false = not yet, null = not checked. Always confirm with eth_getCode before sending money.",
+  "owner": {
+    "safe": "0xfa408F75490C0412d4a5F45FA7553Aff03249BE4"
+  },
+  "create2Deployer": "0x4e59b44847b379578588920ca78fbf26c0b4956c",
+  "artifactsCommit": "33f2dbf",
+  "implementations": {
+    "vaultImpl": "0x94225f897fdf4b2144499b3645c31aeb70ee79d3",
+    "fundImpl": "0xcf4e3581ffb4a8244dbd1b5b7d36b1a950a1bc68",
+    "hedgeImpl": "0x3a4959a4cadc182743159583e490405ed08c1443",
+    "shortImpl": "0x143cde1b63bc18921dee051d4cd2202e8ea846d6",
+    "factoryImpl": "0x2001c345e242e560f25caee506635c3808666ba2"
+  },
+  "chains": [
+    {
+      "chainId": 1,
+      "name": "Ethereum",
+      "launch": false,
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "explorer": "https://etherscan.io",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "decimals": 6
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x7fba27495e360414b31734cf20d010859dc855c9",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    },
+    {
+      "chainId": 10,
+      "name": "Optimism",
+      "launch": false,
+      "rpc": "https://mainnet.optimism.io",
+      "explorer": "https://optimistic.etherscan.io",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+        "decimals": 6
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x633c4d332b9662c53f32801ce438f5fb8e0e5bfd",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    },
+    {
+      "chainId": 56,
+      "name": "BNB Chain",
+      "launch": true,
+      "rpc": "https://bsc-dataseed.bnbchain.org",
+      "explorer": "https://bscscan.com",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+        "decimals": 18
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x609226023872dc33c67558c1fad9ba32dcd72ce7",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    },
+    {
+      "chainId": 137,
+      "name": "Polygon",
+      "launch": false,
+      "rpc": "https://polygon-bor-rpc.publicnode.com",
+      "explorer": "https://polygonscan.com",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+        "decimals": 6
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x5d3c3374276793c1935e276a6cfc2aae5e6445f3",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    },
+    {
+      "chainId": 4663,
+      "name": "Robinhood Chain",
+      "launch": true,
+      "rpc": "https://rpc.mainnet.chain.robinhood.com",
+      "explorer": "https://robin.etherscan.io",
+      "stable": null,
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": null,
+          "deployed": null,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        },
+        "staking": {
+          "address": null,
+          "deployed": null,
+          "gazz": "0x08a5d78a4bc7754e8aff87b4509e007baeb685f3",
+          "tanks": "0x261371a1c467b82d43975cbe526c901b2a5ea9f4",
+          "tankPoints": "100000",
+          "lockDays": 90
+        }
+      }
+    },
+    {
+      "chainId": 8453,
+      "name": "Base",
+      "launch": true,
+      "rpc": "https://base-rpc.publicnode.com",
+      "explorer": "https://basescan.org",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "decimals": 6
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x65311d15544322b90b5c55fea2ae03e2a88af841",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    },
+    {
+      "chainId": 42161,
+      "name": "Arbitrum",
+      "launch": true,
+      "rpc": "https://arb1.arbitrum.io/rpc",
+      "explorer": "https://arbiscan.io",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+        "decimals": 6
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x2bd34ebbada07be3a5bf7987897446b83c2e0af8",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    },
+    {
+      "chainId": 43114,
+      "name": "Avalanche",
+      "launch": false,
+      "rpc": "https://api.avax.network/ext/bc/C/rpc",
+      "explorer": "https://snowtrace.io",
+      "stable": {
+        "symbol": "USDC",
+        "address": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+        "decimals": 6
+      },
+      "contracts": {
+        "treasury": {
+          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "deployed": false
+        },
+        "factory": {
+          "address": "0x63d4738b807b913255e057d1256b341a822c7639",
+          "deployed": false,
+          "markets": null
+        },
+        "multicall3": {
+          "address": "0xca11bde05977b3631167028862be2a173976ca11",
+          "deployed": true
+        }
+      }
+    }
+  ]
+}

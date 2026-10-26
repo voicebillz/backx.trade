@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { keccak_256 } from '@noble/hashes/sha3.js';
-import { db } from './db.js';
+// Postgres is loaded only where it is used, so scripts (scripts/agent-manifest.js) can use the address maths without a
+// database or server env.
+const pg = () => import('./db.js').then((m) => m.db);
 import { CHAINS, SAFE, ethCall, pad, padAddr, decodeUint } from './chains.js';
 
 // Core contracts per chain (owner 2026-10-22, admin portal "Contracts"). The portal never deploys with a key: it
@@ -97,13 +99,14 @@ const hasCode = (chainId, address) => getCode(chainId, address).catch(() => null
 export async function factoryAddress(chainId) {
   const env = process.env[`FACTORY_${chainId}`]?.trim();
   if (env && /^0x[0-9a-fA-F]{40}$/.test(env)) return env.toLowerCase();
-  const { rows } = await db.query(`select address from core_contracts where chain_id = $1 and name = 'factory' and status = 'deployed'`, [chainId]);
+  const { rows } = await (await pg()).query(`select address from core_contracts where chain_id = $1 and name = 'factory' and status = 'deployed'`, [chainId]);
   return rows[0]?.address ?? null;
 }
 
 /** Status of every core contract on one chain, read from the chain (and remembered once deployed). */
 export async function chainStatus(chainId) {
   const chain = CHAINS[chainId];
+  const db = await pg();
   const { rows } = await db.query('select * from core_contracts where chain_id = $1', [chainId]);
   const rec = Object.fromEntries(rows.map((r) => [r.name, r]));
   const [safeOk, deployerOk, ...implCode] = await Promise.all([

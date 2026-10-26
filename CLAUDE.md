@@ -203,6 +203,18 @@ The owner is not a developer: explain briefly, in Norwegian.
   liquidity. A failing coin is rejected (deploy 409, button disabled); the admin listing window shows the recipe.
   Liquidation setup and revenue per $30M volume: `docs/backx/LIQUIDATION.md`. Platform fees → Treasury, 10 % to $GAZZ / Gazz Tanks stakers.
 
+## Agents (owner 2026-10-26, `docs/backx/AGENTS.md`)
+- Public, no login: `/skill.md` (agent recipe: trade, issue, stake, claim all, validate, safety; `web/public/skill.md`,
+  update it in the same commit as any contract change), `/agents.json` (address book per chain + deployed status,
+  written by `server/scripts/agent-manifest.js`; `.github/workflows/agent-manifest.yml` runs it on contract changes and
+  every 6 h and commits when the chain changed, so agents learn about the launch by themselves; Railway-only public
+  addresses must also be GitHub repo *variables*), `/abi/<Name>.json` (from export-artifacts.py), `llms.txt`.
+  CORS `*` on those static files only. The call list (`web/src/lib/agentCalls.ts` → Whitepaper sheet +
+  `docs/backx/agent-calls.csv`) has Find, Issue, Trade, Orders, Stake, Claim, Validate.
+- Planned, not built: MCP at `mcp.backx.trade` on a separate project/server, OAuth 2.1 with the BackX login, a user's
+  agent sees only their own account, prepares unsigned txs (user signs), talks to api.backx.trade only via signed,
+  read-only `/internal/mcp/*` routes; never DB/Redis/keys. Plan: `docs/backx/MCP-PLAN.md`.
+
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.
 - CORS + Origin/Referer guard: exact allowlist from `ALLOWED_ORIGINS` (https only, no wildcards, no preview domains). Fail closed.

@@ -431,7 +431,8 @@ export function WhitepaperPage() {
 
           <section id="agents">
             <h2>For AI agents</h2>
-            <p>Every part of BackX is a plain contract call, so agents need no API key and no BackX server. An agent can issue USDC or coins, open and close longs and shorts, place buy and sell orders, validate other positions and claim every reward, all on-chain. Agents can also log in on the website with their own wallet.</p>
+            <p>Every part of BackX is a plain contract call, so agents need no API key and no BackX server. An agent can issue USDC or coins, open and close longs and shorts, place buy and sell orders, stake $GAZZ and Gazz Tanks, validate other positions and claim every reward, all on-chain. Agents can also log in on the website with their own wallet.</p>
+            <p><b>Agent skill.</b> Point your agent at <a href="/skill.md">backx.trade/skill.md</a>: a ready recipe for trading, issuing, staking $GAZZ and Gazz Tanks, claiming and validating. The address book <a href="/agents.json">backx.trade/agents.json</a> lists every contract per chain and whether it is live; it updates itself when contracts launch, so an agent always starts from the current addresses. ABIs are under <code>/abi/</code>. Rewards from every pool and from staking can be claimed together in one transaction (Multicall3 with <code>claimRewardsFor</code> and <code>claimFor</code>).</p>
             <p><b>Recipe.</b> Find the coin's contracts, approve USDC (or the coin), then call. Amounts are in base units; prices are USD per one coin. Every row below is one call, in the order an agent uses them.</p>
             <AgentCallSheet />
           </section>

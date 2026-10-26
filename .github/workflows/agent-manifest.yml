@@ -1,0 +1,49 @@
+# Keeps the public agent address book (web/public/agents.json, served at www.backx.trade/agents.json) current
+# (owner 2026-10-26). Runs on every contract/address change and every 6 hours, reads each chain (eth_getCode,
+# marketCount: read-only, no keys) and commits the file only when something changed, e.g. the day contracts launch.
+# Public addresses that live in Railway (Robinhood stable, a custom factory) are mirrored as GitHub repository
+# *variables* (not secrets): RESERVE_STABLE_4663, RESERVE_STABLE_SYMBOL_4663, RESERVE_STABLE_DECIMALS_4663,
+# GAZZ_TANKS, STAKING_TANK_POINTS, FACTORY_<chainId>.
+name: agent-manifest
+on:
+  push:
+    branches: [main]
+    paths: ['server/src/artifacts.json', 'server/src/deployments.js', 'server/src/chains.js', 'server/scripts/agent-manifest.js', '.github/workflows/agent-manifest.yml']
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: agent-manifest
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --omit=dev --ignore-scripts
+        working-directory: server
+      - run: node scripts/agent-manifest.js --check
+        working-directory: server
+        env:
+          RESERVE_STABLE_4663: ${{ vars.RESERVE_STABLE_4663 }}
+          RESERVE_STABLE_SYMBOL_4663: ${{ vars.RESERVE_STABLE_SYMBOL_4663 }}
+          RESERVE_STABLE_DECIMALS_4663: ${{ vars.RESERVE_STABLE_DECIMALS_4663 }}
+          GAZZ_TANKS: ${{ vars.GAZZ_TANKS }}
+          STAKING_TANK_POINTS: ${{ vars.STAKING_TANK_POINTS }}
+          FACTORY_4663: ${{ vars.FACTORY_4663 }}
+          FACTORY_56: ${{ vars.FACTORY_56 }}
+          FACTORY_8453: ${{ vars.FACTORY_8453 }}
+          FACTORY_42161: ${{ vars.FACTORY_42161 }}
+      - name: Commit when changed
+        run: |
+          if git diff --quiet -- web/public/agents.json; then echo "no change"; exit 0; fi
+          git config user.name "backx-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/public/agents.json
+          git commit -m "agents.json: on-chain status update"
+          git push
