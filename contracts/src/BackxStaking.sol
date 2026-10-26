@@ -28,7 +28,8 @@ contract BackxStaking is ReentrancyGuard, IERC721Receiver {
     IERC20 public immutable gazz;
     IERC721 public immutable tanks;
     IERC20 public immutable usd;
-    /// Points for one Tank, in $GAZZ base units (e.g. 10,000e18 = a Tank counts like 10,000 $GAZZ).
+    /// Points for one Tank, in $GAZZ base units (100,000e18 at deploy, owner 2026-10-26: 1,000 Tanks weigh
+    /// the same as the 100M $GAZZ supply).
     uint256 public immutable tankPoints;
 
     uint256 public totalPoints;

@@ -50,14 +50,15 @@ export const IMPLS = [
 });
 /** $GAZZ + Gazz Tanks staking (owner 2026-10-26): lives where $GAZZ lives (Robinhood Chain) and receives the Treasury's
  *  holder share in that chain's stable. Constructor (gazz, tanks, usd, tankPoints); no owner, nothing to configure later.
- *  OPEN: how many $GAZZ one Tank counts as (STAKING_TANK_POINTS, whole $GAZZ). Stakes are locked 3 months (contract LOCK). */
+ *  One Tank counts as 100,000 $GAZZ (owner 2026-10-26): 1,000 Tanks weigh the same as the 100M $GAZZ supply
+ *  (STAKING_TANK_POINTS, whole $GAZZ). Stakes are locked 3 months (contract LOCK). */
 export const STAKING_CHAIN = 4663;
 const GAZZ = '0x08a5d78a4bc7754e8aff87b4509e007baeb685f3';
 export function stakingConfig(chainId) {
   if (chainId !== STAKING_CHAIN) return null;
   // GAZZ TANKS on Robinhood Chain (OpenSea gazztanks; ERC-721, 1,000, checked on-chain 2026-10-26). GAZZ_TANKS overrides.
   const tanks = process.env.GAZZ_TANKS?.trim().toLowerCase() || '0x261371a1c467b82d43975cbe526c901b2a5ea9f4';
-  const whole = process.env.STAKING_TANK_POINTS?.trim() || '10000';
+  const whole = process.env.STAKING_TANK_POINTS?.trim() || '100000';
   const usd = CHAINS[chainId].stable?.address?.toLowerCase() || null;
   const missing = [];
   if (!tanks || !/^0x[0-9a-f]{40}$/.test(tanks)) missing.push('Gazz Tanks NFT contract address (GAZZ_TANKS on Railway).');
@@ -145,7 +146,7 @@ export async function chainStatus(chainId) {
     const code = sc.address ? await hasCode(chainId, sc.address) : false;
     items.push({
       key: 'staking', label: '$GAZZ staking', kind: 'core', address: sc.address ?? null, runtimeSize: sc.runtimeSize ?? null,
-      role: `Stake $GAZZ and Gazz Tanks (locked 3 months), earn the Treasury's holder share in USDC (streamed over 7 days).${sc.tankPoints ? ` One Tank counts as ${Number(sc.tankPoints).toLocaleString('en-US')} $GAZZ.` : ''} After deploy, the Safe points the Treasury at it (setHolders).`,
+      role: `Stake $GAZZ and Gazz Tanks (locked 3 months), earn the Treasury's holder share in USDC (streamed continuously, each fee over 24 h).${sc.tankPoints ? ` One Tank counts as ${Number(sc.tankPoints).toLocaleString('en-US')} $GAZZ.` : ''} After deploy, the Safe points the Treasury at it (setHolders).`,
       status: code ? 'deployed' : rec.staking?.status === 'proposed' ? 'proposed' : 'ready',
       blocked: code ? [] : [...(sc.missing ?? []), ...(!safeOk ? [`The Safe does not exist on ${chain.name} yet.`] : [])],
     });

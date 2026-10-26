@@ -148,7 +148,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   (`LOCK`, owner 2026-10-26; adding more restarts it), no owner/admin/upgrade, Tanks by
   transferFrom or safeTransferFrom. One of our validators runs distribute hourly (DISTRIBUTE_MIN) (`keeper/src/revenueShare.js`,
   env TREASURY + USD_TOKEN). Admin → Contracts shows it on Robinhood Chain once the stable is set (Tanks default
-  GAZZ TANKS 0x2613…a9f4, override GAZZ_TANKS) (STAKING_TANK_POINTS, default 10,000 $GAZZ per Tank, OPEN); then the Safe calls
+  GAZZ TANKS 0x2613…a9f4, override GAZZ_TANKS) (STAKING_TANK_POINTS 100,000 $GAZZ per Tank, owner 2026-10-26: 1,000 Tanks = the 100M $GAZZ supply, equal weight); then the Safe calls
   Treasury.setHolders(staking, 1000). Other chains' Treasuries: holder share accrues until bridged (OPEN). Web: Profile →
   Staking, /profile/stake (`StakeTab` in pages/StakePage.tsx, not in the header; old /stake redirects; opens at launch);
   the front page has "Stake $GAZZ" under "Buy $GAZZ". $GAZZ checked on-chain 2026-10-26 ("Gazz"/GAZZ, 18 decimals,

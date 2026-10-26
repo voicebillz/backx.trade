@@ -8,8 +8,9 @@ import { usd } from '../lib/format';
 // locked for 3 months from the latest stake; rewards can be claimed any time. Opens at launch: nothing is sent yet.
 // Data: GET /api/stake/assets (server/src/stake.js) reads the user's own $GAZZ and Tanks on-chain (OpenSea later).
 //   $GAZZ 0x08a5…85f3 (ERC-20, 18 decimals) · GAZZ TANKS 0x2613…a9f4 (ERC-721, 1,000, art drawn on-chain)
-// OPEN (owner): how many $GAZZ one Tank counts as. Keep TANK_POINTS = server STAKING_TANK_POINTS.
-export const TANK_POINTS = 10_000;
+// One Tank = 100,000 $GAZZ (owner 2026-10-26): all 1,000 Tanks weigh the same as the 100M $GAZZ supply.
+// Keep TANK_POINTS = server STAKING_TANK_POINTS.
+export const TANK_POINTS = 100_000;
 export const GAZZ_CA = '0x08a5d78a4bc7754e8aff87b4509e007baeb685f3';
 export const TANKS_CA = '0x261371a1c467b82d43975cbe526c901b2a5ea9f4';
 const LOCK_DAYS = 90;

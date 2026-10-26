@@ -63,7 +63,7 @@ Settes **senere**, ikke nå (vi sier fra når koden trenger dem):
 | `RPC_URL` | Når vi leser priser/saldo on-chain | Kan inneholde API-nøkkel, derfor kun på serveren |
 | `FACTORY_<chainId>` (f.eks. `FACTORY_4663`, `FACTORY_8453`) | Etter engangs-`Deploy.s.sol` på den chainen | Adressen til BackxMarketFactory. Uten den sier «Deploy contracts» i adminportalen hva som mangler |
 | `OPENSEA_API_KEY` | Senere, når vi har en OpenSea-nøkkel | Raskere oppslag av hvilke Gazz Tanks en lommebok har (Profil → Staking). Uten nøkkel leser serveren eierne direkte fra kjeden hvert 5. minutt |
-| `GAZZ_TANKS`, `STAKING_TANK_POINTS` | Valgfritt | Tanks-kontrakten (standard 0x2613…a9f4) og hvor mange $GAZZ én Tank teller som (standard 10 000, **ÅPEN**) |
+| `GAZZ_TANKS`, `STAKING_TANK_POINTS` | Valgfritt | Tanks-kontrakten (standard 0x2613…a9f4) og hvor mange $GAZZ én Tank teller som (standard 100 000: 1 000 Tanks veier like mye som hele 100M $GAZZ-supplyen, eier 2026-10-26) |
 | `RESERVE_STABLE_4663`, `RESERVE_STABLE_SYMBOL_4663`, `RESERVE_STABLE_DECIMALS_4663` | Når eier har valgt stablecoin på Robinhood Chain | Robinhood Chain har ingen USDC hos LI.FI ennå (USDG finnes). **ÅPEN** |
 | Keeper-/fee-collector-nøkler | Når kontraktene finnes | Egen Railway-tjeneste uten offentlig domene, én nøkkel per rolle. Aldri Safe-/owner-nøkler |
 
