@@ -1,0 +1,174 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+html,body{margin:0;width:1080px;height:1080px;overflow:hidden;background:#070707;font-family:"IBM Plex Sans",sans-serif;color:#F2F2F2}
+*{box-sizing:border-box}
+#bar{position:absolute;left:0;top:0;height:8px;background:#FFD100;width:0}
+#brand{position:absolute;left:64px;top:52px;display:flex;align-items:center;gap:14px;font-weight:700;font-size:30px;letter-spacing:-.02em}
+#brand .tile{width:52px;height:52px;border-radius:12px;background:#111;border:1px solid #222;display:flex;align-items:center;justify-content:center}
+#brand .tile img{width:34px}
+#brand span b{color:#8A8A8A;font-weight:600}
+#live{position:absolute;right:64px;top:62px;font-family:"IBM Plex Mono",monospace;font-size:22px;letter-spacing:.14em;color:#8A8A8A;display:flex;align-items:center;gap:10px}
+#live i{width:12px;height:12px;border-radius:50%;background:#FFD100;display:block}
+#head{position:absolute;left:0;right:0;top:0;text-align:center;transform-origin:50% 0}
+#h1{font-weight:700;font-size:112px;letter-spacing:-.045em;line-height:1}
+#h2{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:64px;color:#FFD100;letter-spacing:.02em;margin-top:18px;height:80px}
+#h2 .cur{display:inline-block;width:.55em;height:.9em;background:#FFD100;vertical-align:-.08em;margin-left:6px}
+#card{position:absolute;left:120px;width:840px;top:290px;border:1px solid #232323;border-radius:28px;background:#0E0E0E;padding:30px 36px}
+.row{display:flex;justify-content:space-between;align-items:center}
+.lab{font-family:"IBM Plex Mono",monospace;font-size:22px;letter-spacing:.14em;color:#8A8A8A;text-transform:uppercase}
+.amt{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:52px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:16px}
+.amt img{width:44px;height:44px;border-radius:10px}
+#tanks{display:flex;gap:20px;margin-top:16px}
+.tank{position:relative;width:236px;height:236px;border-radius:22px;overflow:hidden;border:3px solid #232323}
+.tank img{width:100%;height:100%;display:block}
+.tank.on{border-color:#FFD100}
+.chk{position:absolute;right:12px;top:12px;width:46px;height:46px;border-radius:50%;background:rgba(7,7,7,.55);border:2px solid rgba(255,255,255,.55)}
+.chk svg{position:absolute;inset:0;width:100%;height:100%}
+.chk path{fill:none;stroke:#070707;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:30;stroke-dashoffset:30}
+.tank.on .chk{background:#FFD100;border-color:#FFD100}
+#pts{margin-top:20px;padding:14px 22px;border-radius:18px;background:#141414}
+#pts .amt{font-size:44px}
+#btn{margin-top:20px;height:92px;border-radius:20px;background:#FFD100;color:#070707;font-weight:700;font-size:44px;display:flex;align-items:center;justify-content:center;gap:14px;transform-origin:50% 50%}
+#btn.done{background:#141414;color:#F2F2F2;border:2px solid #FFD100}
+#rw{margin-top:18px;display:flex;justify-content:space-between;align-items:center;opacity:0}
+#rw .amt{font-size:46px;color:#3DDC97}
+#cursor{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(242,242,242,.92);left:0;top:0;opacity:0}
+#ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:4px solid #F2F2F2;opacity:0}
+#end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;opacity:0}
+#end .mk{width:200px;height:200px;border-radius:44px;background:#111;border:1px solid #222;display:flex;align-items:center;justify-content:center}
+#end .mk img{width:130px}
+#end .t1{font-weight:700;font-size:96px;letter-spacing:-.045em;line-height:1.02;text-align:center}
+#end .t1 b{color:#FFD100;font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:72px;letter-spacing:.02em;display:block;margin-top:14px}
+#end .t2{font-family:"IBM Plex Mono",monospace;font-size:30px;letter-spacing:.2em;color:#8A8A8A}
+</style></head><body>
+<div id="bar"></div>
+<div id="brand"><div class="tile"><img src="mark.svg" alt=""></div><span>backx<b>.trade</b></span></div>
+<div id="live"><i></i>STAKING</div>
+<div id="head"><div id="h1">Staking protocol</div><div id="h2"><span id="typed"></span><span class="cur" id="cur"></span></div></div>
+<div id="card">
+  <div class="row"><span class="lab">$GAZZ</span><span class="amt"><img src="gazz-logo.svg" alt=""><span id="gz">0</span></span></div>
+  <div class="row" style="margin-top:18px"><span class="lab">Gazz Tanks</span><span class="lab" id="sel">0 selected</span></div>
+  <div id="tanks">
+    <div class="tank" id="t0"><img src="tank12.svg" alt=""><div class="chk"><svg viewBox="0 0 46 46"><path d="M13 23.5l6.5 6.5L33 16.5"/></svg></div></div>
+    <div class="tank" id="t1"><img src="tank1.svg" alt=""><div class="chk"><svg viewBox="0 0 46 46"><path d="M13 23.5l6.5 6.5L33 16.5"/></svg></div></div>
+    <div class="tank" id="t2"><img src="tank58.svg" alt=""><div class="chk"><svg viewBox="0 0 46 46"><path d="M13 23.5l6.5 6.5L33 16.5"/></svg></div></div>
+  </div>
+  <div class="row" id="pts"><span class="lab">Points</span><span class="amt" id="pv">0</span></div>
+  <div id="btn">Stake</div>
+  <div id="rw"><span class="lab">USDC rewards · streaming</span><span class="amt" id="rv">+0.000000</span></div>
+</div>
+<div id="cursor"></div><div id="ring"></div>
+<div id="end">
+  <div class="mk"><img src="mark.svg" alt=""></div>
+  <div class="t1">Staking protocol<b>initiating</b></div>
+  <div class="t2">STAKE $GAZZ + GAZZ TANKS · BACKX.TRADE</div>
+</div>
+<script>
+const DUR = 5;
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - x, 3);                 // ease-out cubic
+const eio = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const back = (x) => { const c = 1.4; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const fmt = (n) => Math.floor(n).toLocaleString('en-US');
+
+// Taps (sound cues live next to the motion they belong to).
+const TAPS = [
+  { t: 1.32, x: 0, y: 0, el: 't0' }, { t: 1.70, el: 't1' }, { t: 2.08, el: 't2' }, { t: 2.86, el: 'btn' },
+];
+window.CUES = [
+  { t: 0.62, f: 'tap-soft', g: 0.5 },   // "initiating" lands
+  ...TAPS.map((k, i) => ({ t: k.t, f: i === 3 ? 'tap-deep' : 'tap-soft', g: i === 3 ? 0.8 : 0.65 })),
+  { t: 4.22, f: 'tap-deep', g: 0.55 },  // end card
+];
+function center(id) {
+  const r = $(id).getBoundingClientRect();
+  return id === 'btn' ? [r.left + r.width * .62, r.top + r.height * .55] : [r.left + r.width * .58, r.top + r.height * .6];
+}
+
+window.seek = (t) => {
+  $('bar').style.width = (clamp(t / DUR) * 100) + '%';
+  $('live').style.opacity = (Math.floor(t * 2.5) % 2) ? .45 : 1;
+
+  // Headline: big in the middle, "initiating" types in, then moves up and shrinks.
+  const word = 'initiating';
+  $('typed').textContent = word; // full from frame 1: the first frame is the thumbnail
+  $('cur').style.opacity = t < 1.0 ? ((Math.floor(t * 4) % 2) ? 0 : 1) : 0;
+  const up = eio(prog(t, 0.72, 1.12));
+  const head = $('head');
+  head.style.top = (380 - 262 * up) + 'px';
+  head.style.transform = `scale(${1 - .42 * up})`;
+  head.style.opacity = 1 - prog(t, 4.0, 4.2);
+
+  // Card rises in.
+  const c = eo(prog(t, 0.85, 1.25));
+  const card = $('card');
+  card.style.opacity = c * (1 - prog(t, 4.0, 4.2));
+  card.style.top = (290 + 80 * (1 - c) - 30 * eio(prog(t, 4.0, 4.2))) + 'px';
+  card.style.transform = `scale(${1 - .04 * prog(t, 4.0, 4.2)})`;
+
+  // $GAZZ counts up.
+  const gz = 250000 * eo(prog(t, 1.0, 1.9));
+  $('gz').textContent = fmt(gz);
+
+  // Tanks get ticked one by one.
+  let picked = 0;
+  TAPS.slice(0, 3).forEach((k, i) => {
+    const on = t >= k.t + 0.04;
+    if (on) picked++;
+    const el = $('t' + i);
+    el.classList.toggle('on', on);
+    el.querySelector('path').style.strokeDashoffset = 30 * (1 - eo(prog(t, k.t + 0.04, k.t + 0.24)));
+    const press = prog(t, k.t - 0.06, k.t + 0.16);
+    el.style.transform = `scale(${1 - .05 * Math.sin(press * Math.PI)})`;
+  });
+  $('sel').textContent = picked + ' selected';
+  $('pv').textContent = fmt(gz + picked * 100000 * 1);
+
+  // Stake button press, then streaming rewards.
+  const bp = prog(t, 2.80, 3.02);
+  const btn = $('btn');
+  btn.style.transform = `scale(${1 - .045 * Math.sin(bp * Math.PI)})`;
+  const staked = t >= 2.92;
+  btn.classList.toggle('done', staked);
+  btn.textContent = staked ? 'Staked · locked 90 days' : 'Stake';
+  const rw = eo(prog(t, 3.0, 3.3));
+  $('rw').style.opacity = rw;
+  $('rv').textContent = '+' + (Math.max(0, t - 3.0) * 0.0137).toFixed(6);
+
+  // Cursor glides between taps; ring ripples on each tap.
+  const cur = $('cursor'), ring = $('ring');
+  const path = TAPS.map((k) => ({ t: k.t, p: center(k.el) }));
+  const start = { t: 1.05, p: [900, 1000] };
+  const pts = [start, ...path];
+  let pos = pts[0].p;
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (t >= pts[i].t) {
+      const k = eio(prog(t, pts[i].t + 0.06, pts[i + 1].t - 0.04));
+      pos = [pts[i].p[0] + (pts[i + 1].p[0] - pts[i].p[0]) * k, pts[i].p[1] + (pts[i + 1].p[1] - pts[i].p[1]) * k];
+    }
+  }
+  if (t >= pts[pts.length - 1].t) {
+    const k = eio(prog(t, 3.1, 3.7));
+    const last = pts[pts.length - 1].p;
+    pos = [last[0] + (980 - last[0]) * k, last[1] + (1060 - last[1]) * k];
+  }
+  cur.style.left = pos[0] + 'px'; cur.style.top = pos[1] + 'px';
+  cur.style.opacity = prog(t, 1.05, 1.2) * (1 - prog(t, 3.3, 3.7));
+  let rs = 0, ro = 0;
+  for (const k of TAPS) { const r = prog(t, k.t, k.t + 0.32); if (r > 0 && r < 1) { rs = r; ro = 1 - r; } }
+  const tp = TAPS.some((k) => t >= k.t - 0.05 && t <= k.t + 0.1);
+  cur.style.transform = `scale(${tp ? .82 : 1})`;
+  ring.style.left = pos[0] + 'px'; ring.style.top = pos[1] + 'px';
+  ring.style.opacity = ro * .8; ring.style.transform = `scale(${1 + rs * 1.4})`;
+
+  // End card.
+  const e = prog(t, 4.12, 4.45);
+  const end = $('end');
+  end.style.opacity = e;
+  end.style.transform = `scale(${.94 + .06 * back(e)})`;
+};
+seek(0);
+</script></body></html>
