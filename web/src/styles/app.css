@@ -1627,3 +1627,61 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .mcp-steps li.now { color: #F2F2F2; font-weight: 600; }
 .mcp-steps li.done { color: var(--price-up); }
 .mcp-steps small { display: block; font-weight: 400; }
+
+/* MCP guide: public page www.backx.trade/mcp + Profile → AI agents (owner 2026-10-26) */
+.down-text { color: var(--down); }
+.mcpp { max-width: 820px; margin: 0 auto; padding: 48px 16px 64px; display: grid; gap: 28px; }
+.mcpp h1 { margin: 0; font-size: clamp(34px, 6vw, 56px); letter-spacing: -.04em; line-height: 1.05; }
+.mcpp h2 { margin: 0 0 14px; font-size: 26px; letter-spacing: -.02em; }
+.mcpp h3 { margin: 0 0 10px; font-size: 18px; }
+.mcpp p { margin: 0; color: var(--ink-2); line-height: 1.6; }
+.mcpp-lead { font-size: 18px; }
+.mcpp section p + p { margin-top: 12px; }
+.mcpp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.mcpp-box { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; background: var(--panel); }
+.mcpp-box ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; color: var(--ink-2); }
+.mcpp-box li { display: flex; gap: 10px; }
+.mcpp-box li span { font-family: var(--mono); font-weight: 600; }
+.mcpp-fine { font-size: 13px; }
+.mcp-addr { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; background: var(--panel); margin: 12px 0; }
+.mcp-addr .lab { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.mcp-addr code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; color: var(--ink); }
+.mcp-addr .btn-mini, .mcp-code .btn-mini { min-height: 32px; }
+.mcp-guide { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
+.mcp-tabs { display: flex; gap: 2px; flex-wrap: wrap; padding: 8px; border-bottom: 1px solid var(--line); }
+.mcp-tabs button { min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.mcp-tabs button.on { background: var(--raised); color: var(--ink); }
+.mcp-steplist { list-style: none; margin: 0; padding: 16px; display: grid; gap: 12px; }
+.mcp-steplist li { display: flex; gap: 12px; align-items: flex-start; color: var(--ink-2); line-height: 1.5; }
+.mcp-steplist .n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: var(--on-brand); font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+.mcp-code { position: relative; margin: 0 16px 16px; }
+.mcp-code pre { margin: 0; padding: 14px 16px; padding-right: 76px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); overflow-x: auto; font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.mcp-code .btn-mini { position: absolute; top: 8px; right: 8px; }
+.agent-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.agent-list li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.agent-name { font-weight: 600; }
+.agent-scopes { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.agent-off { margin-top: 14px; }
+.agent-confirm { display: flex; gap: 8px; }
+@media (max-width: 640px) { .mcpp-two { grid-template-columns: 1fr; } }
+.mcpc { width: min(520px, 100%); display: grid; gap: 14px; padding: 18px 20px 22px; }
+.mcpc-head { display: flex; align-items: center; gap: 8px; }
+.mcpc-head h2 { flex: 1; margin: 0; font-size: 20px; }
+.mcpc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mcpc-btn { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 0 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--raised); font-weight: 600; font-size: 16px; color: var(--ink); text-align: left; transition: border-color 160ms var(--ease-out); }
+.mcpc-btn:hover { border-color: var(--brand); }
+/* Brand tiles of the assistants (their own colours, not ours). */
+.ai-logo { flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
+.ai-logo img { display: block; width: 22px; height: 22px; }
+.ai-chatgpt { background: #000; }
+.ai-claude { background: #F5F4EE; }
+.ai-copilot { background: #24292F; }
+.ai-logo.custom { background: var(--bg); border: 1px solid var(--line); font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--brand-text); }
+.mcpc .mcp-addr .lab { display: none; }
+.mcpc a.btn { text-decoration: none; display: flex; align-items: center; justify-content: center; }
+.mcpc .mcp-steplist { padding: 0; }
+.mcpc .mcp-addr { margin: 0; }
+.mcpc-custom { display: grid; gap: 6px; }
+.mcpc-custom .lab { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.mcpc-custom pre { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); overflow-x: auto; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .mcpc-btn { transition: none; } }

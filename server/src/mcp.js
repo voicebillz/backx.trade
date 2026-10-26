@@ -56,8 +56,16 @@ mcpRouter.use(async (req, res, next) => {
 mcpRouter.get('/me', async (req, res, next) => {
   try {
     const e = await eligibility(req.user.did);
-    const { rows } = await db.query('select client, scopes, created_at from mcp_consents where privy_did = $1 order by id desc limit 20', [req.user.did]);
-    res.json({ eligible: e.eligible, reason: e.reason ?? null, mcpUrl: config.mcpUrl, connections: rows });
+    const [{ rows }, { rows: d }] = await Promise.all([
+      db.query('select client, scopes, created_at from mcp_consents where privy_did = $1 order by id desc limit 20', [req.user.did]),
+      db.query('select at from mcp_disconnects where privy_did = $1', [req.user.did]),
+    ]);
+    const cut = d[0]?.at ?? null;
+    res.json({
+      eligible: e.eligible, reason: e.reason ?? null, mcpUrl: config.mcpUrl, disconnectedAt: cut,
+      // A connection approved after the last "Disconnect all" is active; older ones were cut off.
+      connections: rows.map((r) => ({ ...r, active: !cut || r.created_at > cut })),
+    });
   } catch (e) { next(e); }
 });
 

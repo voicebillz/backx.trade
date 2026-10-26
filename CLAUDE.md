@@ -223,6 +223,13 @@ The owner is not a developer: explain briefly, in Norwegian.
   back to the own wallet, Multicall3 only claimRewardsFor/claimFor). Next (needs owner sign-off on limits): MCP signs
   via Privy policy-limited signing, never holding a key. Plan: `docs/backx/MCP-PLAN.md`. Change the grant/internal-call
   format in both repos together.
+- MCP pages (owner 2026-10-26): public guide www.backx.trade/mcp (`pages/McpSite.tsx`, `lib/mcpGuide.ts` per-assistant
+  steps, footer + whitepaper nav link "MCP", own head via seoPages `mcp.html`, sitemap) explains only, no connect button.
+  App: Profile → AI agents (`/profile/agents`, `pages/AgentsTab.tsx`): active connections with scopes, "Disconnect all"
+  (cuts off within 15 min), "Connect with MCP" overlay (`components/ConnectMcp.tsx`): ChatGPT, Claude, Copilot (VS Code
+  `vscode:mcp/install` link) with their real app icons (`web/public/ai/`, simple-icons marks on brand tiles) + Custom
+  (address, Claude Code command, mcp.json). One address for everyone (https://mcp.backx.trade/mcp): identity comes from
+  the OAuth login, never from a per-user link (a per-user link would be a secret that leaks).
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.

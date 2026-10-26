@@ -33,7 +33,7 @@ export default function WhitepaperSite() {
       <a className="skip" href="#main">Skip to content</a>
       <header className="h-header">
         <span className="h-logo"><Logo /></span>
-        <nav className="h-nav" aria-label="Main"><a href="/">Home</a><a href="/whitepaper" aria-current="page">Whitepaper</a></nav>
+        <nav className="h-nav" aria-label="Main"><a href="/">Home</a><a href="/whitepaper" aria-current="page">Whitepaper</a><a href="/mcp">MCP</a></nav>
         <div className="h-header-cta">
           <button className="h-icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>{theme === 'dark' ? '☀' : '☾'}</button>
           <a className="h-btn h-btn-gold" href="https://app.backx.trade">Launch App</a>

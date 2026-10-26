@@ -134,7 +134,7 @@ export function HomePage() {
 
       <footer className="h-footer">
         <Logo />
-        <nav aria-label="Footer"><a href="/whitepaper">Whitepaper</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+        <nav aria-label="Footer"><a href="/whitepaper">Whitepaper</a><a href="/mcp">MCP</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
         <span className="h-footer-legal">Operated by GAZZFUN LLC. Not financial advice. Using leverage can lose your whole margin.</span>
       </footer>
     </div>

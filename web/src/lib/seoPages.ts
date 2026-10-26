@@ -30,6 +30,11 @@ export const SEO_PAGES: SeoPage[] = [
     description: 'How BackX works: Long and Short with leverage, Issue into Long Pools, execution and liquidation speed, the Reserve Security Fund, fees and $GAZZ.',
   },
   {
+    path: '/mcp', file: 'mcp.html', indexed: true, image: OG_IMAGE,
+    title: 'Connect your AI agent · BackX',
+    description: 'Connect Claude, ChatGPT, Cursor or any MCP agent to your own BackX account: it reads your positions and rewards and prepares trades, staking and Claim all. You sign every transaction.',
+  },
+  {
     path: '/terms', file: null, indexed: true, image: OG_IMAGE,
     title: 'Terms of Service · backx.trade',
     description: 'Terms of Service for backx.trade, the Hedge & Issuer trading platform on Robinhood Chain operated by GAZZFUN LLC.',
