@@ -1,6 +1,7 @@
 // Pieces shown on the public front page (they lived in the old coming-soon overlay).
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { quote } from '../lib/hedge';
+import { APP_URL } from '../lib/host';
 
 const MIN = 1, MAX = 20; // Major coins cap at 20× (server HEDGE_CAP, sim5)
 
@@ -99,6 +100,7 @@ export function BuyGazz() {
       <a className="gazz-btn" href={GAZZ_BUY} target="_blank" rel="noopener noreferrer" aria-label="Buy $GAZZ on Uniswap (opens in a new tab)">
         <img src="/gazz-logo.svg" alt="" width="20" height="20" />Buy $GAZZ
       </a>
+      <a className="gazz-btn" href={`${APP_URL}/stake`} aria-label="Stake $GAZZ and Gazz Tanks on BackX"><img src="/gazz-logo.svg" alt="" width="20" height="20" />Stake $GAZZ</a>
       <button className="gazz-ca" onClick={copy} aria-label={`Copy $GAZZ contract address ${GAZZ_CA}`}>
         {/* Tap the address to copy it; the label confirms. */}
         <span className="gazz-ca-label" aria-live="polite">{copied ? 'Copied ✓' : '$GAZZ CA:'}</span> <span className="gazz-ca-addr">{GAZZ_CA}</span>
