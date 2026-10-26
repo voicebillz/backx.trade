@@ -6,6 +6,7 @@ import { PriceChart } from './components/PriceChart';
 import { OrderTicket, type Action, type TicketLines } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
 import { IssuePage } from './pages/IssuePage';
+import { StakePage } from './pages/StakePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SwapOverlay, SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
@@ -23,7 +24,7 @@ import { useBalances, usdcOf } from './lib/useBalances';
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 const TITLES: Record<string, string> = {
-  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
+  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', stake: 'Stake $GAZZ · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
   profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
   admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts', adminBranding: 'Admin · Branding', adminKeepers: 'Admin · Validators',
 };
@@ -92,6 +93,7 @@ export default function Terminal() {
       />
       {route === 'trade' && <Trade market={market} moving={moving} onSelect={openMarket} theme={theme} priceColors={priceColors} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'issue' && <IssuePage markets={moving.items} usdc={me ? usdcOf(balances.data) : null} />}
+      {route === 'stake' && <StakePage />}
       {route === 'whitepaper' && <WhitepaperPage />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}

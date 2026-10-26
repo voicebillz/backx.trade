@@ -1,6 +1,6 @@
 /* backx.trade tokens (docs/backx/DESIGN-KIT.md §C). Brand mark is racing yellow on black. */
 :root {
-  --bg:#F5F7FA; --panel:#FFFFFF; --raised:#EEF2F7; --line:rgba(11,31,58,.09);
+  --on-brand:#0A0A0A; --bg:#F5F7FA; --panel:#FFFFFF; --raised:#EEF2F7; --line:rgba(11,31,58,.09);
   --ink:#0B1526; --ink-2:#45526A; --ink-3:#5E6A81;
   --navy:#0B1F3A; --action:#1D4ED8; --on-action:#FFFFFF; --gold:#806208;
   --up:#0A774F; --down:#C8283A; --info:#1D5FD1; --warning:#A85A00;

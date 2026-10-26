@@ -7,9 +7,10 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title backx platform Treasury: one per chain, the fee collector of every market on it (owner 2026-10-25).
-/// @notice Every platform fee lands here in USDC. A share (holderBps, 10 % at deploy) is the $GAZZ revenue share: anyone
-/// (our validator weekly) can call `distribute(token)` to split everything that arrived since the last split and send
-/// that share to holderRewards, a contract gazz.fun controls; gazz.fun handles the distribution to holders from there. The rest is the platform's and only the Safe can withdraw it, to an address it chooses. While
+/// @notice Every platform fee lands here in USDC. A share (holderBps, 10 % at deploy) goes to stakers: anyone (our
+/// validator weekly) can call `distribute(token)` to split everything that arrived since the last split and send that
+/// share to holderRewards = BackxStaking ($GAZZ + Gazz Tanks staking, owner 2026-10-26). The rest is the platform's
+/// and only the Safe can withdraw it, to an address it chooses. While
 /// holderRewards is not set, the holders' share is kept aside (holdersOwed) and paid on the first split after it is.
 /// Not upgradeable: it only holds money, there is nothing to evolve.
 /// Deployed with CREATE2 and constructor args (Safe, bps), so it has the same address on every chain.

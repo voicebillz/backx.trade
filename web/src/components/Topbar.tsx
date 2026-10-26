@@ -47,6 +47,7 @@ export function Topbar({ route, theme, onTheme, priceColors, onPriceColors, onSe
         </a>
         <a href={href('trade')} onClick={go('trade')} className={route === 'trade' ? 'active' : ''} aria-current={route === 'trade' ? 'page' : undefined}>Trade</a>
         <a href={href('issue')} onClick={go('issue')} className={route === 'issue' ? 'active' : ''} aria-current={route === 'issue' ? 'page' : undefined}>Issue</a>
+        <a href={href('stake')} onClick={go('stake')} className={route === 'stake' ? 'active' : ''} aria-current={route === 'stake' ? 'page' : undefined}>Stake</a>
         <a href={href('swap')} onClick={go('swap')} className={route === 'swap' ? 'active' : ''} aria-current={route === 'swap' ? 'page' : undefined}>Swap</a>
         <a href={href('whitepaper')} onClick={go('whitepaper')} className={route === 'whitepaper' ? 'active' : ''} aria-current={route === 'whitepaper' ? 'page' : undefined}>Whitepaper</a>
       </nav>

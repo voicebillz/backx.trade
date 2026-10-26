@@ -140,10 +140,14 @@ The owner is not a developer: explain briefly, in Norwegian.
   Treasury (owner 2026-10-25, `BackxTreasury`, CREATE2 via Admin → Contracts, same address every chain, Safe-owned,
   not upgradeable) is the feeCollector of every market: all platform revenue in USDC (everything except what goes to
   issuers, validators and the RSF). holderBps 10 % (owner 2026-10-25, Safe can lower it, max 50 %) goes via
-  the public `distribute(token)` to `holderRewards` = a contract gazz.fun controls (owner 2026-10-25: gazz.fun handles
-  the distribution to holders, not us). One of our validators pushes it weekly (`keeper/src/revenueShare.js`, env
-  TREASURY + USD_TOKEN). Safe sets the address with Treasury.setHolders once gazz.fun gives it (OPEN); until then the
-  share accrues in holdersOwed. Only the Safe `withdraw`s the rest.
+  the public `distribute(token)` to `holderRewards` = `BackxStaking` (owner 2026-10-26, replaces "send to gazz.fun"):
+  stake $GAZZ (1 point per token) and Gazz Tanks NFTs (`tankPoints` per Tank, immutable) on Robinhood Chain, rewards in
+  the stable streamed over 7 days via public `sync()`, claim any time, no lock-up, no owner/admin/upgrade, Tanks by
+  transferFrom or safeTransferFrom. One of our validators runs distribute + sync weekly (`keeper/src/revenueShare.js`,
+  env TREASURY + USD_TOKEN). Admin → Contracts shows it on Robinhood Chain once GAZZ_TANKS (Tanks contract, OPEN) and
+  the stable are set (STAKING_TANK_POINTS, default 10,000 $GAZZ per Tank, OPEN); then the Safe calls
+  Treasury.setHolders(staking, 1000). Other chains' Treasuries: holder share accrues until bridged (OPEN). Web: /stake
+  (`StakePage`, nav after Issue, opens at launch). Only the Safe `withdraw`s the rest.
   Validator gas: flat `validation.gasUsd` per position (default $0.10, max $5, ≈ 2× one close), escrowed in the position
   and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
@@ -186,7 +190,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   $10M, liquidity $1M on that chain, 24 h volume $500k, 30 days trading; no honeypot/tax/hidden mint/owner/pause/blacklist.
   Tier (stricter of cap and liquidity) sets max multiplication + min margin; max position 0.5 % and max open 10 % of
   liquidity. A failing coin is rejected (deploy 409, button disabled); the admin listing window shows the recipe.
-  Liquidation setup and revenue per $30M volume: `docs/backx/LIQUIDATION.md`. Platform fees → Treasury, 10 % revenue share to gazz.fun weekly.
+  Liquidation setup and revenue per $30M volume: `docs/backx/LIQUIDATION.md`. Platform fees → Treasury, 10 % to $GAZZ / Gazz Tanks stakers.
 
 ## API (server/) — closed by default
 - Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.

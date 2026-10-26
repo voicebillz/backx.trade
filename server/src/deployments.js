@@ -48,6 +48,25 @@ export const IMPLS = [
   const initcode = ART[c.artifact].initcode + (c.args ?? '');
   return { kind: 'implementation', ...c, initcode, runtimeSize: ART[c.artifact].runtimeSize, address: create2Address(initcode) };
 });
+/** $GAZZ + Gazz Tanks staking (owner 2026-10-26): lives where $GAZZ lives (Robinhood Chain) and receives the Treasury's
+ *  holder share in that chain's stable. Constructor (gazz, tanks, usd, tankPoints); no owner, nothing to configure later.
+ *  OPEN: the Gazz Tanks NFT contract (GAZZ_TANKS) and how many $GAZZ one Tank counts as (STAKING_TANK_POINTS, whole $GAZZ). */
+export const STAKING_CHAIN = 4663;
+const GAZZ = '0x08a5d78a4bc7754e8aff87b4509e007baeb685f3';
+export function stakingConfig(chainId) {
+  if (chainId !== STAKING_CHAIN) return null;
+  const tanks = process.env.GAZZ_TANKS?.trim().toLowerCase() || null;
+  const whole = process.env.STAKING_TANK_POINTS?.trim() || '10000';
+  const usd = CHAINS[chainId].stable?.address?.toLowerCase() || null;
+  const missing = [];
+  if (!tanks || !/^0x[0-9a-f]{40}$/.test(tanks)) missing.push('Gazz Tanks NFT contract address (GAZZ_TANKS on Railway).');
+  if (!usd) missing.push(`Reserve stablecoin on ${CHAINS[chainId].name} (RESERVE_STABLE_${chainId}).`);
+  if (!/^\d{1,12}$/.test(whole)) missing.push('STAKING_TANK_POINTS must be a whole number of $GAZZ.');
+  if (missing.length) return { missing };
+  const initcode = ART.BackxStaking.initcode + padAddr(GAZZ) + padAddr(tanks) + padAddr(usd) + pad(BigInt(whole) * 10n ** 18n);
+  return { initcode, address: create2Address(initcode), tanks, usd, tankPoints: whole, runtimeSize: ART.BackxStaking.runtimeSize };
+}
+
 /** The Treasury's address (same on every chain): the default fee collector for the factory. */
 export const TREASURY = IMPLS.find((c) => c.key === 'treasury').address;
 
@@ -117,6 +136,18 @@ export async function chainStatus(chainId) {
   }
   if (fCode) {
     try { factory.markets = Number(decodeUint(await ethCall(chainId, fAddr, MARKET_COUNT))); } catch { factory.markets = null; }
+  }
+
+  // Staking (Robinhood Chain only): its address follows from the Tanks contract and the stable, so it waits for both.
+  const sc = stakingConfig(chainId);
+  if (sc) {
+    const code = sc.address ? await hasCode(chainId, sc.address) : false;
+    items.push({
+      key: 'staking', label: '$GAZZ staking', kind: 'core', address: sc.address ?? null, runtimeSize: sc.runtimeSize ?? null,
+      role: `Stake $GAZZ and Gazz Tanks, earn the Treasury's holder share in USDC (streamed over 7 days).${sc.tankPoints ? ` One Tank counts as ${Number(sc.tankPoints).toLocaleString('en-US')} $GAZZ.` : ''} After deploy, the Safe points the Treasury at it (setHolders).`,
+      status: code ? 'deployed' : rec.staking?.status === 'proposed' ? 'proposed' : 'ready',
+      blocked: code ? [] : [...(sc.missing ?? []), ...(!safeOk ? [`The Safe does not exist on ${chain.name} yet.`] : [])],
+    });
   }
 
   // Remember what is live (read-only bookkeeping; the chain stays the source of truth).

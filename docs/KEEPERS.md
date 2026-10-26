@@ -77,11 +77,11 @@ Example, 1,000 positions a day: $100 a day of validator gas income; 300 liquidat
 Validators fund themselves many times over. Planned contract change (LIVENESS.md, needs owner sign-off): pay the
 fee to whoever executes, so any validator (or outside bot) earns directly.
 
-## Weekly $GAZZ revenue share (owner 2026-10-25)
-10 % of platform revenue in the Treasury is the $GAZZ revenue share. It goes to a contract gazz.fun controls;
-gazz.fun distributes it to holders. `Treasury.distribute(USDC)` is public; one of our validators pushes it once a week
-(`src/revenueShare.js`). Env on that validator only: `TREASURY`, `USD_TOKEN`. Nothing is sent until the Safe has set
-gazz.fun's address with `Treasury.setHolders(<address>, 1000)`; until then the share accrues in the Treasury.
+## Weekly staking payout (owner 2026-10-26)
+10 % of platform revenue in the Treasury goes to `BackxStaking` ($GAZZ and Gazz Tanks stakers). Once a week one of our
+validators calls `Treasury.distribute(USDC)` and then `BackxStaking.sync()`, which streams it to stakers over 7 days
+(`src/revenueShare.js`; both calls are public, anyone could make them). Env on that validator only: `TREASURY`,
+`USD_TOKEN`. Nothing moves until the Safe has run `Treasury.setHolders(<staking>, 1000)`.
 
 ## Speed: what is and is not guaranteed
 - Measured by every validator and shown in the admin portal: time from first seeing a position due to the

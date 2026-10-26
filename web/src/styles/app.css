@@ -1536,3 +1536,16 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .chart td, .chart th { height: auto; padding: 0; border: 0; white-space: normal; }
 .chart tbody tr:hover { background: none; }
 .chart-toolbar .dd.compact { display: block; } /* the header hides compact dropdowns on phones; the timeframe stays */
+
+/* Stake page (owner 2026-10-26): $GAZZ and Gazz Tanks */
+.stake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 899px) { .stake-grid { grid-template-columns: 1fr; } }
+.stake-card { display: grid; gap: 14px; }
+.stake-card-head { display: flex; align-items: center; gap: 10px; }
+.stake-card-head h2 { margin: 0; font-size: 18px; }
+.stake-card-head .small { margin-left: auto; }
+.stake-ico { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; background: var(--brand); color: var(--on-brand); }
+.stake-ico.tank { background: var(--raised); color: var(--brand-text); border: 1px solid var(--line); }
+.stake-card .act-tabs { margin: 0; }
+.stake-sum .kv { margin: 0; }
+.stake-ca { display: inline-flex; align-items: center; gap: 6px; }

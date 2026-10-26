@@ -194,5 +194,5 @@ loop('tick', tick, config.pollMs);
 loop('balance', balance, 60_000);
 loop('claim', claimRewards, 15 * 60_000);
 loop('report', report, config.reportEveryMs);
-// Weekly $GAZZ revenue share to gazz.fun's contract (checked hourly, sent once a week).
+// Weekly staking payout: Treasury.distribute + BackxStaking.sync (checked hourly, sent once a week).
 if (config.treasury) loop('revenue-share', makeRevenueShareJob({ pub, wallet, account, cfg: config.treasury, log }), 60 * 60_000);

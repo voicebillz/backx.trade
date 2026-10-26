@@ -416,7 +416,7 @@ export function WhitepaperPage() {
                 ['Validators', 'Each position\'s gas + accuracy bonus', 'Manager'],
                 ['Reserve Security Fund', '0.5 % of the margin + 0.03 % of what is lent', 'Crises only'],
                 ['BackX Treasury', '2 % of the margin with multiplication, 0.3 % on a 1× hedge; 2 % of gains and 5 % of what is left at a liquidation', 'Sent by the contract'],
-                ['$GAZZ revenue share', '10 % of what the Treasury receives', 'To gazz.fun'],
+                ['$GAZZ and Gazz Tanks stakers', '10 % of what the Treasury receives, in USDC', 'Staking'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
             <p className="hint">After a liquidation, issuers also take a share of what is left (50–90 % depending on the multiplication). Rewards stream in over 24 hours so a deposit made just before a large reward cannot take what earlier issuers earned.</p>
@@ -447,17 +447,17 @@ export function WhitepaperPage() {
                 ['Short', '2 % of the margin + 2 % of a gain', 'Borrow 0.25 % + fund'],
               ].map(([w, e, c]) => <div className="wp-row" role="row" key={w}><span role="cell">{w}</span><span role="cell">{e}</span><span role="cell" className="r">{c}</span></div>)}
             </div>
-            <p><b>Treasury.</b> Every platform fee goes on-chain to the BackX Treasury, one contract per chain at the same address everywhere, owned by the BackX Safe and holding USDC. 10 % of what it receives is the $GAZZ revenue share, sent every week on-chain to a contract gazz.fun controls; the rest pays for running BackX (validators, servers, audits, development). Only the Safe can withdraw the platform part, and never the holders' part.</p>
+            <p><b>Treasury.</b> Every platform fee goes on-chain to the BackX Treasury, one contract per chain at the same address everywhere, owned by the BackX Safe and holding USDC. 10 % of what it receives goes to $GAZZ and Gazz Tanks stakers through the BackX staking contract; the rest pays for running BackX (validators, servers, audits, development). Only the Safe can withdraw the platform part, and never the holders' part.</p>
           </section>
 
           <section id="gazz">
             <h2>$GAZZ</h2>
             <p><b>$GAZZ is the core token of BackX.</b> BackX is built inside the gazz.fun ecosystem, and $GAZZ ties the two together: it is the token future staking on BackX is built around, and the one that ecosystem holders share in.</p>
-            <p><b>Revenue shared with holders.</b> Every hedge and short pays a platform fee into the BackX Treasury, and 10 % of it is the $GAZZ revenue share. Once a week it is sent on-chain to a contract gazz.fun controls, and gazz.fun handles the distribution to holders from there. The share is set in the Treasury contract and can be adjusted (at most half).</p>
+            <p><b>Revenue shared with stakers.</b> Every hedge and short pays a platform fee into the BackX Treasury, and 10 % of it goes to <b>stakers</b>. Stake $GAZZ (1 point per token) and Gazz Tanks NFTs (each Tank counts as a fixed number of points) on BackX, and earn that share in USDC, pro rata to your points. Each payment streams in over 7 days, so staking just before a payment earns almost nothing, and there is no lock-up: unstake any time and keep what you earned. Nobody but you can move your staked $GAZZ or Tanks. The share is set in the Treasury contract and can be adjusted (at most half).</p>
             <Reveal className="wp-fig wp-flow" label="How revenue reaches $GAZZ holders">
               <div className="wp-flow-step"><span className="wp-flow-n num">1</span><div><b>Position opens</b><small>fees come out of the amount the trader pays</small></div></div>
               <div className="wp-flow-step"><span className="wp-flow-n num">2</span><div><b>Platform fee to the Treasury</b><small>USDC, on every chain</small></div></div>
-              <div className="wp-flow-step"><span className="wp-flow-n num">3</span><div><b>10 % to gazz.fun</b><small>sent weekly, gazz.fun distributes to holders</small></div></div>
+              <div className="wp-flow-step"><span className="wp-flow-n num">3</span><div><b>10 % to stakers</b><small>$GAZZ and Gazz Tanks, paid in USDC</small></div></div>
             </Reveal>
             <p>Contract on Robinhood Chain: <span className="num wp-ca">0x08a5d78a4bc7754e8aff87b4509e007baeb685f3</span>. How the share is split among holders and how staking works will be published before launch. Holding $GAZZ is not a promise of returns.</p>
           </section>

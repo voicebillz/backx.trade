@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { listingReport, bestChainCached, RULES, TIERS } from './listing.js';
 import { CHAINS, SAFE, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
 import { mountKeeperAdmin } from './keepers.js';
-import { IMPLS, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch, selector } from './deployments.js';
+import { IMPLS, stakingConfig, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch, selector } from './deployments.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
 // portal's existence is not revealed. Own rate limit, strict validation, every write logged in admin_audit.
@@ -436,7 +436,8 @@ adminRouter.post('/contracts/deploy', async (req, res, next) => {
       config = { feeCollector: b.feeCollector.toLowerCase(), usd: chain.stable.address };
       initcode = factoryInitcode(chain.stable.address, config);
     } else {
-      initcode = IMPLS.find((c) => c.key === item.key).initcode;
+      initcode = item.key === 'staking' ? stakingConfig(chainId)?.initcode : IMPLS.find((c) => c.key === item.key).initcode;
+      if (!initcode) return res.status(409).json({ error: 'not_ready', missing: item.blocked });
     }
     const address = create2Address(initcode);
     await db.query(
