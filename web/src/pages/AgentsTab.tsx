@@ -51,11 +51,11 @@ export function AgentsTab() {
             ))}
           </ul>
         ) : (
-          <p className="muted">No assistant is connected. Add one below.</p>
+          null
         )}
         {active.length > 0 && (
           <div className="row-between agent-off">
-            <span className="muted">Cuts every assistant off within 15 minutes. Reconnect any time.</span>
+            <span />
             {confirm
               ? <span className="agent-confirm"><button className="btn btn-sm" onClick={() => setConfirm(false)} disabled={busy}>Cancel</button><button className="btn btn-danger btn-sm" onClick={disconnect} disabled={busy} aria-busy={busy}>Disconnect all</button></span>
               : <button className="btn btn-sm" onClick={() => setConfirm(true)}>Disconnect all</button>}
@@ -66,13 +66,9 @@ export function AgentsTab() {
       {d.eligible && (
         <section className="card">
           <div className="row-between">
-            <div>
-              <h2>Add an assistant</h2>
-              <p className="muted">ChatGPT, Claude, Copilot or any MCP client. You log in and approve on BackX, and sign every transaction yourself.</p>
-            </div>
+            <h2>Add an assistant</h2>
             <button className="btn btn-primary" onClick={() => setOpen(true)}>Connect with MCP</button>
           </div>
-          <p className="muted small">Step-by-step guide: <a href={`${SITE_URL}/mcp`}>backx.trade/mcp</a></p>
         </section>
       )}
       {open && <ConnectMcp onClose={() => setOpen(false)} />}

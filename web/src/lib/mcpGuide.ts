@@ -12,7 +12,7 @@ export const CLIENTS: ClientGuide[] = [
       'Open Claude (claude.ai or the desktop app) → Settings → Connectors.',
       'Choose "Add custom connector". Name it BackX and paste the server address.',
       'Click Connect. A BackX window opens: log in and approve what the assistant may do.',
-      'Back in Claude, ask: "What is my BackX status?"',
+      'Back in Claude, ask: "What is my BackX status?" It works on your account only; you sign every transaction yourself.',
     ],
   },
   {
