@@ -11,13 +11,13 @@
     "safe": "0xfa408F75490C0412d4a5F45FA7553Aff03249BE4"
   },
   "create2Deployer": "0x4e59b44847b379578588920ca78fbf26c0b4956c",
-  "artifactsCommit": "45403f7",
+  "artifactsCommit": "9d5c5a8",
   "implementations": {
     "vaultImpl": "0x94225f897fdf4b2144499b3645c31aeb70ee79d3",
     "fundImpl": "0xcf4e3581ffb4a8244dbd1b5b7d36b1a950a1bc68",
-    "hedgeImpl": "0x7138483d385794400b1951556523b7d82bb07dc6",
-    "shortImpl": "0xea844ce5e23cff772ca111414f611575cce2695d",
-    "factoryImpl": "0xf4438e16abace6c83de46414c063bbe0904b730f"
+    "hedgeImpl": "0x3a1726ec073087b070ec7da9e856e09d8ea7f3fa",
+    "shortImpl": "0x8ad5c2c724b9355232ff68b7acc9ad276e4e89c8",
+    "factoryImpl": "0x78a7fb28bc6e08e675521036f4d80f20aabcc41c"
   },
   "chains": [
     {
@@ -33,11 +33,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0x5673c311e112255fed9f2140f1840f909a431af8",
+          "address": "0xf0e5ae940bf8217d8a7055b498f14ba059c6f559",
           "deployed": false,
           "markets": null
         },
@@ -60,11 +60,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0x3c0b646c52776d0f21156e6cd8039de77d13de1c",
+          "address": "0xaee93a24857b2962ccc590de65b845846c9b2b45",
           "deployed": false,
           "markets": null
         },
@@ -87,11 +87,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0x80014b44073515bf2ca4e758a268496cdb99069a",
+          "address": "0x9a1993595e7800c171111f8d5b8ba9609ea355cb",
           "deployed": false,
           "markets": null
         },
@@ -114,11 +114,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0xb11d8a083074f92977ff751e7c7186b15f435b3b",
+          "address": "0x87bdf533d7c082ccadd05cc692ee2c935bf19780",
           "deployed": false,
           "markets": null
         },
@@ -137,7 +137,7 @@
       "stable": null,
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
@@ -172,11 +172,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0x72a8684fdbed43d9ad2297cc97f3d208f2305c87",
+          "address": "0xa1c0453941c30310134a35cf0abb075debcd2491",
           "deployed": false,
           "markets": null
         },
@@ -199,11 +199,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0x099fc927a4bbeab66622d037a44b604f66b6c22c",
+          "address": "0xa5920bacd0c0e35d12adb354b998c253c56da518",
           "deployed": false,
           "markets": null
         },
@@ -226,11 +226,11 @@
       },
       "contracts": {
         "treasury": {
-          "address": "0x238f55d0135e84f72762797ad8f846620c263558",
+          "address": "0xd66b0b0488195002ad713a1de5e6318f638e7a9d",
           "deployed": false
         },
         "factory": {
-          "address": "0x5be997a7c17962d45219ea45935938fd60e3753d",
+          "address": "0xe087381e5804a2c129fb9f29e6712c3f1b196992",
           "deployed": false,
           "markets": null
         },
