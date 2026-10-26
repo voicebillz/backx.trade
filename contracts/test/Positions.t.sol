@@ -37,8 +37,9 @@ contract HedgeTest is Base {
         uint256 rest = out - p.lent;
         uint256 issuerShare = (rest - p.stake) * 1_000 / 10_000; // p = 10 % (v4)
         uint256 platformShare = (rest - p.stake) * 200 / 10_000; // 2 % of the gain to the Treasury (owner 2026-10-25)
-        assertEq(got, rest - issuerShare - platformShare + p.gas, "trader gets rest minus p and the platform's 2 %, plus its own gas back");
-        assertEq(usd.balanceOf(feeCollector), uint256(p.stake) * 200 / 10_000 + platformShare, "open fee + gain share");
+        assertEq(got, rest - issuerShare - platformShare, "trader gets rest minus p and the platform's 2 %");
+        assertEq(usd.balanceOf(feeCollector), uint256(p.stake) * 200 / 10_000 + platformShare + p.gas,
+            "open fee + gain share + the unused validator gas (own close: never refunded, owner 2026-10-26)");
         vm.warp(block.timestamp + 1 days); // rewards stream in over 24 h
         assertApproxEqAbs(usdVault.pendingRewards(issuer), borrow + issuerShare, 2, "issuers: borrow fee + p, claimable USDC");
         assertGt(got, 135 * USD, "$100 in at 5x, +10 %: about +$39 net");

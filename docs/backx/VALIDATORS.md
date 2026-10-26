@@ -21,7 +21,7 @@ Our own validators (code in `keeper/`, 10 per chain on 5 servers, docs/KEEPERS.m
 
 ## What a validator earns
 1. **Gas**: every position escrows `validation.gasUsd` (default **$0.50**, the minimum every validator earns per settlement however late, owner 2026-10-26; max $5) when it opens. Whoever settles it
-   gets it. If the owner closes the position themselves, the gas goes back to them.
+   gets it. If the owner closes the position themselves, no validator was needed and the gas goes to the Treasury (owner 2026-10-26: never refunded).
    An entry order escrows one extra gas for the validator that fills it.
 2. **Accuracy bonus**: larger the closer the execution is to the trigger price, never below the late floor
    (`lateBps`, 20 % of the max bonus, owner 2026-10-26), so an overdue liquidation or fill always pays.

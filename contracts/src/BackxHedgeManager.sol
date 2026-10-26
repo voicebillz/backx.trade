@@ -204,8 +204,7 @@ contract BackxHedgeManager is BackxManagerBase {
             vault.repay(out + covered, 0);
             if (writtenOff > 0) vault.writeOff(writtenOff);
         }
-        if (kind == K_CLOSE) toTrader += pos.gas; // you settled it yourself: your gas comes back
-        else _payValidator(v, id, kind, pos.gas, bonus);
+        _payGas(v, id, kind, pos.gas, bonus);
         _payOwner(pos.owner, toTrader, kind == K_CLOSE);
         emit Closed(id, v, kind, toTrader, toIssuers, covered, writtenOff);
     }

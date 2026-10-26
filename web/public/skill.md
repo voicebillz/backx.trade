@@ -47,7 +47,7 @@ Units: amounts are base units of the token. The stable is `chains[i].stable` (US
 | Short now | `short.open(amount, m, minOut, takeProfitPrice)` → position id (a profit roof is set automatically) |
 | Take profit / stop loss | `setLimit(id, price)` / `setStop(id, price)` (0 = none; short limit 0 = back to the roof) |
 | Read | `positions(id)`, `threshold(id)` (liquidation value), `isLiquidatable(id)`, `isLimitReached(id)` |
-| Close | `close(id, limit)` (long: minimum USDC out; short: maximum USDC in) → USDC to you, gas refunded |
+| Close | `close(id, limit)` (long: minimum USDC out; short: maximum USDC in) → USDC to you (the $0.50 gas escrow goes to the Treasury) |
 | Limit entry order | `placeOrder(m, amount, trigger, above, expiry, takeProfitPrice, slipBps)` → order id (USDC escrowed) |
 | Cancel order | `cancelOrder(orderId)` → USDC back |
 

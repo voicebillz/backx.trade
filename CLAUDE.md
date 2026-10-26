@@ -62,7 +62,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   allow list); each position escrows its validator gas, paid to whoever settles it + an accuracy bonus
   (max·((W−d)/W)², W 1 %, never below the late floor `lateBps` 20 % of the max, owner 2026-10-26; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal, and
   never above `restCapBps` 15 % of the rest: issuers get the most, owner 2026-10-25); own
-  close refunds the gas. Every validator action pays from its own escrow (owner 2026-10-26, VALIDATORS.md "Who pays"):
+  close sends the gas escrow to the Treasury (never refunded, owner 2026-10-26; `_payGas`). Every validator action pays from its own escrow (owner 2026-10-26, VALIDATORS.md "Who pays"):
   orders escrow their gas at placement (`Order.gas`), clearing an expired order pays that $0.50 (rest to the owner),
   Treasury `distribute` pays the caller $0.50 from the platform part when ≥ $50 arrived; no pooled validator reserve
   (nothing to drain, no company capital; the Safe cannot take escrows). Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
@@ -164,7 +164,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   happens on BackX itself (owner 2026-10-26). Only the Safe `withdraw`s the rest.
   Validator gas: flat `validation.gasUsd` per position (default $0.50 = the minimum every validator earns per settlement
   however late, owner 2026-10-26; max $5), escrowed in the position
-  and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".
+  and paid to whoever settles it (own close: to the Treasury, never refunded). The ticket shows the amount, the position size and "Gas".
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
   Limit (take-profit) orders fill via validator on the TWAP, at most 1 % worse than the limit.

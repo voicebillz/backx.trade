@@ -398,6 +398,13 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         emit Rewarded(v, id, kind, gas, bonus);
     }
 
+    /// The position's escrowed gas: to whoever settled it, or to the Treasury when the owner closed it themselves
+    /// (owner 2026-10-26: the escrow is never refunded; no validator was needed, so it is platform revenue).
+    function _payGas(address v, uint256 id, uint8 kind, uint256 gas, uint256 bonus) internal {
+        if (kind == K_CLOSE) usd.safeTransfer(feeCollector, gas);
+        else _payValidator(v, id, kind, gas, bonus);
+    }
+
     /// Validator bonus on a liquidation or take-profit, from the rest: the accuracy bonus, capped at restCapBps of it.
     function _settleBonus(uint8 kind, uint256 rest, uint256 value, uint256 target) internal view returns (uint256) {
         Validation memory v = validation;

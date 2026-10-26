@@ -19,7 +19,7 @@
 "18","Trade","Read a position","Hedge / Short","positions(id) · threshold(id)","size, margin, limit · liquidation value"
 "19","Trade","Move take-profit","Hedge / Short","setLimit(id, price)","short: 0 = back to the roof"
 "20","Trade","Set stop-loss","Hedge / Short","setStop(id, price)","0 = none"
-"21","Trade","Close","Hedge / Short","close(id, limit)","USDC to you · gas back"
+"21","Trade","Close","Hedge / Short","close(id, limit)","USDC to you (gas escrow → Treasury)"
 "22","Orders","Place a buy / sell order","Hedge / Short","placeOrder(m, amount, trigger, above, expiry, takeProfit, slipBps)","order id · USDC escrowed"
 "23","Orders","Read an order","Hedge / Short","orders(orderId) · isOrderFillable(orderId)","order · fillable now?"
 "24","Orders","Cancel","Hedge / Short","cancelOrder(orderId)","USDC back"

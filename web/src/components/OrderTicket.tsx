@@ -263,6 +263,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
           <div><dt>Liquidation</dt><dd className="num down">{price(liqPrice)} <span className="liq-pct">{buy ? '−' : '+'}{(q.liqMove * 100).toFixed(1)}%</span></dd></div>
         )}
         {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} <span className="liq-pct">−{roof * 100}%</span></dd></div>}
+        {!buy && <div><dt>Max gain at the roof</dt><dd className="num up">{signed(q.at(1 - roof).trader)}</dd></div>}
         {buy ? (<>
           <div><dt>Position size</dt><dd className="num">{usd(q.notional)}</dd></div>
           {q.loan > 0 && <div><dt>Borrowed from issuers</dt><dd className="num">{usd(q.loan)} USDC</dd></div>}
@@ -299,6 +300,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
               {buy && q.loan > 0 && <div><dt>Borrowed from issuers</dt><dd className="num">{usd(q.loan)} USDC</dd></div>}
               {!q.noLiquidation && <div><dt>Liquidation</dt><dd className="num down">{`${price(liqPrice)} ${buy ? '−' : '+'}${(q.liqMove * 100).toFixed(1)}%`}</dd></div>}
               {!buy && <div><dt>Profit roof</dt><dd className="num up">{price(base * (1 - roof))} −{roof * 100}%</dd></div>}
+              {!buy && <div><dt>Max gain at the roof</dt><dd className="num up">{signed(q.at(1 - roof).trader)}</dd></div>}
               {hasTp && !tpErr && <div><dt>Take profit</dt><dd className="num">{price(tpNum)}</dd></div>}
               {hasSl && !slErr && <div><dt>Stop loss</dt><dd className="num">{price(slNum)}</dd></div>}
               <div><dt>Gas</dt><dd className="num">{usd(q.fees.gas * (isOrder ? 2 : 1))}</dd></div>
@@ -322,7 +324,6 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
               <div><dt>Entry</dt><dd className="num">{price(selling.entry)}</dd></div>
               <div><dt>Price now</dt><dd className="num">{price(market.price)}</dd></div>
               <div><dt>Result</dt><dd className={'num ' + (pnlOf(selling) >= 0 ? 'up' : 'down')}>{signed(pnlOf(selling))}</dd></div>
-              <div><dt>Gas back</dt><dd className="num up">+{usd(KEEPER_GAS)}</dd></div>
             </dl>
             <button className={'btn btn-block ' + (buy ? 'btn-sell' : 'btn-primary')} disabled>Opens at launch</button>
           </div>

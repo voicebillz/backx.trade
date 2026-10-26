@@ -221,8 +221,7 @@ contract BackxShortManager is BackxManagerBase {
             vault.repay(back, got - back); // coins beyond the principal stay with the issuers
             if (writtenOff > 0) vault.writeOff(writtenOff);
         }
-        if (kind == K_CLOSE) toTrader += pos.gas;
-        else _payValidator(v, id, kind, pos.gas, bonus);
+        _payGas(v, id, kind, pos.gas, bonus);
         _payOwner(pos.owner, toTrader, kind == K_CLOSE);
         emit Closed(id, v, kind, toTrader, toIssuers, covered, writtenOff);
     }
