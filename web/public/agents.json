@@ -11,13 +11,13 @@
     "safe": "0xfa408F75490C0412d4a5F45FA7553Aff03249BE4"
   },
   "create2Deployer": "0x4e59b44847b379578588920ca78fbf26c0b4956c",
-  "artifactsCommit": "9d5c5a8",
+  "artifactsCommit": "a920711",
   "implementations": {
     "vaultImpl": "0x94225f897fdf4b2144499b3645c31aeb70ee79d3",
     "fundImpl": "0xcf4e3581ffb4a8244dbd1b5b7d36b1a950a1bc68",
-    "hedgeImpl": "0x3a1726ec073087b070ec7da9e856e09d8ea7f3fa",
-    "shortImpl": "0x8ad5c2c724b9355232ff68b7acc9ad276e4e89c8",
-    "factoryImpl": "0x78a7fb28bc6e08e675521036f4d80f20aabcc41c"
+    "hedgeImpl": "0x93356459ceb109af836edb0801c99a18fbd29d76",
+    "shortImpl": "0xc9e0e1100ed933b0c6059d7ac64111a7eb0c2ac9",
+    "factoryImpl": "0xbba7241d984074ea2fd6abf70982ebc04e09bd3d"
   },
   "chains": [
     {
@@ -37,7 +37,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0xf0e5ae940bf8217d8a7055b498f14ba059c6f559",
+          "address": "0x10f0ad9c83633efd53972de4d0ee4b491968dcf4",
           "deployed": false,
           "markets": null
         },
@@ -64,7 +64,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0xaee93a24857b2962ccc590de65b845846c9b2b45",
+          "address": "0x892f6cc09c65f9515355590fa2279ffb5c346581",
           "deployed": false,
           "markets": null
         },
@@ -91,7 +91,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0x9a1993595e7800c171111f8d5b8ba9609ea355cb",
+          "address": "0x5a1c27c3a4b12a72842d79f9da2d5901a42705c4",
           "deployed": false,
           "markets": null
         },
@@ -118,7 +118,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0x87bdf533d7c082ccadd05cc692ee2c935bf19780",
+          "address": "0x267084cacc7149123d521ce9632551a814156611",
           "deployed": false,
           "markets": null
         },
@@ -176,7 +176,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0xa1c0453941c30310134a35cf0abb075debcd2491",
+          "address": "0x4c90a3a28ba2bf966078bdd858956539601d0893",
           "deployed": false,
           "markets": null
         },
@@ -203,7 +203,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0xa5920bacd0c0e35d12adb354b998c253c56da518",
+          "address": "0x1a51e3421a89d067a6ee2cfb0212fda1646ad4af",
           "deployed": false,
           "markets": null
         },
@@ -230,7 +230,7 @@
           "deployed": false
         },
         "factory": {
-          "address": "0xe087381e5804a2c129fb9f29e6712c3f1b196992",
+          "address": "0xf01cfad94bbd48087319bb8980525be00e2f5af4",
           "deployed": false,
           "markets": null
         },
