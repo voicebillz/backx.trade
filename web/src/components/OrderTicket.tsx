@@ -322,7 +322,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
               <div><dt>Entry</dt><dd className="num">{price(selling.entry)}</dd></div>
               <div><dt>Price now</dt><dd className="num">{price(market.price)}</dd></div>
               <div><dt>Result</dt><dd className={'num ' + (pnlOf(selling) >= 0 ? 'up' : 'down')}>{signed(pnlOf(selling))}</dd></div>
-              <div><dt>Gas</dt><dd className="num ok">Refunded</dd></div>
+              <div><dt>Gas back</dt><dd className="num up">+{usd(KEEPER_GAS)}</dd></div>
             </dl>
             <button className={'btn btn-block ' + (buy ? 'btn-sell' : 'btn-primary')} disabled>Opens at launch</button>
           </div>
