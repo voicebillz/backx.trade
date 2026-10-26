@@ -146,8 +146,10 @@ The owner is not a developer: explain briefly, in Norwegian.
   transferFrom or safeTransferFrom. One of our validators runs distribute + sync weekly (`keeper/src/revenueShare.js`,
   env TREASURY + USD_TOKEN). Admin → Contracts shows it on Robinhood Chain once GAZZ_TANKS (Tanks contract, OPEN) and
   the stable are set (STAKING_TANK_POINTS, default 10,000 $GAZZ per Tank, OPEN); then the Safe calls
-  Treasury.setHolders(staking, 1000). Other chains' Treasuries: holder share accrues until bridged (OPEN). Web: /stake
-  (`StakePage`, nav after Issue, opens at launch); the front page has "Stake $GAZZ" under "Buy $GAZZ". Staking
+  Treasury.setHolders(staking, 1000). Other chains' Treasuries: holder share accrues until bridged (OPEN). Web: Profile →
+  Staking, /profile/stake (`StakeTab` in pages/StakePage.tsx, not in the header; old /stake redirects; opens at launch);
+  the front page has "Stake $GAZZ" under "Buy $GAZZ". $GAZZ checked on-chain 2026-10-26 ("Gazz"/GAZZ, 18 decimals,
+  100M supply, Robinhood Chain 4663); the Gazz Tanks address was not findable publicly (must be ERC-721). Staking
   happens on BackX itself (owner 2026-10-26). Only the Safe `withdraw`s the rest.
   Validator gas: flat `validation.gasUsd` per position (default $0.10, max $5, ≈ 2× one close), escrowed in the position
   and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".

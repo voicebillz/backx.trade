@@ -43,7 +43,7 @@ export const IMPLS = [
   // Platform Treasury (owner 2026-10-25): the fee collector of every market on the chain. Constructor (Safe, holders'
   // share in bps), so the same address on every chain. Not upgradeable.
   { key: 'treasury', artifact: 'BackxTreasury', kind: 'core', args: padAddr(SAFE) + pad(TREASURY_HOLDER_BPS), label: 'Treasury',
-    role: 'All platform fees in USDC. 10 % is the $GAZZ revenue share, sent to gazz.fun\'s contract (setHolders); only the Safe withdraws the rest.' },
+    role: 'All platform fees in USDC. 10 % goes to $GAZZ and Gazz Tanks stakers (setHolders → staking); only the Safe withdraws the rest.' },
 ].map((c) => {
   const initcode = ART[c.artifact].initcode + (c.args ?? '');
   return { kind: 'implementation', ...c, initcode, runtimeSize: ART[c.artifact].runtimeSize, address: create2Address(initcode) };

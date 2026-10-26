@@ -2,7 +2,7 @@
 Same fee model as the contracts (BackxManagerBase._stakeFor, Fees defaults) and web/src/lib/hedge.ts:
   amount typed = X + fees + gas. 1x hedge: platform 0.3 % of X only. Otherwise platform 2 % of X, RSF 0.5 % of X
   + 0.03 % of lent, borrow 0.25 % of lent (to issuers). Issuers also get p = 10 % of a trader's profit.
-  Platform fees go to the Treasury; 10 % of that is the $GAZZ revenue share (to gazz.fun).
+  Platform fees go to the Treasury; 10 % of that goes to $GAZZ and Gazz Tanks stakers (BackxStaking).
 Volume = position size (m x margin), the usual way exchanges count it."""
 GAS = 0.10
 PLATFORM, SPOT, RSF_X, RSF_L, BORROW, P_GAIN, HOLDERS = 0.02, 0.003, 0.005, 0.0003, 0.0025, 0.10, 0.10
@@ -44,7 +44,7 @@ for label, m, side, share in MIX:
 issuers = tot['borrow'] + tot['gain'] + tot['liq']
 print(f"\n$50M volume, {tot['trades']:,.0f} trades of $100")
 print(f"  Treasury (90 % of platform) ${tot['platform']*(1-HOLDERS):,.0f}")
-print(f"  $GAZZ revenue share (10 %)  ${tot['platform']*HOLDERS:,.0f}")
+print(f"  $GAZZ / Tanks stakers (10 %) ${tot['platform']*HOLDERS:,.0f}")
 print(f"  Reserve Security Fund       ${tot['rsf']:,.0f}")
 print(f"  Issuers: borrow ${tot['borrow']:,.0f} + profit share ${tot['gain']:,.0f} + liquidations ${tot['liq']:,.0f} = ${issuers:,.0f}")
 print(f"  Validators (gas)            ${tot['gas']:,.0f}")

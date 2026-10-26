@@ -1,3 +1,4 @@
+import { StakeTab } from './StakePage';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { useAuth, type Me, type PrivyActions } from '../lib/auth';
@@ -20,6 +21,7 @@ const TABS: { id: Route; label: string }[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'security', label: 'Security' },
   { id: 'wallet', label: 'Wallet' },
+  { id: 'stake', label: 'Staking' },
   { id: 'documents', label: 'Documents' },
 ];
 
@@ -59,6 +61,7 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
           {route === 'security' && <SecurityTab me={me} actions={actions} />}
           {route === 'wallet' && <WalletTab me={me} actions={actions} balances={balances} />}
           {route === 'documents' && <DocumentsTab />}
+          {route === 'stake' && <StakeTab balances={balances} />}
         </div>
       </div>
     </main>

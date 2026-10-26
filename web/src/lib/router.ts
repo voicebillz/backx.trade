@@ -4,12 +4,13 @@ import { useEffect, useState, type MouseEvent } from 'react';
 export type Route = 'trade' | 'issue' | 'stake' | 'swap' | 'whitepaper' | 'profile' | 'security' | 'wallet' | 'documents' | 'admin' | 'adminUsers' | 'adminParticipants' | 'adminContracts' | 'adminBranding' | 'adminKeepers';
 
 const PATHS: Record<Route, string> = {
-  trade: '/', issue: '/issue', stake: '/stake', swap: '/swap', whitepaper: '/whitepaper', profile: '/profile', security: '/profile/security', wallet: '/profile/wallet',
+  trade: '/', issue: '/issue', stake: '/profile/stake', swap: '/swap', whitepaper: '/whitepaper', profile: '/profile', security: '/profile/security', wallet: '/profile/wallet',
   documents: '/profile/documents', admin: '/admin', adminUsers: '/admin/users', adminParticipants: '/admin/participants', adminContracts: '/admin/contracts', adminBranding: '/admin/branding', adminKeepers: '/admin/keepers',
 };
 
 function parse(path: string): Route {
   if (/^\/trade(\/|$)/.test(path)) return 'trade';
+  if (path.replace(/\/+$/, '') === '/stake') return 'stake'; // old address of Profile → Staking
   const hit = (Object.keys(PATHS) as Route[]).find((r) => PATHS[r] === path.replace(/\/+$/, '') || (r === 'trade' && path === '/'));
   return hit ?? 'trade';
 }

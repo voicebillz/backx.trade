@@ -52,7 +52,7 @@ export const config = {
   reportUrl: process.env.REPORT_URL?.trim() || null,
   reportKey: process.env.REPORT_KEY?.trim() || null,      // ed25519 private key, PKCS#8 base64 (npm run keygen)
   reportEveryMs: num('REPORT_EVERY_MS', 60_000),
-  // Weekly $GAZZ revenue share push (Treasury.distribute → gazz.fun's contract). Set on one validator per chain.
+  // Weekly staking payout (Treasury.distribute → BackxStaking.sync). Set on one validator per chain.
   treasury: process.env.TREASURY ? { treasury: addr(process.env.TREASURY, 'TREASURY'), usd: addr(req('USD_TOKEN'), 'USD_TOKEN') } : null,
 };
 

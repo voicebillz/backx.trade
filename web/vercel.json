@@ -6,10 +6,6 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/stake",
-      "destination": "/"
-    },
-    {
       "source": "/trade",
       "destination": "/"
     },
@@ -127,10 +123,21 @@
       "has": [
         {
           "type": "host",
+          "value": "app.backx.trade"
+        }
+      ],
+      "destination": "/profile/stake",
+      "permanent": false
+    },
+    {
+      "source": "/stake",
+      "has": [
+        {
+          "type": "host",
           "value": "backx.trade"
         }
       ],
-      "destination": "https://app.backx.trade/stake",
+      "destination": "https://app.backx.trade/profile/stake",
       "permanent": false
     },
     {
@@ -141,7 +148,7 @@
           "value": "www.backx.trade"
         }
       ],
-      "destination": "https://app.backx.trade/stake",
+      "destination": "https://app.backx.trade/profile/stake",
       "permanent": false
     },
     {

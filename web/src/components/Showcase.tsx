@@ -100,7 +100,7 @@ export function BuyGazz() {
       <a className="gazz-btn" href={GAZZ_BUY} target="_blank" rel="noopener noreferrer" aria-label="Buy $GAZZ on Uniswap (opens in a new tab)">
         <img src="/gazz-logo.svg" alt="" width="20" height="20" />Buy $GAZZ
       </a>
-      <a className="gazz-btn" href={`${APP_URL}/stake`} aria-label="Stake $GAZZ and Gazz Tanks on BackX"><img src="/gazz-logo.svg" alt="" width="20" height="20" />Stake $GAZZ</a>
+      <a className="gazz-btn" href={`${APP_URL}/profile/stake`} aria-label="Stake $GAZZ and Gazz Tanks on BackX"><img src="/gazz-logo.svg" alt="" width="20" height="20" />Stake $GAZZ</a>
       <button className="gazz-ca" onClick={copy} aria-label={`Copy $GAZZ contract address ${GAZZ_CA}`}>
         {/* Tap the address to copy it; the label confirms. */}
         <span className="gazz-ca-label" aria-live="polite">{copied ? 'Copied ✓' : '$GAZZ CA:'}</span> <span className="gazz-ca-addr">{GAZZ_CA}</span>

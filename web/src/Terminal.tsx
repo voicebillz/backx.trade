@@ -6,7 +6,6 @@ import { PriceChart } from './components/PriceChart';
 import { OrderTicket, type Action, type TicketLines } from './components/OrderTicket';
 import { BottomPanel } from './components/BottomPanel';
 import { IssuePage } from './pages/IssuePage';
-import { StakePage } from './pages/StakePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SwapOverlay, SwapPage } from './pages/SwapPage';
 import { searchMarkets, useMovingMarkets, type Market } from './lib/markets';
@@ -24,11 +23,11 @@ import { useBalances, usdcOf } from './lib/useBalances';
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 const TITLES: Record<string, string> = {
-  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', stake: 'Stake $GAZZ · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
+  trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', stake: 'Staking · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
   profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
   admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts', adminBranding: 'Admin · Branding', adminKeepers: 'Admin · Validators',
 };
-const PRIVATE = new Set(['profile', 'security', 'wallet', 'documents', 'admin', 'adminUsers', 'adminParticipants', 'adminContracts', 'adminBranding', 'adminKeepers']);
+const PRIVATE = new Set(['profile', 'security', 'wallet', 'stake', 'documents', 'admin', 'adminUsers', 'adminParticipants', 'adminContracts', 'adminBranding', 'adminKeepers']);
 
 /** Per-page title, and noindex on private pages (vercel.json also sends X-Robots-Tag there). */
 function usePageMeta(route: string) {
@@ -93,10 +92,9 @@ export default function Terminal() {
       />
       {route === 'trade' && <Trade market={market} moving={moving} onSelect={openMarket} theme={theme} priceColors={priceColors} usdc={me ? usdcOf(balances.data) : null} />}
       {route === 'issue' && <IssuePage markets={moving.items} usdc={me ? usdcOf(balances.data) : null} />}
-      {route === 'stake' && <StakePage />}
       {route === 'whitepaper' && <WhitepaperPage />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
-      {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
+      {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'stake' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
       {(route === 'admin' || route === 'adminUsers' || route === 'adminParticipants' || route === 'adminContracts' || route === 'adminBranding' || route === 'adminKeepers') && (me?.isAdmin
         ? <Suspense fallback={<main id="main" className="page" aria-busy="true"><div className="card"><span className="sk sk-w60" /></div></main>}><AdminPage route={route} /></Suspense>
         : <main id="main" className="page"><h1>Page not found</h1><p className="muted"><a href="/">Back to trading</a></p></main>)}

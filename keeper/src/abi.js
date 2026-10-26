@@ -20,7 +20,7 @@ export const managerAbi = parseAbi([
   'function claimTo(address to) returns (uint256)',
 ]);
 
-// $GAZZ revenue share (contracts/src/BackxTreasury.sol): distribute() is public.
+// Staking payout (contracts/src/BackxTreasury.sol → BackxStaking.sol): distribute() is public.
 export const treasuryAbi = parseAbi([
   'function holderRewards() view returns (address)',
   'function distribute(address token) returns (uint256)',
