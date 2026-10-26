@@ -142,14 +142,20 @@ The owner is not a developer: explain briefly, in Norwegian.
   issuers, validators and the RSF). holderBps 10 % (owner 2026-10-25, Safe can lower it, max 50 %) goes via
   the public `distribute(token)` to `holderRewards` = `BackxStaking` (owner 2026-10-26, replaces "send to gazz.fun"):
   stake $GAZZ (1 point per token) and Gazz Tanks NFTs (`tankPoints` per Tank, immutable) on Robinhood Chain, rewards in
-  the stable streamed over 7 days via public `sync()`, claim any time, no lock-up, no owner/admin/upgrade, Tanks by
+  the stable streamed over 7 days via public `sync()`, claim any time, stake LOCKED 3 months from the latest stake
+  (`LOCK`, owner 2026-10-26; adding more restarts it), no owner/admin/upgrade, Tanks by
   transferFrom or safeTransferFrom. One of our validators runs distribute + sync weekly (`keeper/src/revenueShare.js`,
-  env TREASURY + USD_TOKEN). Admin → Contracts shows it on Robinhood Chain once GAZZ_TANKS (Tanks contract, OPEN) and
-  the stable are set (STAKING_TANK_POINTS, default 10,000 $GAZZ per Tank, OPEN); then the Safe calls
+  env TREASURY + USD_TOKEN). Admin → Contracts shows it on Robinhood Chain once the stable is set (Tanks default
+  GAZZ TANKS 0x2613…a9f4, override GAZZ_TANKS) (STAKING_TANK_POINTS, default 10,000 $GAZZ per Tank, OPEN); then the Safe calls
   Treasury.setHolders(staking, 1000). Other chains' Treasuries: holder share accrues until bridged (OPEN). Web: Profile →
   Staking, /profile/stake (`StakeTab` in pages/StakePage.tsx, not in the header; old /stake redirects; opens at launch);
   the front page has "Stake $GAZZ" under "Buy $GAZZ". $GAZZ checked on-chain 2026-10-26 ("Gazz"/GAZZ, 18 decimals,
-  100M supply, Robinhood Chain 4663); the Gazz Tanks address was not findable publicly (must be ERC-721). Staking
+  100M supply, Robinhood Chain 4663); GAZZ TANKS 0x261371a1c467b82d43975cbe526c901b2a5ea9f4 (OpenSea gazztanks, ERC-721,
+  1,000, not Enumerable, art drawn on-chain: tokenURI = data: JSON with a data: SVG). `GET /api/stake/assets`
+  (server/src/stake.js, session, own address): $GAZZ balance + owned/staked Tanks with on-chain images; Tanks owned
+  come from OpenSea when OPENSEA_API_KEY is set (later), else a background ownerOf scan of all tanks every 5 min
+  (`startTankScanner`, small RPC batches, the public RPC 429s on big ones). Profile → Staking: Max for $GAZZ, Tank
+  picker overlay with images, checkboxes, Select all / Stake all; web/public/gazz-tank.svg = Tank #1's on-chain art. Staking
   happens on BackX itself (owner 2026-10-26). Only the Safe `withdraw`s the rest.
   Validator gas: flat `validation.gasUsd` per position (default $0.10, max $5, ≈ 2× one close), escrowed in the position
   and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".

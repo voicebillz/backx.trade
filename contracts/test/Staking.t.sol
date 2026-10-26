@@ -68,7 +68,8 @@ contract StakingTest is Test {
     function test_streamedOver7Days_lateStakerGetsLittle() public {
         vm.prank(alice);
         st.stake(10_000e18, _none());
-        uint256 t0 = block.timestamp;
+        uint256 t0 = 1_000_000;
+        vm.warp(t0);
         _pay(700e6);
         vm.warp(t0 + 6 days);
         vm.prank(bob);
@@ -79,16 +80,43 @@ contract StakingTest is Test {
     }
 
     function test_unstakeReturnsEverything_rewardsKept() public {
+        uint256 t0 = 1_000_000;
+        vm.warp(t0);
         vm.prank(bob);
         st.stake(5_000e18, _ids(2));
         _pay(70e6);
-        vm.warp(block.timestamp + 7 days);
+        vm.warp(t0 + 7 days);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(BackxStaking.Locked.selector, t0 + 90 days));
+        st.unstake(5_000e18, _ids(2));
+        vm.prank(bob);
+        st.claim(); // rewards are claimable while locked
+        assertApproxEqAbs(usd.balanceOf(bob), 70e6, 10);
+        vm.warp(t0 + 90 days);
         vm.prank(bob);
         st.unstake(5_000e18, _ids(2));
         assertEq(gazz.balanceOf(bob), 30_000e18);
         assertEq(tanks.ownerOf(2), bob);
         assertEq(st.totalPoints(), 0);
-        assertApproxEqAbs(st.earned(bob), 70e6, 10, "earned stays claimable");
+        assertEq(st.earned(bob), 0, "already claimed, nothing lost");
+    }
+
+    function test_lock_restartsOnEveryStake() public {
+        uint256 t0 = 1_000_000;
+        vm.warp(t0);
+        vm.prank(alice);
+        st.stake(1_000e18, _none());
+        vm.warp(t0 + 80 days);
+        vm.prank(alice);
+        st.stake(1e18, _none()); // adding more: 3 months again for everything
+        vm.warp(t0 + 91 days);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BackxStaking.Locked.selector, t0 + 170 days));
+        st.unstake(1_000e18, _none());
+        vm.warp(t0 + 170 days);
+        vm.prank(alice);
+        st.unstake(1_001e18, _none());
+        assertEq(gazz.balanceOf(alice), 30_000e18);
     }
 
     function test_onlyOwnerUnstakesTank_noAdmin() public {
@@ -100,7 +128,8 @@ contract StakingTest is Test {
     }
 
     function test_noStakers_rewardWaitsForNextSync() public {
-        uint256 t0 = block.timestamp;
+        uint256 t0 = 1_000_000;
+        vm.warp(t0);
         _pay(70e6);
         vm.warp(t0 + 7 days);
         vm.prank(alice);

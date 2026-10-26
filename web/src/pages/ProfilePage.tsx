@@ -61,7 +61,7 @@ export function ProfilePage({ route, balances }: { route: Route; balances: { dat
           {route === 'security' && <SecurityTab me={me} actions={actions} />}
           {route === 'wallet' && <WalletTab me={me} actions={actions} balances={balances} />}
           {route === 'documents' && <DocumentsTab />}
-          {route === 'stake' && <StakeTab balances={balances} />}
+          {route === 'stake' && <StakeTab />}
         </div>
       </div>
     </main>

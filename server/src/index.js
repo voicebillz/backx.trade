@@ -8,6 +8,7 @@ import { marketsRouter } from './markets.js';
 import { swapRouter } from './swap.js';
 import { adminRouter } from './admin.js';
 import { ventureRouter } from './venture.js';
+import { stakeRouter, startTankScanner } from './stake.js';
 import { keeperReportRouter } from './keepers.js';
 
 // family: 0 lets ioredis resolve Railway's IPv6 private network.
@@ -107,6 +108,7 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/markets', marketsRouter);
 app.use('/api/swap', swapRouter);
 app.use('/api/venture', ventureRouter);
+app.use('/api/stake', stakeRouter);
 app.use('/api/admin', adminRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }));
@@ -123,6 +125,7 @@ app.use((err, _req, res, _next) => {
 // '::' listens on IPv4 and IPv6 (Railway private networking is IPv6).
 await migrate();
 const server = app.listen(config.port, process.env.HOST || '::', () => console.log(`backx api on :${config.port}`));
+startTankScanner(redis); // Profile → Staking: which Gazz Tanks each wallet holds
 
 for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, () => {

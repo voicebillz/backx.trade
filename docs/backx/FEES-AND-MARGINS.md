@@ -6,7 +6,7 @@
 > - **Plattformgebyr** (2026-10-25, før «holders»): 2 % av marginen når issuers låner ut (multiplikasjon og short),
 >   **0,3 % på 1× hedge** (`spotBps`, ingen RSF og ingen lån). Alt går til **BackX Treasury** (én per kjede, samme
 >   adresse, eid av Safe); 10 % av det går til staking (`holderBps`, kan justeres, maks 50 %): `BackxStaking` på Robinhood Chain, der man
->   staker $GAZZ (1 poeng per token) og Gazz Tanks-NFT-er (fast poeng per Tank), betalt i USDC over 7 dager. Resten er plattforminntekt.
+>   staker $GAZZ (1 poeng per token) og Gazz Tanks-NFT-er (fast poeng per Tank), betalt i USDC over 7 dager. Stake er låst i 3 måneder fra siste stake. Resten er plattforminntekt.
 > - **Utfallsandel** (2026-10-25): på posisjoner med lån tar plattformen også 2 % av traderens gevinst (`gainBps`) og
 >   5 % av det som er igjen ved likvidering (`liqCutBps`, før issuers' andel). Til Treasury. Lånegebyr til issuers **0,25 %** av lånt (før 0,2 %).
 >   Reserve Security Fund 0,5 % av innsatsen + 0,03 % av lånt, uendret.
