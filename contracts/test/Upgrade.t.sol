@@ -139,7 +139,7 @@ contract ValidatorBatchTest is Base {
         assertEq(hm.liquidateBatch(ids), 2);
         assertEq(_pos(hm, ids[0]).owner, address(0));
         assertEq(_pos(hm, ids[2]).owner, trader, "skipped, still open");
-        assertGe(hm.claimable(validator), 2 * USD / 10, "paid for both");
+        assertGe(hm.claimable(validator), 2 * USD / 2, "paid for both");
     }
 
     function test_limitBatch() public {

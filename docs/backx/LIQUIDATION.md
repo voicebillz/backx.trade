@@ -17,7 +17,7 @@ Issuers must not lose money. A hedge must be sold **before** the coins are worth
 | Price guard | `_liqMinOut` | sale fills at most `liqMaxGapBps` (2 %) below TWAP; while TWAP covers principal + 2 % the sale must return the FULL principal, otherwise it reverts |
 | Balance-delta booking | `_swapIn` / `_swapOut` | what the adapter claims is ignored; only what actually arrived counts |
 | Batches | `liquidateBatch`, `executeLimitBatch` | many positions per tx (≈ 227k gas each), a failed one does not block the rest |
-| Validator gas | `keeperGasUsd` | $0.10 per position paid at open to the validator wallet |
+| Validator gas | `keeperGasUsd` | $0.50 per position, escrowed, paid to whoever settles it (minimum per settlement) |
 | Size caps | `maxNotionalUsd`, `maxOpenHedgeUsd` + listing rules | one position ≤ 0.5 % of DEX liquidity, all open hedges ≤ 10 % (5 % recommended) |
 | Backstop | Reserve Security Fund | covers a gap the sale could not close (flash crash), last resort |
 
@@ -71,7 +71,7 @@ WETH on Robinhood PASS (Small: only $ liquidity on that chain counts).
 ## 5. Revenue at $30M volume, $10M issued
 
 Volume = sum of opened position sizes (m × X). Fee model v4: holders 2 % of X, borrow 0.25 % of lent,
-RSF 0.5 % of X + 0.03 % of lent, issuers 10 % of gains, validator gas $0.10 per position.
+RSF 0.5 % of X + 0.03 % of lent, issuers 10 % of gains, validator gas $0.50 per position.
 
 | Average multiplication | 3× | 5× | 10× |
 |---|---|---|---|

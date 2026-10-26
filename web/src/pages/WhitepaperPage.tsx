@@ -253,17 +253,20 @@ function RoofTable() {
   );
 }
 
-/** Validator accuracy bonus: max · ((W − d) / W)², W = 1 %. */
+/** Late floor: share of the max bonus a late validator still earns (contract validation.lateBps). */
+const LATE = 0.2;
+
+/** Validator accuracy bonus: max · ((W − d) / W)², W = 1 %, never below the 20 % late floor. */
 function RewardCurve() {
   const W = 320, H = 150, L = 34, B = 22;
   const px = (d: number) => L + (d / 1.2) * (W - L - 6);
   const py = (s: number) => 6 + (1 - s) * (H - B - 6);
-  const share = (d: number) => (d >= 1 ? 0 : (1 - d) ** 2);
+  const share = (d: number) => Math.max(LATE, d >= 1 ? 0 : (1 - d) ** 2);
   const path = Array.from({ length: 121 }, (_, i) => i / 100).map((d, i) => `${i ? 'L' : 'M'}${px(d).toFixed(1)},${py(share(d)).toFixed(1)}`).join('');
   return (
     <Reveal className="wp-fig wp-chart" label="Validator accuracy bonus by distance from the trigger">
       <div className="wp-fig-head"><span>Accuracy bonus · share of the max</span><span className="num">max 0.5 % of the position</span></div>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Full bonus right at the trigger, a quarter at 0.5 percent past it, nothing from 1 percent">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Full bonus right at the trigger, a quarter at 0.5 percent past it, and never below 20 percent however late">
         {[0, 0.5, 1].map((s) => <g key={s}><line x1={L} x2={W - 6} y1={py(s)} y2={py(s)} className="grid" /><text x={L - 4} y={py(s) + 3} className="ax r">{s * 100}%</text></g>)}
         {[0, 0.25, 0.5, 0.75, 1].map((d) => <text key={d} x={px(d)} y={H - 6} className="ax c">{d}%</text>)}
         <path d={path} className="line" />
@@ -365,7 +368,7 @@ export function WhitepaperPage() {
           <section id="validators">
             <h2>Validators</h2>
             <p>Anyone can be a validator: a person, a bot or an AI agent, on every chain BackX runs on. Validators liquidate positions, fill take-profits and stop-losses, close shorts at their roof and fill buy and sell orders. There is no allow list and nothing depends on BackX servers: if ours stop, everyone else keeps the market running. Everything they do is visible on-chain.</p>
-            <p><b>What a validator earns.</b> Every position puts its gas fee aside when it opens; whoever settles it gets it. On top comes an accuracy bonus, largest when the execution lands right at the trigger price and falling to zero 1 % past it. The fastest, most accurate validator earns the most, which is exactly what keeps issuers safe.</p>
+            <p><b>What a validator earns.</b> Every position puts its gas fee aside when it opens; whoever settles it gets it. On top comes an accuracy bonus, largest when the execution lands right at the trigger price and falling to a floor of 20 % of the max from 1 % past it. Every settlement pays at least $0.50, however late, so an overdue liquidation is always worth picking up. The fastest, most accurate validator earns the most, which is exactly what keeps issuers safe.</p>
             <RewardCurve />
             <div className="wp-table three" role="table" aria-label="Validator bonus by distance">
               <div className="wp-row wp-head" role="row"><span role="columnheader">Past the trigger</span><span role="columnheader" className="r">Share of max</span><span role="columnheader" className="r">$1,000 liquidation</span></div>

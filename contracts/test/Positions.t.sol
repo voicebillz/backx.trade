@@ -15,9 +15,9 @@ contract HedgeTest is Base {
         uint256 id = _hedge(100 * USD, 5); // $100 paid, everything included
         BackxManagerBase.Position memory p = _pos(hm, id);
         // Owner 2026-10-19: the amount typed is the amount paid. Margin X = (100 − gas) / (1 + 2.5 % + 4 · 0.28 %).
-        assertEq(p.stake, (100 * USD - USD / 10) * 10_000 / 10_362, "margin after fees");
+        assertEq(p.stake, (100 * USD - USD / 2) * 10_000 / 10_362, "margin after fees");
         assertEq(p.lent, 4 * uint256(p.stake), "L = (m-1)X");
-        assertEq(p.gas, USD / 10, "validator gas escrowed in the position");
+        assertEq(p.gas, USD / 2, "validator gas escrowed in the position");
         assertEq(usdVault.lent(), p.lent);
         uint256 paid = 1_000_000 * USD - usd.balanceOf(trader);
         assertLe(paid, 100 * USD, "never more than the amount typed");
@@ -50,7 +50,7 @@ contract HedgeTest is Base {
         assertEq(_pos(hm, id).lent, 0);
         // Owner 2026-10-25: a 1x hedge pays only the low platform fee (0.3 %) + gas, no fund fee.
         uint256 x = _pos(hm, id).stake;
-        assertEq(x, (100 * USD - USD / 10) * 10_000 / 10_030, "margin after 0.3 %");
+        assertEq(x, (100 * USD - USD / 2) * 10_000 / 10_030, "margin after 0.3 %");
         assertEq(usd.balanceOf(feeCollector), x * 30 / 10_000, "platform fee to the Treasury");
         assertEq(hedgeFund.balance(), fundBefore, "no fund fee when nothing is lent");
         _move(-5_000);
@@ -81,11 +81,25 @@ contract HedgeTest is Base {
         assertGe(usdVault.totalAssets(), assetsBefore, "issuers never lose on a normal liquidation");
         assertGe(hedgeFund.balance(), fundBefore, "fund untouched");
         assertGt(usd.balanceOf(trader), traderBefore, "trader keeps (1-s) of the rest");
-        assertGt(hm.claimable(validator), USD / 10, "validator: gas + accuracy bonus");
+        assertGt(hm.claimable(validator), USD / 2, "validator: gas + accuracy bonus");
         vm.prank(validator);
         hm.claim();
-        assertGt(usd.balanceOf(validator), USD / 10);
+        assertGt(usd.balanceOf(validator), USD / 2);
         assertEq(hm.claimable(validator), 0);
+    }
+
+    /// A validator who comes late still earns: the $0.50 gas plus the late floor (20 % of the max bonus), so an
+    /// overdue liquidation is always worth picking up (owner 2026-10-26).
+    function test_lateLiquidation_stillPaysFloor() public {
+        uint256 id = _hedge(100 * USD, 2);
+        int256 trig = _triggerBps(hm, id, false);
+        _move(trig - 300); // 3 % further down: well past the 1 % accuracy window
+        assertTrue(hm.isLiquidatable(id));
+        vm.prank(validator);
+        hm.liquidate(id);
+        uint256 got = hm.claimable(validator);
+        assertGe(got, USD / 2, "never below the $0.50 minimum");
+        assertGt(got, USD / 2, "late floor bonus on top of the gas");
     }
 
     function test_hedge_30x_gap_fundCovers() public {
@@ -98,7 +112,7 @@ contract HedgeTest is Base {
         assertLt(hedgeFund.balance(), fundBefore, "fund paid the gap");
         assertGe(usdVault.totalAssets() + 1, assetsBefore, "issuers whole: fund covered it");
         assertEq(usdVault.lent(), 0);
-        assertEq(hm.claimable(validator), USD / 10, "late: gas only, no accuracy bonus");
+        assertEq(hm.claimable(validator), USD / 2, "nothing left: still the $0.50 gas minimum");
     }
 
     function test_hedge_gap_fundEmpty_writeOff() public {
@@ -320,7 +334,7 @@ contract GuardsTest is Base {
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setFees(BackxManagerBase.Fees(500, 50, 3, 20, 200, 30, 200, 500)); // platform above 3 %
         vm.expectRevert(BackxManagerBase.BadParams.selector);
-        hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100, 1500)); // gas above $5
+        hm.setValidation(BackxManagerBase.Validation(uint64(6 * USD), 50, 10, 100, 1500, 2000)); // gas above $5
         vm.expectRevert(BackxManagerBase.BadParams.selector);
         hm.setConfig(_cfg(31, 0, 0));
         vm.stopPrank();
@@ -357,7 +371,7 @@ contract LimitTest is Base {
         vm.prank(v2);
         hm.executeLimit(b);
         assertGt(hm.claimable(v1), hm.claimable(v2), "more accurate, more reward");
-        assertGt(hm.claimable(v2), USD / 10 - 1, "both get the gas");
+        assertGt(hm.claimable(v2), USD / 2 - 1, "both get the gas");
         assertEq(usdVault.lent(), 0, "principal back first");
         assertEq(hm.stressUsd(), 0, "crash cover released");
     }
@@ -392,7 +406,7 @@ contract LimitTest is Base {
         assertGt(got, 50 * USD, "the stop kept most of the margin");
         assertLt(got, 100 * USD);
         assertEq(usdVault.lent(), 0, "principal back first");
-        assertGt(hm.claimable(validator), USD / 10 - 1, "validator paid");
+        assertGt(hm.claimable(validator), USD / 2 - 1, "validator paid");
     }
 
     function test_short_stopLoss_buysBackOnRise() public {
@@ -484,7 +498,7 @@ contract OrderTest is Base {
         BackxManagerBase.Position memory p = _pos(hm, id);
         assertEq(p.owner, trader, "the position is the trader's");
         assertEq(p.m, 5);
-        assertGt(hm.claimable(validator), USD / 10, "filler: gas + accuracy bonus");
+        assertGt(hm.claimable(validator), USD / 2, "filler: gas + accuracy bonus");
     }
 
     function test_short_orderWaitsForIssuedCoins() public {
@@ -502,7 +516,7 @@ contract OrderTest is Base {
         vm.prank(validator);
         assertEq(sm.fillOrderBatch(ids), 1);
         assertGt(tokenVault.lent(), 0, "coins borrowed and sold");
-        assertEq(sm.claimable(validator), USD / 10, "no trigger: gas only");
+        assertEq(sm.claimable(validator), USD / 2, "no trigger: gas only");
     }
 
     function test_cancelAndExpiry() public {

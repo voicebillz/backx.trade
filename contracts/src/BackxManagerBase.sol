@@ -19,8 +19,9 @@ import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 ///
 /// Open validators: liquidations, take-profit fills, the short roof and entry orders can be executed by ANYONE
 /// (a person, a bot, an AI agent). Whoever executes earns the position's escrowed gas fee plus an accuracy bonus
-/// that is largest when the execution lands right at the trigger and falls to zero 1 % past it:
-///     bonus = maxBonus · ((W − d) / W)²,  d = distance past the trigger,  W = accuracyBps (default 1 %).
+/// that is largest when the execution lands right at the trigger and falls to a late floor 1 % past it:
+///     bonus = max(maxBonus · ((W − d) / W)², maxBonus · lateBps),  d = distance past the trigger,  W = accuracyBps (1 %),
+///     lateBps 20 % (owner 2026-10-26: late settlements still pay, so nothing overdue is left to sink).
 /// Rewards are USDC, credited in this contract and taken out with claim(): validators, agents and people alike.
 /// Nothing that protects money depends on BackX servers (docs/backx/LIVENESS.md).
 ///
@@ -69,6 +70,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         uint16 fillBonusBps;    // max accuracy bonus on a take-profit / roof / entry fill, of the position value
         uint16 accuracyBps;     // W: the bonus is zero this far past the trigger
         uint16 restCapBps;      // the bonus never takes more than this share of what is left (issuers first, owner 2026-10-25)
+        uint16 lateBps;         // late floor, share of the max bonus a validator still earns past W (owner 2026-10-26)
     }
 
     struct Position {
@@ -208,7 +210,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         nextId = 1;
         nextOrderId = 1;
         _oneUsd = 10 ** IERC20Metadata(address(a.usd)).decimals();
-        validation = Validation({gasUsd: uint64(_oneUsd / 10), liqBonusBps: 50, fillBonusBps: 10, accuracyBps: 100, restCapBps: 1500});
+        validation = Validation({gasUsd: uint64(_oneUsd / 2), liqBonusBps: 50, fillBonusBps: 10, accuracyBps: 100, restCapBps: 1500, lateBps: 2000});
         fees = Fees({platformBps: 200, rsfStakeBps: 50, rsfLentBps: 3, borrowBps: 25, oracleDevBps: 200, spotBps: 30, gainBps: 200, liqCutBps: 500});
         // e, s from docs/backx/sim/sim3.py (v3); p = 10 % flat since v4. Packed: 2 bytes per m (m = 1..30), in bps.
         for (uint256 m = 1; m <= MAX_M; m++) {
@@ -248,7 +250,7 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
 
     /// @notice Gas at most $5; bonuses at most 2 % (liquidation) / 0.5 % (fills); W between 0.1 % and 5 %.
     function setValidation(Validation calldata v) external onlyOwner {
-        if (v.gasUsd > 5 * _oneUsd || v.liqBonusBps > 200 || v.fillBonusBps > 50 || v.accuracyBps < 10 || v.accuracyBps > 500 || v.restCapBps > 5000) {
+        if (v.gasUsd > 5 * _oneUsd || v.liqBonusBps > 200 || v.fillBonusBps > 50 || v.accuracyBps < 10 || v.accuracyBps > 500 || v.restCapBps > 5000 || v.lateBps > 5000) {
             revert BadParams();
         }
         validation = v;
@@ -402,14 +404,18 @@ abstract contract BackxManagerBase is Initializable, Ownable2StepUpgradeable, Pa
         return b < cap ? b : cap;
     }
 
-    /// maxBonus · ((W − d) / W)², d = |got − target| / target in bps.
+    /// maxBonus · ((W − d) / W)², d = |got − target| / target in bps, never below the late floor
+    /// (lateBps of maxBonus, owner 2026-10-26): a late settlement still pays, so an overdue liquidation or fill is
+    /// always worth picking up instead of being left to sink.
     function _accuracyBonus(uint256 maxBonus, uint256 got, uint256 target) internal view returns (uint256) {
         if (maxBonus == 0 || target == 0) return 0;
+        uint256 floor = maxBonus * validation.lateBps / BPS;
         uint256 diff = got > target ? got - target : target - got;
         uint256 d = diff * BPS / target;
         uint256 w = validation.accuracyBps;
-        if (d >= w) return 0;
-        return maxBonus * (w - d) * (w - d) / (w * w);
+        if (d >= w) return floor;
+        uint256 b = maxBonus * (w - d) * (w - d) / (w * w);
+        return b > floor ? b : floor;
     }
 
     // ---- entry orders ---------------------------------------------------------------------------

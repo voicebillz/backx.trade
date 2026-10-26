@@ -20,21 +20,22 @@ Everything is on-chain and visible: positions (`positions(id)`), orders (`orders
 Our own validators (code in `keeper/`, 10 per chain on 5 servers, docs/KEEPERS.md) are simply validators too.
 
 ## What a validator earns
-1. **Gas**: every position escrows `validation.gasUsd` (default $0.10, max $5) when it opens. Whoever settles it
+1. **Gas**: every position escrows `validation.gasUsd` (default **$0.50**, the minimum every validator earns per settlement however late, owner 2026-10-26; max $5) when it opens. Whoever settles it
    gets it. If the owner closes the position themselves, the gas goes back to them.
    An entry order escrows one extra gas for the validator that fills it.
-2. **Accuracy bonus**: larger the closer the execution is to the trigger price.
+2. **Accuracy bonus**: larger the closer the execution is to the trigger price, never below the late floor
+   (`lateBps`, 20 % of the max bonus, owner 2026-10-26), so an overdue liquidation or fill always pays.
 
 ```
-bonus = maxBonus · ((W − d) / W)²      d = how far past the trigger (oracle), W = accuracyBps (default 1 %)
+bonus = max(maxBonus · ((W − d) / W)², maxBonus · lateBps)   d = how far past the trigger, W = accuracyBps (1 %), lateBps 20 %
 maxBonus: liquidation 0.5 % of the position value (liqBonusBps), fills 0.1 % (fillBonusBps), and never more than
 15 % of what is left after the issuers' principal (restCapBps, owner 2026-10-25: issuers get the most)
 ```
 
 | Distance past the trigger | 0 % | 0.1 % | 0.25 % | 0.5 % | 0.75 % | ≥ 1 % |
 |---|---|---|---|---|---|---|
-| Share of the max bonus | 100 % | 81 % | 56 % | 25 % | 6 % | 0 % |
-| $1,000 position liquidated | $5.00 | $4.05 | $2.81 | $1.25 | $0.31 | $0 |
+| Share of the max bonus | 100 % | 81 % | 56 % | 25 % | 20 % (floor) | 20 % (floor) |
+| $1,000 position liquidated (bonus + $0.50 gas) | $5.50 | $4.55 | $3.31 | $1.75 | $1.50 | $1.50 |
 
 Where the bonus comes from: a liquidation's bonus comes out of the trader's rest after the issuers' principal is
 repaid (never out of the principal; capped by that rest). A take-profit / roof bonus comes out of the trader's

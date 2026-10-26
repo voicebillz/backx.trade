@@ -28,7 +28,7 @@ on-chain state plus a price that anyone can post.
    open to any address. Safety does not come from *who* calls but from the checks inside: the trigger, the price
    guard (sale within 2 % of the reference price and full principal back when the coins cover it) and balance-delta
    accounting already make a hostile caller harmless.
-2. **The protocol pays whoever does the work.** Today validator gas (flat ~$0.10 per position) is sent to our validator
+2. **The protocol pays whoever does the work.** Validator gas (flat $0.50 per position, escrowed, minimum per settlement) is sent to our validator
    wallet at open. Instead hold it in the contract per position and pay it to **whoever** closes, liquidates or fills
    it. Add a small liquidation bonus on top (e.g. 0.25 % of the position, capped, taken from what the trader would
    keep, never from the issuers' principal). Any liquidation bot, MEV searcher or user then earns money by keeping

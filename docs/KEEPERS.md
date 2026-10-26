@@ -69,7 +69,7 @@ not browsers) and gives validators nothing they need: if Railway is down they ke
 status, rank, gas balance (read on-chain), positions watched, sent / landed / failed and latency p50 / p95.
 
 ## Self-funding
-Today each position pays a flat validator gas fee at open (default $0.10, contract `keeperGasUsd`) into `keeperWallet`.
+Today each position pays a flat validator gas fee at open (default $0.50, contract `validation.gasUsd`, the minimum per settlement) into `keeperWallet`.
 Make `keeperWallet` one of the validators' gas addresses: the balancer spreads it to the others and sweeps anything
 above the cap to the Safe, so validators keep only a small buffer and the rest goes to the treasury.
 Example, 1,000 positions a day: $100 a day of validator gas income; 300 liquidations or limit fills batched into

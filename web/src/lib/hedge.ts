@@ -16,7 +16,7 @@ export const feeRate = (lentMult: number) =>
   (lentMult === 0 ? FEES.spot : FEES.platform + FEES.rsfStake) + lentMult * (FEES.borrow + FEES.rsfLent);
 /** Validator gas per position (contract validation.gasUsd, flat USD): ≈ 2× one close/liquidation. Escrowed in the
  *  position, paid to whoever settles it, back to you when you close it yourself. ÅPEN: set from measured gas at deploy. */
-export const KEEPER_GAS = 0.1;
+export const KEEPER_GAS = 0.5; // $0.50: every validator earns at least this per settlement (owner 2026-10-26)
 /** Extra margin on the issuers' principal; grows 0.02 % per step past 10×. */
 export const buffer = (_side: 'hedge' | 'short', m: number) => 0.003 + 0.0002 * Math.max(m - 10, 0); // short: same since its margin is larger (2026-10-25)
 /** Max position (notional) per coin: keeps price impact ≈ ≤ 0.5 % per way. */

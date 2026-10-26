@@ -60,7 +60,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   append-only across versions. Validators settle many per tx (`liquidateBatch`, `executeLimitBatch`, `fillOrderBatch`).
   Contracts v2 (owner 2026-10-25, `docs/backx/VALIDATORS.md`, `AGENTS.md`): execution is OPEN to anyone (no keeper
   allow list); each position escrows its validator gas, paid to whoever settles it + an accuracy bonus
-  (max·((W−d)/W)², W 1 %; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal, and
+  (max·((W−d)/W)², W 1 %, never below the late floor `lateBps` 20 % of the max, owner 2026-10-26; liquidation max 0.5 %, fills 0.1 %, from the trader's rest/payout, never principal, and
   never above `restCapBps` 15 % of the rest: issuers get the most, owner 2026-10-25); own
   close refunds the gas. Entry orders (`placeOrder`, buy for Hedge / sell for Short, trigger above/below, expiry,
   cancel; a short order waits until coins are issued). ALL rewards are claimable USDC: validators `claim()/claimTo()`
@@ -159,7 +159,8 @@ The owner is not a developer: explain briefly, in Norwegian.
   (`startTankScanner`, small RPC batches, the public RPC 429s on big ones). Profile → Staking: Max for $GAZZ, Tank
   picker overlay with images, checkboxes, Select all / Stake all; web/public/gazz-tank.svg = Tank #1's on-chain art. Staking
   happens on BackX itself (owner 2026-10-26). Only the Safe `withdraw`s the rest.
-  Validator gas: flat `validation.gasUsd` per position (default $0.10, max $5, ≈ 2× one close), escrowed in the position
+  Validator gas: flat `validation.gasUsd` per position (default $0.50 = the minimum every validator earns per settlement
+  however late, owner 2026-10-26; max $5), escrowed in the position
   and paid to whoever settles it (refunded on an own close). The ticket shows the amount, the position size and "Gas".
 - Issuer reserves are used in full; the Reserve Security Fund is the last resort for crashes the contract cannot
   liquidate through. The crash-exposure gate (stressCoverBps) is tracked but OFF by default; only the Safe turns it on.
