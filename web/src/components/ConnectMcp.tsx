@@ -20,7 +20,7 @@ const QUICK: Quick[] = [
     steps: ['Choose "Add custom connector".', 'Name it BackX and paste the address (already copied).', 'Click Connect, log in on the BackX window and approve.', 'It works on your account only; you sign every transaction yourself.'],
   },
   {
-    id: 'copilot', name: 'Copilot', logo: '/ai/githubcopilot.svg',
+    id: 'copilot', name: 'Copilot', logo: '/ai/copilot.svg',
     // VS Code's MCP install link: GitHub Copilot in VS Code picks the server up from here.
     open: `vscode:mcp/install?${encodeURIComponent(JSON.stringify({ name: 'backx', type: 'http', url: MCP_URL }))}`, openLabel: 'Install in VS Code',
     steps: ['Click "Install in VS Code" and confirm in VS Code.', 'In Copilot Chat (Agent mode), start the backx server and log in on the BackX window.', 'Approve, then ask Copilot about your BackX account. You sign every transaction yourself.'],

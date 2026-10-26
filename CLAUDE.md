@@ -230,7 +230,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   steps, footer + whitepaper nav link "MCP", own head via seoPages `mcp.html`, sitemap) explains only, no connect button.
   App: Profile → AI agents (`/profile/agents`, `pages/AgentsTab.tsx`): active connections with scopes, "Disconnect all"
   (cuts off within 15 min), "Connect with MCP" overlay (`components/ConnectMcp.tsx`): ChatGPT, Claude, Copilot (VS Code
-  `vscode:mcp/install` link) with their real app icons (`web/public/ai/`, simple-icons marks on brand tiles) + Custom
+  `vscode:mcp/install` link) with their real app icons (`web/public/ai/`, simple-icons marks on brand tiles; Copilot = the colour Copilot icon from @lobehub/icons-static-svg 1.95.1) + Custom
   (address, Claude Code command, mcp.json). One address for everyone (https://mcp.backx.trade/mcp): identity comes from
   the OAuth login, never from a per-user link (a per-user link would be a secret that leaks).
 

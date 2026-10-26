@@ -1675,7 +1675,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .ai-logo img { display: block; width: 22px; height: 22px; }
 .ai-chatgpt { background: #000; }
 .ai-claude { background: #F5F4EE; }
-.ai-copilot { background: #24292F; }
+.ai-copilot { background: #FFFFFF; }
 .ai-logo.custom { background: var(--bg); border: 1px solid var(--line); font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--brand-text); }
 .mcpc .mcp-addr .lab { display: none; }
 .mcpc a.btn { text-decoration: none; display: flex; align-items: center; justify-content: center; }
