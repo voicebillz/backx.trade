@@ -60,9 +60,8 @@ function LongDiagram() {
       </div>
       <div className="pd-bar-label"><span className="num">10×</span><span>=</span><b className="num">$1,000 position</b></div>
       <div className="pd-split">
-        <div><i className="you" /><span>Gain</span><b>to you</b></div>
-        <div><i className="lent" /><span>10 %</span><b>to issuers</b></div>
-        <div><i className="plat" /><span>2 %</span><b>to the platform</b></div>
+        <div><i className="lent" /><span>10 %</span><b>of gains to issuers</b></div>
+        <div><i className="plat" /><span>2 %</span><b>of gains to the platform</b></div>
       </div>
     </div>
   );
@@ -84,16 +83,26 @@ function SpeedDiagram() {
   );
 }
 
-/** Where every fee goes. */
+/** Where the money from every trade goes, on average (docs/backx/sim/revenue_split.py, 200,000 simulated trades). */
+const SPLIT: [ReactNode, string, string, number][] = [
+  [<Coins key="i" />, 'blue', 'Issuers', 59], [<Bolt key="v" />, 'green', 'Validators', 4],
+  [<Lock key="r" />, 'grey', 'Safety fund', 7], [<Vault key="t" />, 'gold', 'Treasury', 30],
+];
 function MoneyDiagram() {
   return (
     <div className="pd-money">
       <div className="pd-node"><span className="pd-ico gold"><User /></span><b>Every trade</b></div>
       <Arrow />
-      <div className="pd-node core"><span className="pd-ico gold"><Vault /></span><b>Treasury</b><span>USDC</span></div>
-      <div className="pd-fan">
-        <Arrow /><div className="pd-pill"><b className="num">90 %</b><span>BackX</span></div>
-        <Arrow /><div className="pd-pill gold"><b className="num">10 %</b><span>$GAZZ stakers</span></div>
+      <div className="pd-split2">
+        {SPLIT.map(([icon, tone, label, pct]) => (
+          <div key={label} className={tone}>
+            <span className={'pd-ico ' + tone}>{icon}</span>
+            <b>{label}</b>
+            <span className="pd-meter"><i style={{ width: `${pct / 0.59}%` }} /></span>
+            <b className="num">{pct} %</b>
+          </div>
+        ))}
+        <p>Average of 200,000 simulated trades</p>
       </div>
     </div>
   );
@@ -157,7 +166,6 @@ const SLIDES: Slide[] = [
   { kicker: 'Wallet', title: 'Log in. Own your wallet.', sub: 'Every account gets its own wallet. No custody.', art: <WalletDiagram /> },
   { kicker: 'Agents', title: 'AI agents trade BackX.', sub: 'ChatGPT, Claude and Copilot connect in one click.', art: <AgentDiagram /> },
   { kicker: 'Revenue', title: 'Every trade pays.', art: <MoneyDiagram /> },
-  { kicker: '$GAZZ', title: 'Holders share the revenue.', sub: 'Stake $GAZZ or Gazz Tanks. Claim in USDC.', art: <img className="ps-shot" src="/pitch/staking.webp" alt="BackX staking" /> },
   { kicker: 'Launch', title: 'Four chains. Day one.', art: <div className="pd-chains">{CHAINS.map(([n, l]) => <div key={n}><img src={l} alt="" /><b>{n}</b></div>)}</div> },
   { kicker: 'Roadmap', title: 'Oracle. Audit. Launch.', art: <Roadmap /> },
   { kicker: 'The round', title: 'This round takes BackX live.', art: <Uses /> },
