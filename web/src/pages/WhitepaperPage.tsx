@@ -281,7 +281,7 @@ function RewardCurve() {
 const LAUNCH = [
   { name: 'Robinhood Chain', logo: '/chains/robinhood.png', note: 'Home of $GAZZ and staking · 250 ms blocks' },
   { name: 'BNB Chain', logo: '/chains/bnb.png', note: 'USDC reserves' },
-  { name: 'Base', logo: '/chains/base.png', note: 'USDC reserves' },
+  { name: 'Base', logo: '/chains/base.svg', note: 'USDC reserves' },
   { name: 'Arbitrum', logo: '/chains/arbitrum.png', note: 'USDC reserves' },
 ];
 
