@@ -414,7 +414,6 @@ function DocumentsTab() {
       <section className="card">
         <h2>Legal</h2>
         <div className="row-between">
-          <span className="muted">Operated by GAZZFUN LLC.</span>
           <span className="link-buttons">
             <a className="btn btn-ghost btn-sm" href="/terms" target="_blank" rel="noopener">Terms of Service ↗</a>
             <a className="btn btn-ghost btn-sm" href="/privacy" target="_blank" rel="noopener">Privacy Policy ↗</a>

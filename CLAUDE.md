@@ -35,6 +35,8 @@ The owner is not a developer: explain briefly, in Norwegian.
 ## Login and money (locked)
 - Privy login: email, SMS, Google, X, Discord, Twitch, Telegram, Farcaster, passkey
   (Apple once our Apple OAuth credentials exist; owner 2026-10-18). Own Privy app for backx, not gazz.fun's.
+  Operator name (owner 2026-10-27): "GAZZFUN LLC" removed from footers, meta, JSON-LD and llms.txt; a new company will
+  operate BackX. Terms/Privacy still name GAZZFUN LLC until the new entity exists (update them then).
   External wallets ON (owner 2026-10-25, for agents): `wallet` login + WalletConnect in Privy's modal (detected,
   MetaMask, Robinhood Wallet, Rainbow, WalletConnect). The external wallet is only the login: every account still gets
   its own embedded wallet (`createOnLogin: 'all-users'`), which the session, deposits and ADMIN_WALLETS use.

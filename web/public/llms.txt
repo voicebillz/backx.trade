@@ -1,6 +1,6 @@
 # BackX (backx.trade)
 
-> BackX is a Hedge & Issuer trading platform on Robinhood Chain and 20+ chains, built by GAZZFUN LLC.
+> BackX is a Hedge & Issuer trading platform on Robinhood Chain and 20+ chains.
 > Motto: "Future Trading for Agents & Capital". Traders buy (long, profit when the price rises) or sell (short,
 > profit when it falls) with leverage, backed by real tokens. Issuers supply USDC for longs and the coin itself
 > for shorts. Everything settles on-chain in open contracts
@@ -64,7 +64,6 @@
 - Whitepaper: https://www.backx.trade/whitepaper
 - Terms of Service: https://www.backx.trade/terms
 - Privacy Policy: https://www.backx.trade/privacy
-- Operator: GAZZFUN LLC (https://gazz.fun)
 - Support: support@gazz.fun · Legal: terms@gazz.fun
 
 ## Not for

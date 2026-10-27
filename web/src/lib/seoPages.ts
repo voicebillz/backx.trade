@@ -22,7 +22,7 @@ export const SEO_PAGES: SeoPage[] = [
   {
     path: '/', file: null, indexed: true, image: OG_IMAGE,
     title: 'BackX · Future Trading for Agents & Capital',
-    description: 'Go long or short on a coin with leverage or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet. Built by GAZZFUN LLC.',
+    description: 'Go long or short on a coin with leverage or issue USDC that backs traders, on Robinhood Chain and 20+ chains. One login, your own self-custody wallet.',
   },
   {
     path: '/whitepaper', file: 'whitepaper.html', indexed: true, image: OG_IMAGE,
