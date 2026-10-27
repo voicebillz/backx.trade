@@ -277,8 +277,30 @@ function RewardCurve() {
   );
 }
 
+// Launch chains (owner 2026-10-23, server/src/chains.js LAUNCH_CHAIN_IDS): same order and facts as the server.
+const LAUNCH = [
+  { name: 'Robinhood Chain', logo: '/chains/robinhood.png', note: 'Home of $GAZZ and staking · 250 ms blocks' },
+  { name: 'BNB Chain', logo: '/chains/bnb.png', note: 'USDC reserves' },
+  { name: 'Base', logo: '/chains/base.png', note: 'USDC reserves' },
+  { name: 'Arbitrum', logo: '/chains/arbitrum.png', note: 'USDC reserves' },
+];
+
+function LaunchChains() {
+  return (
+    <Reveal className="wp-fig wp-chains" label="Launch chains">
+      {LAUNCH.map((c) => (
+        <div key={c.name} className="wp-chain">
+          <img src={c.logo} alt="" width="40" height="40" />
+          <div><b>{c.name}</b><span>{c.note}</span></div>
+          <span className="chip chip-on">Launch</span>
+        </div>
+      ))}
+    </Reveal>
+  );
+}
+
 const TOC = [
-  ['overview', 'Overview'], ['hedge', 'Long'], ['short', 'Short'], ['issue', 'Issue'], ['orders', 'Orders'],
+  ['overview', 'Overview'], ['chains', 'Launch chains'], ['hedge', 'Long'], ['short', 'Short'], ['issue', 'Issue'], ['orders', 'Orders'],
   ['execution', 'Execution & liquidation'], ['validators', 'Validators'], ['timing', 'Speed in a flash crash'],
   ['safety', 'Reserve Security Fund'], ['rewards', 'Rewards & claims'], ['agents', 'For AI agents'],
   ['fees', 'Fees & revenue'], ['gazz', '$GAZZ'], ['risks', 'Risks'],
@@ -319,6 +341,13 @@ export function WhitepaperPage() {
             <BeforeAfter title="Centralized exchange compared with BackX"
               before={[['Other side of your trade', 'The exchange'], ['Custody', 'Exchange account'], ['Rules', 'Private'], ['Liquidation leftovers', 'Kept by the venue']]}
               after={[['Other side of your trade', 'Issuers, on-chain'], ['Custody', 'Your own wallet'], ['Rules', 'Open contracts'], ['Liquidation leftovers', 'Repay issuers first']]} />
+          </section>
+
+          <section id="chains">
+            <h2>Launch chains</h2>
+            <p>BackX launches on four EVM chains at once, with the same contracts at the same addresses on every one of them (deployed with CREATE2 by the BackX Safe). Each coin gets its own isolated market on the chain where it trades best: highest listing tier, cheapest validation, deepest liquidity.</p>
+            <LaunchChains />
+            <p>Ethereum, Optimism, Polygon and Avalanche follow after launch. Coins from other networks (BTC, SOL, XRP, DOGE and more) are listed through their wrapped tokens on these chains, so 20+ chains' assets are reachable from day one. Solana gets its own program later.</p>
           </section>
 
           <section id="hedge">

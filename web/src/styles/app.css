@@ -1690,3 +1690,11 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .chip-warn { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning); }
 .chip-on { background: var(--up-bg); color: var(--up); }
 .mcp-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+
+/* Whitepaper: launch chains (owner 2026-10-27) */
+.wp-chains { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wp-chain { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); }
+.wp-chain img { width: 40px; height: 40px; border-radius: 50%; flex: none; }
+.wp-chain > div { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.wp-chain span:not(.chip) { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 640px) { .wp-chains { grid-template-columns: 1fr; } }
