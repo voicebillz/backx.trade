@@ -1736,10 +1736,6 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-node.core { padding: 2.4cqw 3cqw; border: 2px solid var(--brand); border-radius: 1.6cqw; background: var(--panel); }
 .pd-node.core svg { width: 5cqw; height: 5cqw; }
 .pd-sides { display: grid; grid-template-columns: auto auto auto auto auto; align-items: center; justify-items: center; gap: 2cqw 2.4cqw; }
-.pd-under { grid-column: 1 / -1; display: flex; align-items: center; gap: 1.4cqw; padding: 1.4cqw 2.4cqw; border: 1px dashed var(--line); border-radius: 99px; }
-.pd-under .pd-ico { width: 4.4cqw; height: 4.4cqw; }
-.pd-under b { font-size: 1.9cqw; }
-.pd-under span:last-child { font-size: 1.5cqw; color: var(--ink-3); }
 .pd-long { width: 78%; display: grid; gap: 2cqw; }
 .pd-bar { display: flex; height: 9cqw; border-radius: 1.2cqw; overflow: hidden; gap: 3px; }
 .pd-bar div { display: grid; align-content: center; padding: 0 1.6cqw; gap: .3cqw; }
@@ -1827,7 +1823,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-ico.mark { background: #000000; }
 .pd-split2 .pd-ico.mark svg { width: 4.4cqw !important; height: 4.4cqw !important; }
 .pd-split2 .pd-ico.bank svg { width: 4cqw !important; height: 4cqw !important; }
-.pd-node > .pd-cluster, .pd-under > .pd-cluster { width: 7.6cqw; height: 7.6cqw; }
+.pd-node > .pd-cluster { width: 7.6cqw; height: 7.6cqw; }
 .pd-uses > div > :first-child { width: 7.6cqw; height: 7.6cqw; }
 .pd-paper { width: 5.2cqw; height: 5.2cqw; }
 .pd-nib { width: 4.6cqw; height: 4.6cqw; }

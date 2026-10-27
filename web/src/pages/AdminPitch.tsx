@@ -35,7 +35,7 @@ const Arrow = ({ dir = 'r' }: { dir?: 'r' | 'd' | 'lr' }) => (
 
 // ---- Diagrams --------------------------------------------------------------------------------------------------
 
-/** Three sides around one market. */
+/** Traders and issuers around one market. */
 function SidesDiagram() {
   return (
     <div className="pd-sides">
@@ -44,9 +44,6 @@ function SidesDiagram() {
       <div className="pd-node core"><Mark size={44} /><b>Market</b></div>
       <Arrow dir="lr" />
       <div className="pd-node"><Cluster logos={CHAIN_LOGOS} /><b>Issuers</b></div>
-      <div className="pd-under">
-        <Cluster logos={AI_LOGOS} /><b>Validators</b>
-      </div>
     </div>
   );
 }
@@ -217,7 +214,7 @@ interface Slide { kicker: string; title: string; sub?: string; art: ReactNode; l
 
 const SLIDES: Slide[] = [
   { kicker: 'backx.trade', title: 'Future Trading for Agents ⇄ Capital', layout: 'cover', art: <img className="ps-shot" src="/pitch/terminal.webp" alt="BackX trading terminal" /> },
-  { kicker: 'The idea', title: 'Three sides. One open market.', art: <SidesDiagram /> },
+  { kicker: 'The idea', title: 'Two sides. One open market.', art: <SidesDiagram /> },
   { kicker: 'Long', title: 'Put in $100. Trade $1,000.', art: <LongDiagram /> },
   { kicker: 'Product', title: 'The terminal is built.', art: <img className="ps-shot" src="/pitch/terminal.webp" alt="BackX trading terminal" />, layout: 'wide' },
   { kicker: 'Trade', title: 'Long or Short. Up to 20×.', art: <img className="ps-shot tall" src="/pitch/ticket.webp" alt="BackX trade ticket" />, layout: 'split' },
