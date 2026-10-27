@@ -1759,7 +1759,6 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-track div { display: grid; align-content: center; padding: 0 1.4cqw; background: var(--brand-bg); border-bottom: 3px solid var(--brand); min-width: 11cqw; white-space: nowrap; }
 .pd-track div:last-child { background: var(--brand); color: #0A0A0A; }
 .pd-track b { font-size: 2.2cqw; } .pd-track span { font-size: 1.3cqw; opacity: .8; }
-.pd-scale { display: flex; justify-content: space-between; font-size: 1.3cqw; color: var(--ink-3); }
 .pd-chips { display: flex; gap: 2cqw; margin-top: 1.6cqw; }
 .pd-chips div { flex: 1; display: grid; gap: .4cqw; padding: 1.6cqw 2cqw; border: 1px solid var(--line); border-radius: 1cqw; background: var(--panel); }
 .pd-chips b { font-size: 3cqw; color: var(--up); } .pd-chips span { font-size: 1.4cqw; color: var(--ink-3); }

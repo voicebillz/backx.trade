@@ -42,13 +42,13 @@ const Arrow = ({ dir = 'r' }: { dir?: 'r' | 'd' | 'lr' }) => (
 function SidesDiagram() {
   return (
     <div className="pd-sides">
-      <div className="pd-node"><span className="pd-ico gold"><User /></span><b>Traders</b><span>Long or Short</span></div>
+      <div className="pd-node"><span className="pd-ico gold"><User /></span><b>Traders</b></div>
       <Arrow dir="lr" />
-      <div className="pd-node core"><Mark size={44} /><b>Market</b><span>open contracts</span></div>
+      <div className="pd-node core"><Mark size={44} /><b>Market</b></div>
       <Arrow dir="lr" />
-      <div className="pd-node"><Cluster logos={CHAIN_LOGOS} /><b>Issuers</b><span>back the trades</span></div>
+      <div className="pd-node"><Cluster logos={CHAIN_LOGOS} /><b>Issuers</b></div>
       <div className="pd-under">
-        <Cluster logos={AI_LOGOS} /><b>Validators</b><span>settle every trade, paid per trade</span>
+        <Cluster logos={AI_LOGOS} /><b>Validators</b>
       </div>
     </div>
   );
@@ -77,7 +77,6 @@ function SpeedDiagram() {
   return (
     <div className="pd-speed">
       <div className="pd-track">{steps.map(([l, s]) => <div key={l} style={{ flex: s * 10 }}><b className="num">{s} s</b><span>{l}</span></div>)}</div>
-      <div className="pd-scale"><span className="num">0 s</span><span className="num">0.5 s</span></div>
       <div className="pd-chips">
         <div><b className="num">0.25 s</b><span>issue</span></div>
         <div><b className="num">0.3 s</b><span>buy</span></div>
@@ -144,9 +143,9 @@ function AgentDiagram() {
         <img src="/ai/openai.svg" alt="ChatGPT" /><img src="/ai/claude.svg" alt="Claude" /><img src="/ai/copilot.svg" alt="Copilot" />
       </div>
       <Arrow />
-      <div className="pd-node core"><Mark size={40} /><b>MCP</b><span>prepares</span></div>
+      <div className="pd-node core"><Mark size={40} /><b>MCP</b></div>
       <Arrow />
-      <div className="pd-node"><span className="pd-ico gold"><Pen /></span><b>You sign</b><span>own wallet</span></div>
+      <div className="pd-node"><span className="pd-ico gold"><Pen /></span><b>You sign</b></div>
     </div>
   );
 }
@@ -159,18 +158,18 @@ function WalletDiagram() {
         {['google', 'x', 'outlook', 'apple'].map((k) => <span key={k}><img src={`/logins/${k}.svg`} alt={k} /></span>)}
       </div>
       <Arrow />
-      <div className="pd-node"><span className="pd-ico gold"><Lock /></span><b>Your wallet</b><span>yours alone</span></div>
+      <div className="pd-node"><span className="pd-ico gold"><Lock /></span><b>Your wallet</b></div>
       <Arrow />
-      <div className="pd-node core"><Mark size={40} /><b>Trade</b><span>on-chain</span></div>
+      <div className="pd-node core"><Mark size={40} /><b>Trade</b></div>
     </div>
   );
 }
 
 function Roadmap() {
-  const steps = [['Oracle', 'fast prices'], ['Audit', 'external'], ['Launch', '4 chains'], ['Scale', 'more chains, Solana']];
+  const steps = ['Oracle', 'Audit', 'Launch', 'Scale'];
   return (
     <ol className="pd-road">
-      {steps.map(([h, t], n) => <li key={h} className={n === 0 ? 'now' : ''}><i /><b>{h}</b><span>{t}</span></li>)}
+      {steps.map((h, n) => <li key={h} className={n === 0 ? 'now' : ''}><i /><b>{h}</b></li>)}
     </ol>
   );
 }
@@ -186,13 +185,13 @@ interface Slide { kicker: string; title: string; sub?: string; art: ReactNode; l
 
 const SLIDES: Slide[] = [
   { kicker: 'backx.trade', title: 'Future Trading for Agents ⇄ Capital', layout: 'cover', art: <img className="ps-shot" src="/pitch/terminal.webp" alt="BackX trading terminal" /> },
-  { kicker: 'The idea', title: 'Three sides. One open market.', sub: 'Traders take the trade. Issuers back it. Validators settle it.', art: <SidesDiagram /> },
-  { kicker: 'Long', title: 'Put in $100. Trade $1,000.', sub: 'Issuers lend the rest and earn from every gain.', art: <LongDiagram /> },
+  { kicker: 'The idea', title: 'Three sides. One open market.', art: <SidesDiagram /> },
+  { kicker: 'Long', title: 'Put in $100. Trade $1,000.', art: <LongDiagram /> },
   { kicker: 'Product', title: 'The terminal is built.', art: <img className="ps-shot" src="/pitch/terminal.webp" alt="BackX trading terminal" />, layout: 'wide' },
-  { kicker: 'Trade', title: 'Long or Short. Up to 20×.', sub: 'Take profit, stop loss and limit orders on every trade.', art: <img className="ps-shot tall" src="/pitch/ticket.webp" alt="BackX trade ticket" />, layout: 'split' },
+  { kicker: 'Trade', title: 'Long or Short. Up to 20×.', art: <img className="ps-shot tall" src="/pitch/ticket.webp" alt="BackX trade ticket" />, layout: 'split' },
   { kicker: 'Speed', title: 'Liquidation in half a second.', art: <SpeedDiagram /> },
-  { kicker: 'Wallet', title: 'Log in. Own your wallet.', sub: 'Every account gets its own wallet. No custody.', art: <WalletDiagram /> },
-  { kicker: 'Agents', title: 'AI agents trade BackX.', sub: 'ChatGPT, Claude and Copilot connect in one click.', art: <AgentDiagram /> },
+  { kicker: 'Wallet', title: 'Log in. Own your wallet.', art: <WalletDiagram /> },
+  { kicker: 'Agents', title: 'AI agents trade BackX.', art: <AgentDiagram /> },
   { kicker: 'Revenue', title: 'Every trade pays.', art: <MoneyDiagram /> },
   { kicker: 'Launch', title: 'Four chains. Day one.', art: <div className="pd-chains">{CHAINS.map(([n, l]) => <div key={n}><img src={l} alt="" /><b>{n}</b></div>)}</div> },
   { kicker: 'Roadmap', title: 'Oracle. Audit. Launch.', art: <Roadmap /> },
