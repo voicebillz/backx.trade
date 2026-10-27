@@ -1803,7 +1803,6 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-split2 .pd-ico svg { width: 2.6cqw !important; height: 2.6cqw !important; }
 .pd-split2 b { font-size: 2cqw; }
 .pd-split2 b.num { text-align: right; }
-.pd-split2 p { margin: .4cqw 0 0; font-size: 1.2cqw; color: var(--ink-3); text-align: right; }
 .pd-meter { height: 1.6cqw; border-radius: 99px; background: var(--raised); overflow: hidden; }
 .pd-meter i { display: block; height: 100%; border-radius: 99px; background: var(--ink-3); }
 .pd-split2 .blue .pd-meter i { background: var(--info); }
@@ -1811,3 +1810,21 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-split2 .gold .pd-meter i { background: var(--brand); }
 .pd-split2 .gold b.num { color: var(--brand-text); }
 .pd-ico.grey { color: var(--ink-2); }
+.pitch-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pitch-actions .btn { min-height: 44px; }
+/* Present (owner 2026-10-27): the slide fills the screen at 16:9, letterboxed in the slide colour */
+.pitch-stage.full { display: grid; place-items: center; background: var(--bg); cursor: pointer; }
+.pitch-stage.full .ps-frame { width: min(100vw, calc(100vh * 16 / 9)); }
+.pitch-stage.full .ps-slide { border: 0; border-radius: 0; }
+/* PowerPoint export: every slide rendered off screen at 1280 px, then saved as images */
+.pitch-export { position: fixed; left: -20000px; top: 0; width: 1280px; pointer-events: none; }
+.pitch-export .ps-slide { border: 0; border-radius: 0; }
+.pd-split2 > div > :first-child { width: 7.6cqw; height: 7.6cqw; }
+.pd-split2 > div { grid-template-columns: 7.6cqw 13cqw 1fr 6cqw; }
+.pd-cluster { position: relative; display: block; border-radius: 50%; background: var(--raised); }
+.pd-cluster img { position: absolute; width: 3cqw; height: 3cqw; border-radius: 50%; border: 2px solid var(--raised); background: var(--raised); object-fit: cover; }
+.pd-ico.bank { color: var(--ink); background: var(--raised); }
+.pd-bank { width: 4cqw; height: 4cqw; }
+.pd-ico.mark { background: #000000; }
+.pd-split2 .pd-ico.mark svg { width: 4.4cqw !important; height: 4.4cqw !important; }
+.pd-split2 .pd-ico.bank svg { width: 4cqw !important; height: 4cqw !important; }
