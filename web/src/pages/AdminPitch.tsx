@@ -15,6 +15,8 @@ const CHAINS = [
   ['Robinhood Chain', '/chains/robinhood.png'], ['BNB Chain', '/chains/bnb.png'],
   ['Base', '/chains/base.svg'], ['Arbitrum', '/chains/arbitrum.png'],
 ] as const;
+const CHAIN_LOGOS = CHAINS.map(([, l]) => l);
+const AI_LOGOS = ['/ai/claude.svg', '/ai/copilot.svg', '/ai/openai.svg'];
 
 // ---- Small flat icons ------------------------------------------------------------------------------------------
 
@@ -44,9 +46,9 @@ function SidesDiagram() {
       <Arrow dir="lr" />
       <div className="pd-node core"><Mark size={44} /><b>Market</b><span>open contracts</span></div>
       <Arrow dir="lr" />
-      <div className="pd-node"><span className="pd-ico blue"><Coins /></span><b>Issuers</b><span>back the trades</span></div>
+      <div className="pd-node"><Cluster logos={CHAIN_LOGOS} /><b>Issuers</b><span>back the trades</span></div>
       <div className="pd-under">
-        <span className="pd-ico green"><Bolt /></span><b>Validators</b><span>settle every trade, paid per trade</span>
+        <Cluster logos={AI_LOGOS} /><b>Validators</b><span>settle every trade, paid per trade</span>
       </div>
     </div>
   );
@@ -110,8 +112,8 @@ const Bank = () => (
 
 /** Where the money from every trade goes, on average (docs/backx/sim/revenue_split.py, 200,000 simulated trades). */
 const SPLIT: [ReactNode, string, string, number][] = [
-  [<Cluster key="i" logos={CHAINS.map(([, l]) => l)} />, 'blue', 'Issuers', 59],
-  [<Cluster key="v" logos={['/ai/claude.svg', '/ai/copilot.svg', '/ai/openai.svg']} />, 'green', 'Validators', 4],
+  [<Cluster key="i" logos={CHAIN_LOGOS} />, 'blue', 'Issuers', 59],
+  [<Cluster key="v" logos={AI_LOGOS} />, 'green', 'Validators', 4],
   [<span key="r" className="pd-ico bank"><Bank /></span>, 'grey', 'Safety fund', 7],
   [<span key="t" className="pd-ico mark"><Mark size={30} /></span>, 'gold', 'Platform', 30],
 ];

@@ -1828,3 +1828,4 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-ico.mark { background: #000000; }
 .pd-split2 .pd-ico.mark svg { width: 4.4cqw !important; height: 4.4cqw !important; }
 .pd-split2 .pd-ico.bank svg { width: 4cqw !important; height: 4cqw !important; }
+.pd-node > .pd-cluster, .pd-under > .pd-cluster { width: 7.6cqw; height: 7.6cqw; }
