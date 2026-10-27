@@ -201,6 +201,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   Sandbox, Azure 12 mo), ranks interleaved (server s runs s−1 and s+4). One image `ghcr.io/voicebillz/backx-keeper`
   (built by .github/workflows/keeper-image.yml), `src/setup.js` makes a server's keys → KEEPER_SET (secret, that server
   only) + public KEEPERS lines, `src/multi.js` runs them. Step-by-step recipe: Admin → Contracts (AdminKeeperRecipe).
+  Key rotation (owner 2026-10-27, docs/KEEPERS.md "Key rotation"): every 30 days each server makes its validators' new
+  gas keys itself (never on Railway, never sent anywhere), stored encrypted in KEY_DIR (persistent volume) under the
+  server's KEY_SECRET (in KEEPER_SET); the old key claims to SWEEP_TO and sends its gas to the new one, then stays as
+  "previous" (last batch) forwarding late funds; the API accepts the new address only after seeing that gas handover
+  on-chain (`keeper_addresses`), peers for top-ups come from the signed report reply. Gas cap stays 0.02 ETH (excess → Safe).
 - Issuer withdrawal queue (owner 2026-10-20): free money (`freeIdle`) is withdrawn at once; for the rest the issuer calls
   `requestRedeem(shares)`, the shares are parked in the vault and reserved, and every settlement point (`repay`, a new
   deposit, `processQueue`) pays the queue first, FIFO, part-payments, straight to the wallet that asked. Reserved money

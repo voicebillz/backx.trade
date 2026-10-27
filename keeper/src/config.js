@@ -52,10 +52,18 @@ export const config = {
   reportUrl: process.env.REPORT_URL?.trim() || null,
   reportKey: process.env.REPORT_KEY?.trim() || null,      // ed25519 private key, PKCS#8 base64 (npm run keygen)
   reportEveryMs: num('REPORT_EVERY_MS', 60_000),
+  // Key rotation (owner 2026-10-27): a new gas key every ROTATE_DAYS, made on this server and kept encrypted in KEY_DIR
+  // (must be a persistent disk or volume). On when KEY_DIR is set (the server's volume); setup.js puts KEY_SECRET in
+  // KEEPER_SET, so a server without a volume simply does not rotate.
+  keyDir: process.env.KEY_DIR?.trim() || null,
+  keySecret: process.env.KEY_SECRET?.trim() || null,
+  rotateDays: num('ROTATE_DAYS', 30),
   // Weekly staking payout (Treasury.distribute → BackxStaking.sync). Set on one validator per chain.
   treasury: process.env.TREASURY ? { treasury: addr(process.env.TREASURY, 'TREASURY'), usd: addr(req('USD_TOKEN'), 'USD_TOKEN') } : null,
 };
 
 if (config.reportUrl && !/^https:\/\//.test(config.reportUrl)) throw new Error('REPORT_URL must be https');
 if (config.reportUrl && !config.reportKey) throw new Error('REPORT_URL needs REPORT_KEY');
+if (config.keyDir && !config.keySecret) throw new Error('KEY_DIR needs KEY_SECRET (re-run src/setup.js)');
+if (config.keyDir && !(config.rotateDays >= 1)) throw new Error('ROTATE_DAYS must be at least 1');
 if (!(config.low < config.target && config.target < config.cap)) throw new Error('Need LOW_WEI < TARGET_WEI < CAP_WEI');

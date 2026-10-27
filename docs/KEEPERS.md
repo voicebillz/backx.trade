@@ -68,6 +68,35 @@ rate limit (Redis, fails closed), and keeps the latest report for the admin port
 not browsers) and gives validators nothing they need: if Railway is down they keep working. Admin → Validators shows
 status, rank, gas balance (read on-chain), positions watched, sent / landed / failed and latency p50 / p95.
 
+## Key rotation (owner 2026-10-27)
+Every validator gets a new gas key every 30 days (`ROTATE_DAYS`), made **on its own server**. Owner's first idea was
+to make keys on Railway and send them out; rejected because one hacked Railway would then hold every key and keys
+would travel over the network. What happens instead (`keeper/src/keystore.js`, `rotation()` in `keeper/src/index.js`):
+1. The server makes a new key and saves it encrypted (AES-256-GCM, `KEY_SECRET` from KEEPER_SET, one per server) in
+   `KEY_DIR` (a persistent volume, `/data/keys` in the image), then reads it back. Only then does money move.
+2. The old key claims its validator rewards (to `SWEEP_TO` = the Safe, else the new key) and sends all its gas to
+   the new key except a tiny reserve (0.00003 ETH + 3× the transfer fee, for OP-stack L1 fees). Then it switches.
+3. The old key stays as **previous** (the last batch) and forwards anything that still arrives, hourly, until the
+   next rotation replaces it. A handover that was cut short (crash, RPC error) is finished by that same pass.
+4. The report to Railway carries `rotation: { from, to, tx }`. The API accepts the new address only after it finds
+   that gas transfer from the current address to the new one on-chain (`keeper_addresses` table), so a stolen report
+   key alone cannot redirect Safe funding or top-ups. Admin → Validators shows the current key, since when, and the
+   previous address.
+- Gas cap stays **0.02 ETH** per validator (`CAP_WEI`, owner 2026-10-27): above it the excess goes to the Safe; top-ups
+  among validators use the current addresses from the report reply (not the fixed `PEERS` list, which would top up
+  retired keys).
+- Rotation is on when `KEY_DIR` is set. A disk that cannot be written, or a key file sealed with another
+  `KEY_SECRET` (setup.js run again), turns rotation off with a log line; the validator never stops validating.
+- If the API missed a whole rotation (down for 30+ days), it stays on "Rotating": set that validator's address in
+  KEEPERS to the one it reports and delete its row in `keeper_addresses`.
+- Keep KEEPER_SET in a password manager: without its `KEY_SECRET` the rotated keys on disk cannot be opened.
+- Add contract addresses later as `MANAGERS_<chainId>` server variables (`src/multi.js`), not by running setup.js
+  again (that makes new keys and a new secret).
+- Railway: attach a volume at `/data/keys`, `KEY_DIR=/data/keys`, `RAILWAY_RUN_UID=0` (Railway volumes are root-owned).
+  VMs: `-v /opt/backx/keys:/data/keys -e KEY_DIR=/data/keys` with the host folder owned by uid 1000.
+- Tested on a local chain 2026-10-27: rotation, gas handover, restart on the new key, late funds forwarded from the
+  previous key, wrong secret and unwritable disk both keep validating.
+
 ## Self-funding
 Today each position pays a flat validator gas fee at open (default $0.50, contract `validation.gasUsd`, the minimum per settlement) into `keeperWallet`.
 Make `keeperWallet` one of the validators' gas addresses: the balancer spreads it to the others and sweeps anything

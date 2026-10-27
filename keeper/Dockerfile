@@ -6,6 +6,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
+# Rotated gas keys (KEY_DIR, encrypted): mount a persistent volume here so they survive restarts and redeploys.
+RUN mkdir -p /data/keys && chown node:node /data/keys
 USER node
 # One container per server runs every keeper in KEEPER_SET (src/setup.js); a single keeper still works with
 # `node src/index.js` and the per-keeper env.

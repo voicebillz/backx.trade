@@ -130,6 +130,18 @@ export async function migrate() {
       at         timestamptz not null default now()
     );
 
+    -- Validator key rotation (owner 2026-10-27, docs/KEEPERS.md): each validator's current gas address and the last
+    -- batch (previous address + the on-chain gas handover that proved the change). KEEPERS env holds the first one.
+    create table if not exists keeper_addresses (
+      id          text primary key,
+      chain_id    integer not null,
+      address     text not null,
+      since       timestamptz not null default now(),
+      previous    text,
+      handover_tx text,
+      updated_at  timestamptz not null default now()
+    );
+
     -- Accounts created before sign-up methods were recorded: best known value is the latest login.
     update users set signup_method = last_login_method where signup_method is null and last_login_method is not null;
   `);

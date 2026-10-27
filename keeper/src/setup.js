@@ -6,7 +6,7 @@
 //   - the public lines for Railway KEEPERS (id:gasAddress:reportPublicKey)
 // RPCs and Position Manager addresses per chain come from env RPC_<chainId> / MANAGERS_<chainId>, or can be added
 // later by re-running with them set.
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import { generatePrivateKey, privateKeyToAddress } from 'viem/accounts';
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
@@ -20,6 +20,8 @@ const DEFAULT_RPC = {
   4663: 'https://rpc.mainnet.chain.robinhood.com', 56: 'https://bsc-dataseed.bnbchain.org',
   8453: 'https://mainnet.base.org', 42161: 'https://arb1.arbitrum.io/rpc',
 };
+// One secret per server that encrypts its rotated keys on its own disk (KEY_DIR, docs/KEEPERS.md "Key rotation").
+const keySecret = randomBytes(32).toString('base64');
 const set = [], pub = [];
 for (const chainId of chains) {
   // Interleave ranks across servers: slot s gets s−1, s−1+of, … so the first ranks sit on different servers.
@@ -36,7 +38,7 @@ for (const chainId of chains) {
       KEEPER_ID: k.id, CHAIN_ID: String(chainId), KEEPER_RANK: String(k.rank), KEEPER_KEY: k.key, REPORT_KEY: k.reportKey,
       REPORT_URL: report, RPC_URLS: process.env[`RPC_${chainId}`] || DEFAULT_RPC[chainId] || '',
       MANAGERS: process.env[`MANAGERS_${chainId}`] || '', START_BLOCK: process.env[`START_BLOCK_${chainId}`] || '0',
-      PEERS: keepers.map((x) => x.address).join(','), SWEEP_TO: process.env.SWEEP_TO || '',
+      PEERS: keepers.map((x) => x.address).join(','), SWEEP_TO: process.env.SWEEP_TO || '', KEY_SECRET: keySecret,
     });
   }
 }

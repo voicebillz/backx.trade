@@ -8,13 +8,15 @@ import { useState } from 'react';
 
 const IMAGE = 'ghcr.io/voicebillz/backx-keeper:latest';
 const CHAINS = '4663,56,8453,42161';
+// The rotated gas keys live on the server's own disk (owner 2026-10-27, docs/KEEPERS.md "Key rotation").
+const RUN = `-v /opt/backx/keys:/data/keys -e KEY_DIR=/data/keys ${IMAGE}`;
 
 interface Server { key: string; name: string; kind: 'vm' | 'service'; free: string; how: string[] }
 const SERVERS: Server[] = [
-  { key: 'rail', name: 'Railway', kind: 'service', free: 'Betalt (har allerede)', how: ['New → Service → Docker Image', 'Image: ' + IMAGE, 'Variables: KEEPER_SET = linjen fra steg 2', 'Ingen public domain (Settings → Networking)'] },
+  { key: 'rail', name: 'Railway', kind: 'service', free: 'Betalt (har allerede)', how: ['New → Service → Docker Image', 'Image: ' + IMAGE, 'Variables: KEEPER_SET = linjen fra steg 2', 'Volume: høyreklikk tjenesten → Attach volume → mount path /data/keys', 'Variables: KEY_DIR = /data/keys og RAILWAY_RUN_UID = 0 (Railway-volumer krever det)', 'Ingen public domain (Settings → Networking)'] },
   { key: 'oci', name: 'Oracle Cloud Always Free', kind: 'vm', free: 'Gratis for alltid · Ampere A1 2 kjerner / 12 GB', how: ['Compute → Instances → Create', 'Image: Ubuntu 24.04 · Shape: VM.Standard.A1.Flex (1 OCPU, 6 GB)', 'Legg inn din SSH-nøkkel, opprett, koble til med SSH'] },
   { key: 'gcp', name: 'Google Cloud e2-micro', kind: 'vm', free: 'Gratis for alltid · 1 VM i us-west1 / us-central1 / us-east1', how: ['Compute Engine → VM instances → Create', 'Region us-central1 · Machine e2-micro · Ubuntu 24.04 · 30 GB standard disk', 'Trykk SSH i konsollen'] },
-  { key: 'nf', name: 'Northflank Sandbox', kind: 'service', free: 'Gratis · 2 tjenester som alltid kjører (kortverifisering)', how: ['Create service → Deployment → External image', 'Image: ' + IMAGE, 'Environment: KEEPER_SET = linjen fra steg 2', 'Ingen ports / ingen public'] },
+  { key: 'nf', name: 'Northflank Sandbox', kind: 'service', free: 'Gratis · 2 tjenester som alltid kjører (kortverifisering)', how: ['Create service → Deployment → External image', 'Image: ' + IMAGE, 'Environment: KEEPER_SET = linjen fra steg 2', 'Volumes: legg til et volum på /data/keys og KEY_DIR = /data/keys (uten volum i gratisplanen: hopp over, da bytter denne serveren ikke nøkler)', 'Ingen ports / ingen public'] },
   { key: 'az', name: 'Microsoft Azure', kind: 'vm', free: 'Gratis i 12 måneder · B2pts v2 (Arm) 750 t/mnd', how: ['Virtual machines → Create', 'Image: Ubuntu 24.04 · Size: B2pts v2 · SSH public key', 'Inbound ports: ingen utenom SSH'] },
 ];
 
@@ -52,18 +54,19 @@ export function AdminKeeperRecipe() {
         <li>
           <b>Lag nøklene for denne serveren</b> {s.kind === 'vm' ? '(i SSH-vinduet):' : '(på en hvilken som helst maskin med Docker, f.eks. en av VM-ene):'}
           <Code text={(s.kind === 'vm' ? 'sudo ' : '') + setup} />
-          Den skriver ut to deler. <b>KEEPER_SET=…</b> er hemmelig og hører bare hjemme på denne serveren. Den <b>offentlige linjen</b> legger du til i Railway → API-tjenesten → <span className="num">KEEPERS</span> (skilt med komma).
+          Den skriver ut to deler. <b>KEEPER_SET=…</b> er hemmelig og hører bare hjemme på denne serveren (ta også en kopi i passordmanageren: uten den kan nøklene på disken ikke åpnes). Den <b>offentlige linjen</b> legger du til i Railway → API-tjenesten → <span className="num">KEEPERS</span> (skilt med komma).
         </li>
         {s.kind === 'vm' ? (
           <li><b>Start validatorene</b> (lim inn KEEPER_SET-linjen i filen, lagre med Ctrl+O, Enter, Ctrl+X):
-            <Code text={`sudo mkdir -p /opt/backx && sudo nano /opt/backx/keepers.env\nsudo docker run -d --name backx-keepers --restart=always --env-file /opt/backx/keepers.env ${IMAGE}`} />
+            <Code text={`sudo mkdir -p /opt/backx/keys && sudo chown 1000:1000 /opt/backx/keys && sudo nano /opt/backx/keepers.env\nsudo docker run -d --name backx-keepers --restart=always --env-file /opt/backx/keepers.env ${RUN}`} />
             Oppdatere til ny versjon senere:
-            <Code text={`sudo docker pull ${IMAGE} && sudo docker rm -f backx-keepers && sudo docker run -d --name backx-keepers --restart=always --env-file /opt/backx/keepers.env ${IMAGE}`} />
+            <Code text={`sudo docker pull ${IMAGE} && sudo docker rm -f backx-keepers && sudo docker run -d --name backx-keepers --restart=always --env-file /opt/backx/keepers.env ${RUN}`} />
           </li>
         ) : (
           <li><b>Start validatorene:</b> lim inn KEEPER_SET som variabel på tjenesten og deploy. Ny versjon: Redeploy.</li>
         )}
-        <li><b>Kontrakt-adresser:</b> når markedene er deployet, legg til <span className="num">MANAGERS_4663</span> osv. og kjør steg 5 på nytt, eller vent: uten adresser står validatorene i ro.</li>
+        <li><b>Kontrakt-adresser:</b> når markedene er deployet, legg til <span className="num">MANAGERS_4663</span>, <span className="num">MANAGERS_56</span> osv. som egne variabler på serveren (env-filen eller tjenesten) og start på nytt. Ikke kjør steg 5 på nytt: det lager nye nøkler. Uten adresser står validatorene i ro.</li>
+        <li><b>Nøkkelbytte:</b> skjer av seg selv hver 30. dag. Serveren lager den nye nøkkelen selv, flytter gass og belønninger fra den gamle og viser byttet i Admin → Validators. Ingen privat nøkkel forlater serveren.</li>
         <li><b>Gass:</b> Admin → Validators → «Top up low validators» lager en Safe-fil. Etter det fyller validatorene på hverandre selv.</li>
         <li><b>Sjekk:</b> Admin → Validators viser «Up» for validatorene på denne serveren innen ett minutt.</li>
       </ol>

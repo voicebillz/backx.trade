@@ -10,6 +10,9 @@ const set = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
 const script = join(dirname(fileURLToPath(import.meta.url)), 'index.js');
 
 function run(env, wait = 5000) {
+  // Contract addresses can be added later as a plain server variable MANAGERS_<chainId>, without a new KEEPER_SET
+  // (a new set would mean new keys, and a new KEY_SECRET that cannot open the rotated keys on disk).
+  env = { ...env, MANAGERS: env.MANAGERS || process.env[`MANAGERS_${env.CHAIN_ID}`] || '' };
   if (!env.MANAGERS) { console.log(`${env.KEEPER_ID}: no MANAGERS yet, idle`); return; }
   const started = Date.now();
   const child = spawn(process.execPath, [script], { env: { ...process.env, KEEPER_SET: '', ...env }, stdio: 'inherit' });

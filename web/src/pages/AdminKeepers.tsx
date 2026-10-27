@@ -5,13 +5,15 @@ import { api } from '../lib/api';
 // read from Robinhood Chain, and a Safe Transaction Builder file to top them up. Keepers balance among themselves;
 // the Safe only refills the pool. The portal never holds keys or sends money itself.
 
-interface Hb { rank: number | null; version: string; block: string; open: number | null; sent: number | null; landed: number | null; failed: number | null; p50ms: number | null; p95ms: number | null; at: number }
-interface Row { id: string; address: string; host: string; balanceWei: string | null; heartbeat: Hb | null; ageMs: number | null; status: 'up' | 'late' | 'down' | 'never' }
+interface Hb { rotating?: string | null; rank: number | null; version: string; block: string; open: number | null; sent: number | null; landed: number | null; failed: number | null; p50ms: number | null; p95ms: number | null; at: number }
+interface Row { id: string; address: string; host: string; chainId: number; since: string | null; previous: string | null; handoverTx: string | null; balanceWei: string | null; heartbeat: Hb | null; ageMs: number | null; status: 'up' | 'late' | 'down' | 'never' }
 interface Resp { keepers: Row[]; targetWei: string; lowWei: string; safe: string; chainId: number }
 
 const eth = (wei: string | null) => (wei == null ? '—' : (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(4));
 const ago = (ms: number | null) => (ms == null ? 'never' : ms < 60_000 ? `${Math.round(ms / 1000)} s ago` : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min ago` : `${Math.round(ms / 3_600_000)} h ago`);
 const STATUS = { up: 'Up', late: '● Late', down: 'Down', never: '○ No report' } as const;
+const short = (a: string) => `${a.slice(0, 8)}…${a.slice(-4)}`;
+const day = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 export function AdminKeepers() {
   const [data, setData] = useState<Resp | null>(null);
@@ -66,15 +68,19 @@ export function AdminKeepers() {
         {data && !rows.length && <p className="muted">No validators configured. Add them to KEEPERS on Railway (docs/KEEPERS.md).</p>}
         <div className="table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Validator</th><th>Status</th><th>Rank</th><th className="r">Gas (ETH)</th><th className="r">Watching</th><th className="r">Sent / landed / failed</th><th className="r">p50 / p95</th><th>Last report</th></tr></thead>
+            <thead><tr><th>Validator</th><th>Key</th><th>Status</th><th>Rank</th><th className="r">Gas (ETH)</th><th className="r">Watching</th><th className="r">Sent / landed / failed</th><th className="r">p50 / p95</th><th>Last report</th></tr></thead>
             <tbody>
-              {!data && !err && Array.from({ length: 4 }, (_, i) => <tr key={i} aria-hidden="true"><td colSpan={8}><span className="sk sk-w60" /></td></tr>)}
+              {!data && !err && Array.from({ length: 4 }, (_, i) => <tr key={i} aria-hidden="true"><td colSpan={9}><span className="sk sk-w60" /></td></tr>)}
               {rows.map((r) => {
                 const h = r.heartbeat;
                 const isLow = data && r.balanceWei != null && BigInt(r.balanceWei) < BigInt(data.lowWei);
                 return (
                   <tr key={r.id}>
-                    <td><b>{r.id}</b><small className="muted block num">{r.address.slice(0, 8)}…{r.address.slice(-4)}</small></td>
+                    <td><b>{r.id}</b><small className="muted block num">{short(r.address)}</small></td>
+                    <td className="num">
+                      {h?.rotating ? <span className="kp-late">Rotating → {short(h.rotating)}</span> : r.since ? `Since ${day(r.since)}` : 'First key'}
+                      {r.previous && <small className="muted block">Previous {short(r.previous)}</small>}
+                    </td>
                     <td className={'kp-' + r.status}>{STATUS[r.status]}</td>
                     <td className="num">{h?.rank ?? '—'}</td>
                     <td className={'num r' + (isLow ? ' down' : '')}>{eth(r.balanceWei)}</td>
