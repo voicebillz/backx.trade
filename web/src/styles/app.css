@@ -1698,3 +1698,50 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .wp-chain > div { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .wp-chain span:not(.chip) { font-size: 12px; color: var(--ink-3); }
 @media (max-width: 640px) { .wp-chains { grid-template-columns: 1fr; } }
+
+/* Admin → Pitch deck (owner 2026-10-27): 16:9 slides that scale with their frame (cqw), flat background. */
+.pitch { display: grid; gap: 14px; }
+.ps-frame { container-type: inline-size; width: 100%; }
+.ps-slide { aspect-ratio: 16 / 9; display: flex; flex-direction: column; padding: 4.5cqw 5.5cqw 3.5cqw; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg, 12px); color: var(--ink); overflow: hidden; }
+.ps-top { display: flex; align-items: center; gap: 1.2cqw; font-size: 1.5cqw; color: var(--brand-text); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+.ps-top svg { width: 2.4cqw; height: 2.4cqw; }
+.ps-slide h2 { font-size: 4.2cqw; line-height: 1.12; margin: 2.2cqw 0 2.6cqw; max-width: 80%; letter-spacing: -.01em; }
+.ps-slide.first { justify-content: center; }
+.ps-slide.first h2 { font-size: 5.6cqw; color: var(--brand-text); }
+.ps-body { flex: 1; min-height: 0; font-size: 1.9cqw; line-height: 1.45; color: var(--ink-2); }
+.ps-lead { font-size: 2.4cqw; max-width: 75%; margin: 0; }
+.ps-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2cqw; }
+.ps-box { border: 1px solid var(--line); background: var(--panel); border-radius: 1cqw; padding: 2.2cqw; }
+.ps-box h3 { font-size: 2.1cqw; margin: 0 0 1cqw; color: var(--ink); }
+.ps-box p { margin: 0; }
+.ps-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 1.3cqw; }
+.ps-list li { position: relative; padding-left: 2.6cqw; }
+.ps-list li::before { content: ""; position: absolute; left: 0; top: .6em; width: 1.2cqw; height: 2px; background: var(--brand); }
+.ps-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2cqw; margin-bottom: 2.6cqw; }
+.ps-stats div { display: grid; gap: .6cqw; border-top: 2px solid var(--brand); padding-top: 1.4cqw; }
+.ps-stats b { font-size: 4cqw; color: var(--ink); font-weight: 600; }
+.ps-stats span { font-size: 1.6cqw; }
+.ps-fine { font-size: 1.4cqw; color: var(--ink-3); }
+.ps-chains { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2cqw; }
+.ps-chains div { display: grid; justify-items: center; gap: 1.4cqw; border: 1px solid var(--line); background: var(--panel); border-radius: 1cqw; padding: 3cqw 1cqw; color: var(--ink); font-weight: 600; }
+.ps-chains img { width: 6cqw; height: 6cqw; border-radius: 50%; }
+.ps-road { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2cqw; }
+.ps-road li { display: grid; gap: 1cqw; border-top: 2px solid var(--line); padding-top: 1.6cqw; }
+.ps-road li:first-child { border-color: var(--brand); }
+.ps-road b { color: var(--ink); font-size: 2.2cqw; }
+.ps-foot { display: flex; justify-content: space-between; font-size: 1.3cqw; color: var(--ink-3); }
+.ps-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ps-nav .btn { min-width: 44px; min-height: 44px; }
+.ps-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 0; }
+.ps-dots button { width: 16px; height: 44px; position: relative; }
+.ps-dots button::after { content: ""; position: absolute; left: 4px; top: 19px; width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .15s ease-out; }
+.ps-dots button.on::after { background: var(--brand); }
+.pitch-print { display: none; }
+@media (max-width: 640px) { .ps-cols, .ps-chains, .ps-road { gap: 1.2cqw; } }
+@media print {
+  @page pitch { size: 338.67mm 190.5mm; margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-left { content: none; } @bottom-right { content: none; } }
+  body.pitch-printing #root { display: none !important; }
+  body.pitch-printing .pitch-print { display: block; }
+  .pitch-print .ps-frame { page: pitch; width: 338.67mm; break-after: page; }
+  .pitch-print .ps-slide { border: 0; border-radius: 0; width: 338.67mm; height: 190.5mm; aspect-ratio: auto; }
+}

@@ -286,7 +286,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   flash-crash sim results and launch targets; the owner removed the on-page footnote (2026-10-22), the Whitepaper carries the method. Old app paths on backx.trade redirect to app.backx.trade (vercel.json);
   app.backx.trade sends X-Robots-Tag noindex. `/api/venture/me` + `POST /api/venture/participate`: session required, own Redis
   limit, one row per account (`venture_participants`, primary key privy_did, idempotent). Admin page `/admin/participants`.
-- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts`, `/admin/participants`, `/admin/branding` and `/admin/keepers`, button on the profile page for admins.
+- Admin portal (owner 2026-10-19): `/admin` (Listed assets), `/admin/users`, `/admin/contracts`, `/admin/participants`, `/admin/branding`, `/admin/keepers` and `/admin/pitch` (investor pitch deck, 16:9 slides + Download PDF, owner 2026-10-27; the admin chunk is a public file, so no confidential numbers in it), button on the profile page for admins.
   Web: own lazy chunk, rendered only when `/api/auth/me` says admin; private pages get noindex. Server `/api/admin/*`:
   session + ADMIN_WALLETS or 404, own Redis rate limit (GET 120/min, writes 30/min), POST must be JSON, strict
   validation (Robinhood Chain 4663, addresses, fee tiers, max 20×, margin ≤ 5 %, logo only from CSP image hosts),
