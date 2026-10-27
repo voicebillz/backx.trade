@@ -5,15 +5,15 @@ import { Mark } from '../components/Logo';
 // Admin "Pitch deck" (owner 2026-10-27): investor deck, admins only (it lives in the admin chunk, which is still a
 // public file: never put confidential numbers here, add them in the PDF/email instead). One slide at a time on screen
 // (arrows, keys), "Present" goes full screen like PowerPoint (→ ← Enter Space PageUp/Down Home End, click = next,
-// Esc leaves), "PowerPoint" downloads a .pptx (one full-bleed 16:9 image per slide, opens in PowerPoint, Keynote and
+// Esc leaves), "PowerPoint" downloads a .pptx (one full-bleed 3840×2160 (4K) image per slide, opens in PowerPoint, Keynote and
 // Google Slides) and "PDF" prints every slide as its own 16:9 page in the current theme.
 // Style (owner 2026-10-27): one short, confident statement per slide and a picture that explains it; diagrams are
 // drawn here, screenshots live in web/public/pitch (retake them when the app changes). Copy rules as everywhere:
 // "Leverage" and "Long", never "zero risk", no yield promises.
 
 const CHAINS = [
-  ['Robinhood Chain', '/chains/robinhood.png'], ['BNB Chain', '/chains/bnb.png'],
-  ['Base', '/chains/base.svg'], ['Arbitrum', '/chains/arbitrum.png'],
+  ['Robinhood Chain', '/chains/robinhood.svg'], ['BNB Chain', '/chains/bnb.svg'],
+  ['Base', '/chains/base.svg'], ['Arbitrum', '/chains/arbitrum.svg'],
 ] as const;
 const CHAIN_LOGOS = CHAINS.map(([, l]) => l);
 const AI_LOGOS = ['/ai/claude.svg', '/ai/copilot.svg', '/ai/openai.svg'];
@@ -24,9 +24,6 @@ const I = ({ d, size = 1 }: { d: ReactNode; size?: number }) => (
   <svg viewBox="0 0 24 24" className="ps-i" style={{ width: `${3.8 * size}cqw`, height: `${3.8 * size}cqw` }} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 );
 const User = () => <I d={<><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></>} />;
-const Coins = () => <I d={<><ellipse cx="9" cy="7" rx="6" ry="3" /><path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7" /><path d="M9 15v2c0 1.7 2.7 3 6 3s6-1.3 6-3v-5c0-1.7-2.7-3-6-3" /></>} />;
-const Bolt = () => <I d={<path d="M13 2 4 14h7l-1 8 9-12h-7z" />} />;
-const Vault = () => <I d={<><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="12" cy="12" r="3.5" /><path d="M12 8.5V7M12 17v-1.5M15.5 12H17M7 12h1.5" /></>} />;
 const Lock = () => <I d={<><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>} />;
 const Pen = () => <I d={<><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></>} />;
 const Arrow = ({ dir = 'r' }: { dir?: 'r' | 'd' | 'lr' }) => (
@@ -174,9 +171,44 @@ function Roadmap() {
   );
 }
 
+/** Audit: a flat paper page with a seal. */
+const Paper = () => (
+  <svg viewBox="0 0 24 24" className="pd-paper" aria-hidden="true">
+    <path d="M6 2.5h8.5L19 7v13.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z" fill="currentColor" />
+    <path d="M14.5 2.5V7H19" fill="var(--raised)" />
+    {[10, 12.8, 15.6].map((y) => <rect key={y} x="7.6" y={y} width={y === 15.6 ? 5 : 8.8} height="1.3" rx=".6" fill="var(--raised)" />)}
+    <circle cx="15.6" cy="17.8" r="2.4" fill="var(--brand)" />
+    <path d="m14.6 17.8.8.8 1.4-1.5" fill="none" stroke="#0A0A0A" strokeWidth=".9" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** Oracle: a data store streaming live prices. */
+const Data = () => (
+  <svg viewBox="0 0 24 24" className="pd-nib" aria-hidden="true">
+    <ellipse cx="10" cy="5" rx="7" ry="2.6" fill="currentColor" />
+    <path d="M3 5v4.6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V5c0 1.4-3.1 2.6-7 2.6S3 6.4 3 5z" fill="currentColor" opacity=".8" />
+    <path d="M3 11v4.6c0 1.4 3.1 2.6 7 2.6.9 0 1.8-.1 2.6-.2V13c-.8.1-1.7.2-2.6.2-3.9 0-7-1.2-7-2.2z" fill="currentColor" opacity=".6" />
+    <path d="M14 17.5h2l1.4-3 2 6 1.4-3H23" fill="none" stroke="var(--up)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** Legal: a flat fountain-pen nib. */
+const Nib = () => (
+  <svg viewBox="0 0 24 24" className="pd-nib" aria-hidden="true">
+    <path d="M12 1.8 17.6 8.4c.5.6.6 1.4.3 2.1L13.4 21a1.5 1.5 0 0 1-2.8 0L6.1 10.5c-.3-.7-.2-1.5.3-2.1z" fill="currentColor" />
+    <circle cx="12" cy="10.6" r="1.6" fill="var(--raised)" />
+    <path d="M12 12.2v8" stroke="var(--raised)" strokeWidth="1.1" strokeLinecap="round" />
+    <rect x="9.2" y="0.6" width="5.6" height="2.2" rx=".8" fill="currentColor" opacity=".55" />
+  </svg>
+);
+
 function Uses() {
-  const items: [ReactNode, string][] = [[<Lock key="a" />, 'Audit'], [<Bolt key="b" />, 'Oracle'], [<Vault key="c" />, 'Validators'], [<Coins key="d" />, 'Liquidity'], [<Pen key="e" />, 'Legal']];
-  return <div className="pd-uses">{items.map(([icon, t]) => <div key={t}><span className="pd-ico gold">{icon}</span><b>{t}</b></div>)}</div>;
+  const items: [ReactNode, string][] = [
+    [<span key="a" className="pd-ico bank"><Paper /></span>, 'Audit'], [<span key="b" className="pd-ico bank"><Data /></span>, 'Oracle'],
+    [<Cluster key="c" logos={AI_LOGOS} />, 'Validators'], [<Cluster key="d" logos={CHAIN_LOGOS} />, 'Liquidity'],
+    [<span key="e" className="pd-ico bank"><Nib /></span>, 'Legal'],
+  ];
+  return <div className="pd-uses">{items.map(([icon, t]) => <div key={t}>{icon}<b>{t}</b></div>)}</div>;
 }
 
 // ---- Slides ----------------------------------------------------------------------------------------------------
@@ -225,7 +257,7 @@ async function savePptx(root: HTMLElement) {
   pptx.layout = 'LAYOUT_WIDE';
   pptx.title = 'BackX Pitch deck';
   for (const el of slides) {
-    const data = await toPng(el, { pixelRatio: 1.5, fontEmbedCSS });
+    const data = await toPng(el, { pixelRatio: 3, fontEmbedCSS });
     pptx.addSlide().addImage({ data, x: 0, y: 0, w: 13.333, h: 7.5 });
   }
   await pptx.writeFile({ fileName: 'BackX-pitch-deck.pptx' });
