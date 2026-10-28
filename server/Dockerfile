@@ -8,7 +8,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Retries ride out a flaky registry during the Railway build.
+RUN npm ci --omit=dev --ignore-scripts --fetch-retries=5 --fetch-retry-mintimeout=5000 && npm cache clean --force
 
 COPY src ./src
 
