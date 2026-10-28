@@ -71,7 +71,7 @@ export function HomePage() {
           <div className="h-hero-art"><CircuitHero /></div>
           <div className="h-hero-copy">
             <h1 id="hero-title"><Motto className="h-motto" /></h1>
-            <p className="h-sub">Go long or short with leverage, or issue capital that backs traders, on Robinhood Chain and 20+ chains.</p>
+            <p className="h-sub">Go long or short with leverage, or issue capital that backs traders.</p>
             <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
           </div>
         </section>
