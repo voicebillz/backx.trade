@@ -43,6 +43,8 @@ const signed = (n: number) => (n >= 0 ? '+' : '−') + usd(Math.abs(n));
 const pct = (f: number) => (f >= 0 ? '+' : '−') + Math.abs(f * 100).toFixed(1) + '%';
 // Quick picks as a return on the margin (owner 2026-10-25, like ROE): take profit up, stop loss down.
 const TP_STEPS = [25, 50, 100, 200];
+// A Short gains when the price falls and closes itself at its max profit (−50 to −80 %), so its quick picks are smaller.
+const TP_STEPS_SHORT = [5, 10, 25, 50];
 // Stop-loss quick picks as price changes: the four largest that still sit before liquidation (at 20× that is
 // about −1 % and −2 %; at low leverage −10 / −15 / −25 / −50 %).
 const SL_STEPS = [1, 2, 5, 10, 15, 25, 50];
@@ -111,10 +113,10 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
   const tpNum = parseFloat(tp);
   const hasTp = tpOn && tp !== '' && Number.isFinite(tpNum);
   const tpErr = !hasTp ? null
+    : !buy && tpNum < base * (1 - roof) ? `Max profit is reached at ${price(base * (1 - roof))} (−${Math.round(roof * 100)} %)`
     : tpNum <= 0 ? 'Enter a price above 0'
     : buy && tpNum <= base ? `Above ${price(base)}`
     : !buy && tpNum >= base ? `Below ${price(base)}`
-    : !buy && tpNum < base * (1 - roof) ? `Max profit is reached at ${price(base * (1 - roof))}`
     : null;
   const ratio = hasTp && !tpErr ? tpNum / base : null;
   const preview = ratio ? q.at(ratio * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
@@ -131,8 +133,12 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
     : buy && slNum >= base ? `Below ${price(base)}`
     : !buy && slNum <= base ? `Above ${price(base)}`
     : !q.noLiquidation && (buy ? slNum <= liqPriceOf() : slNum >= liqPriceOf()) ? `Liquidation comes first at ${price(liqPriceOf())}`
+    // A stop fills at most 1 % worse than its price (LIMIT_SLIP); past liquidation it would do nothing.
+    : !q.noLiquidation && (buy ? slNum * (1 - LIMIT_SLIP) <= liqPriceOf() : slNum * (1 + LIMIT_SLIP) >= liqPriceOf()) ? `Too close to liquidation at ${price(liqPriceOf())}: a stop can fill 1 % worse`
     : null;
   const slOut = hasSl && !slErr ? q.at((slNum / base) * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
+  // Stop-loss quick picks that still work: the stop plus its worst 1 % fill stays before liquidation.
+  const slSteps = SL_STEPS.filter((f) => (q.noLiquidation ? buy ? f < 100 : true : f / 100 + LIMIT_SLIP < q.liqMove)).slice(-4);
   function liqPriceOf() { return buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove); }
   const liqPrice = buy ? base * (1 - q.liqMove) : base * (1 + q.liqMove);
   const invalid = !(amount > 0) || tooBig || !!entryErr || !!tpErr || !!slErr;
@@ -231,7 +237,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
                 onChange={(e) => { const v = clean(e.target.value); setTp(v); setTpPct(v ? String(toPct(parseFloat(v), true)) : ''); }} /></div>
           </div>
           <div className="chips tpsl-chips" role="group" aria-label="Quick take profit">
-            {TP_STEPS.filter((f) => buy || f / 100 <= roof).map((f) => (
+            {(buy ? TP_STEPS : TP_STEPS_SHORT).filter((f) => buy || f / 100 <= roof).map((f) => (
               <button key={f} type="button" className={'chip-btn' + (tpPct === String(f) ? ' on' : '')} onClick={() => { setTpPct(String(f)); setTp(String(fromPct(f, true))); }}>{buy ? '+' : '−'}{f}%</button>
             ))}
           </div>
@@ -250,11 +256,11 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
               <input inputMode="decimal" className="num" placeholder="SL price" aria-label="Stop loss price" value={sl} aria-invalid={!!slErr}
                 onChange={(e) => { const v = clean(e.target.value); setSl(v); setSlPct(v ? String(toPct(parseFloat(v), false)) : ''); }} /></div>
           </div>
-          <div className="chips tpsl-chips sl" role="group" aria-label="Quick stop loss">
-            {SL_STEPS.filter((f) => (q.noLiquidation ? f < 100 || !buy : f / 100 < q.liqMove)).slice(-4).map((f) => (
+          {slSteps.length > 0 && <div className="chips tpsl-chips sl" role="group" aria-label="Quick stop loss">
+            {slSteps.map((f) => (
               <button key={f} type="button" className={'chip-btn' + (slPct === String(f) ? ' on' : '')} onClick={() => { setSlPct(String(f)); setSl(String(fromPct(f, false))); }}>{buy ? '−' : '+'}{f}%</button>
             ))}
-          </div>
+          </div>}
           {slErr ? <span className="field-err">{slErr}</span> : (
             <div className="tpsl-foot"><span>Potential loss <b className={'num' + (slOut ? ' down' : '')}>{slOut ? signed(slOut.trader) : '—'}</b></span>
               {sl && <button type="button" className="tpsl-clear" onClick={() => { setSl(''); setSlPct(''); }}>Clear</button>}</div>

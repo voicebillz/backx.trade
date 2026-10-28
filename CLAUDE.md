@@ -89,7 +89,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   Trade ticket (owner 2026-10-25): Long | Short flip at the top (UI says Long; contracts and docs keep "Hedge"), Buy | Sell
   tabs below, multiplication dial always on from 1× (`MultRoller`: values slide under a centre mark, drag/scroll/tap/keys;
   hidden only when the coin's cap is 1×), TP/SL switch (take profit and stop loss as a % change in PRICE from the open price or as a price, owner 2026-10-28: +100 % = price ×2; sign follows the price (Long TP +, Short TP −); the dollar result after fees and shares shows as Potential profit/loss; quick picks
-  +25/50/100/200 % and the four largest of −1/2/5/10/15/25/50 % that sit before liquidation, potential profit/loss, drawn on the chart as TP (--up) and SL (--warning)
+  +25/50/100/200 % (Short: −5/10/25/50 %, never past its max profit) and the four largest of 1/2/5/10/15/25/50 % whose stop plus the 1 % fill slip stays before liquidation (a stop that close says "Too close to liquidation"), potential profit/loss, drawn on the chart as TP (--up) and SL (--warning)
   lines next to Entry and Liq. (all four come from the ticket and start at the limit price when one is set, labelled
   "Limit"); the price scale stretches to keep every line in view; contracts `setStop(id, price)`, `stopValue`, filled by
   validators through executeLimit like a take-profit; ShortManager is ~24.1 KB, only ~0.5 KB left under EIP-170), "Limit order" switch (price required;
