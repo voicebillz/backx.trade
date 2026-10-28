@@ -49,7 +49,8 @@ const TP_STEPS_SHORT = [5, 10, 25, 50];
 // about −1 % and −2 %; at low leverage −10 / −15 / −25 / −50 %).
 const SL_STEPS = [1, 2, 5, 10, 15, 25, 50];
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
-const clean = (v: string) => v.replace(/[^0-9.]/g, '');
+// Digits and one decimal point; a comma counts as the point (Norwegian and most European keyboards type "2,5").
+const clean = (v: string) => { const t = v.replace(',', '.').replace(/[^0-9.]/g, ''); const i = t.indexOf('.'); return i < 0 ? t : t.slice(0, i + 1) + t.slice(i + 1).replace(/\./g, ''); };
 const coinAmt = (n: number) => (n >= 1000 ? n.toFixed(0) : n >= 1 ? n.toFixed(4) : n.toPrecision(4));
 
 /** A clean on/off switch: the knob carries a check when on. The whole row is the hit area. */
@@ -125,6 +126,13 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
   // The dollar result after fees and shares is shown below as "Potential profit / loss". Either field drives the other.
   const tpSign = buy ? 1 : -1;
   const fromPct = (pct: number, up: boolean) => roundPrice(base * (1 + (up ? tpSign : -tpSign) * pct / 100));
+  // Typed take-profit percent → price. A Short cannot gain past its max profit, so a larger number (e.g. 100 %, a
+  // price of 0) stops at the max-profit price instead of producing 0.
+  const tpFromPct = (v: string) => {
+    const n = parseFloat(v);
+    if (!Number.isFinite(n)) return '';
+    return String(fromPct(buy ? n : Math.min(n, roof * 100), true));
+  };
   const toPct = (p: number, up: boolean) => Math.round((p / base - 1) * (up ? tpSign : -tpSign) * 1000) / 10;
   const slNum = parseFloat(sl);
   const hasSl = tpOn && sl !== '' && Number.isFinite(slNum);
@@ -230,7 +238,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
           <div className="tpsl-inputs">
             <div className="input-wrap sm"><span className="prefix up">{buy ? '+' : '−'}</span>
               <input inputMode="decimal" className="num" placeholder="0" aria-label="Take profit, price change in percent" value={tpPct}
-                onChange={(e) => { const v = clean(e.target.value); setTpPct(v); setTp(v ? String(fromPct(parseFloat(v), true)) : ''); }} />
+                onChange={(e) => { const v = clean(e.target.value); const n = parseFloat(v); setTpPct(!buy && n > roof * 100 ? String(Math.round(roof * 100)) : v); setTp(tpFromPct(v)); }} />
               <span className="prefix unit">%</span></div>
             <div className="input-wrap sm"><span className="prefix">$</span>
               <input id={id + 'tp'} inputMode="decimal" className="num" placeholder="TP price" aria-label="Take profit price" value={tp} aria-invalid={!!tpErr}
@@ -250,7 +258,7 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
           <div className="tpsl-inputs">
             <div className="input-wrap sm"><span className="prefix down">{buy ? '−' : '+'}</span>
               <input inputMode="decimal" className="num" placeholder="0" aria-label="Stop loss, price change in percent" value={slPct}
-                onChange={(e) => { const v = clean(e.target.value); setSlPct(v); setSl(v ? String(fromPct(parseFloat(v), false)) : ''); }} />
+                onChange={(e) => { const v = clean(e.target.value); setSlPct(v); const n = parseFloat(v); setSl(Number.isFinite(n) ? String(fromPct(n, false)) : ''); }} />
               <span className="prefix unit">%</span></div>
             <div className="input-wrap sm"><span className="prefix">$</span>
               <input inputMode="decimal" className="num" placeholder="SL price" aria-label="Stop loss price" value={sl} aria-invalid={!!slErr}
