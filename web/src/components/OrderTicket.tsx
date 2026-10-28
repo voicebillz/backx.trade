@@ -43,7 +43,9 @@ const signed = (n: number) => (n >= 0 ? '+' : '−') + usd(Math.abs(n));
 const pct = (f: number) => (f >= 0 ? '+' : '−') + Math.abs(f * 100).toFixed(1) + '%';
 // Quick picks as a return on the margin (owner 2026-10-25, like ROE): take profit up, stop loss down.
 const TP_STEPS = [25, 50, 100, 200];
-const SL_STEPS = [10, 15, 25, 50];
+// Stop-loss quick picks as price changes: the four largest that still sit before liquidation (at 20× that is
+// about −1 % and −2 %; at low leverage −10 / −15 / −25 / −50 %).
+const SL_STEPS = [1, 2, 5, 10, 15, 25, 50];
 const roundPrice = (n: number) => parseFloat(n >= 1 ? n.toFixed(n >= 1000 ? 2 : 4) : n.toPrecision(4));
 const clean = (v: string) => v.replace(/[^0-9.]/g, '');
 const coinAmt = (n: number) => (n >= 1000 ? n.toFixed(0) : n >= 1 ? n.toFixed(4) : n.toPrecision(4));
@@ -116,35 +118,15 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
     : null;
   const ratio = hasTp && !tpErr ? tpNum / base : null;
   const preview = ratio ? q.at(ratio * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)) : null;
-  // Percent fields are the NET result on what you pay (owner 2026-10-28: "+300 %" must mean about +$300 on $100):
-  // after fees, gas, swap costs, the issuers' and platform's share of a gain and the 1 % fill slip, exactly what
-  // "Potential profit / loss" shows. Either field drives the other; price → % reads it off the quote, % → price
-  // finds the price by bisection (the result only moves one way with price on each side).
-  const mm = Math.max(1, Math.min(m, max));
-  const paid = q.paid > 0 ? q.paid : amount;
-  const netAt = (p: number) => q.at((p / base) * (buy ? 1 - LIMIT_SLIP : 1 + LIMIT_SLIP)).trader;
-  const fromPct = (pct: number, up: boolean) => {
-    const target = (up ? 1 : -1) * pct / 100 * paid;
-    // Search window: a take-profit from the open price outwards (a short stops at its max profit), a stop loss
-    // between the open price and liquidation.
-    const far = up ? (buy ? base * (1 + 20 / mm + 1) : base * (1 - roof)) : (q.noLiquidation ? base * (buy ? 0.0001 : 10) : liqPriceOf());
-    let lo = base, hi = far;
-    for (let i = 0; i < 60; i++) {
-      const mid = (lo + hi) / 2;
-      // Long: net rises with price. Short: net rises as price falls. Move toward the side that reaches the target.
-      const better = netAt(mid) >= target;
-      if (up === better) hi = mid; else lo = mid;
-    }
-    return roundPrice((lo + hi) / 2);
-  };
-  const toPct = (p: number, up: boolean) => Math.round((up ? 1 : -1) * netAt(p) / paid * 1000) / 10;
+  // Percent fields are the change in PRICE from where the position opens (owner 2026-10-28: +100 % = the price
+  // doubles). The sign follows the price: a Long's take-profit is +, its stop −; a Short's the other way round.
+  // The dollar result after fees and shares is shown below as "Potential profit / loss". Either field drives the other.
+  const tpSign = buy ? 1 : -1;
+  const fromPct = (pct: number, up: boolean) => roundPrice(base * (1 + (up ? tpSign : -tpSign) * pct / 100));
+  const toPct = (p: number, up: boolean) => Math.round((p / base - 1) * (up ? tpSign : -tpSign) * 1000) / 10;
   const slNum = parseFloat(sl);
   const hasSl = tpOn && sl !== '' && Number.isFinite(slNum);
-  // What a stop at the open price would already lose: fees, gas, swap costs and the worst 1 % fill. A stop loss
-  // in percent can never be smaller than this, so say so instead of pointing at the price.
-  const slFloor = Math.ceil(-netAt(base) / paid * 1000) / 10;
   const slErr = !hasSl ? null
-    : slPct !== '' && parseFloat(slPct) < slFloor ? `Costs alone are −${slFloor} %: pick at least that`
     : slNum <= 0 ? 'Enter a price above 0'
     : buy && slNum >= base ? `Below ${price(base)}`
     : !buy && slNum <= base ? `Above ${price(base)}`
@@ -240,8 +222,8 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
         <div className="tpsl">
           <span className="tpsl-label">Take profit</span>
           <div className="tpsl-inputs">
-            <div className="input-wrap sm"><span className="prefix up">+</span>
-              <input inputMode="decimal" className="num" placeholder="0" aria-label="Take profit, percent of what you pay" value={tpPct}
+            <div className="input-wrap sm"><span className="prefix up">{buy ? '+' : '−'}</span>
+              <input inputMode="decimal" className="num" placeholder="0" aria-label="Take profit, price change in percent" value={tpPct}
                 onChange={(e) => { const v = clean(e.target.value); setTpPct(v); setTp(v ? String(fromPct(parseFloat(v), true)) : ''); }} />
               <span className="prefix unit">%</span></div>
             <div className="input-wrap sm"><span className="prefix">$</span>
@@ -249,8 +231,8 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
                 onChange={(e) => { const v = clean(e.target.value); setTp(v); setTpPct(v ? String(toPct(parseFloat(v), true)) : ''); }} /></div>
           </div>
           <div className="chips tpsl-chips" role="group" aria-label="Quick take profit">
-            {TP_STEPS.filter((f) => buy || netAt(base * (1 - roof)) / paid * 100 >= f).map((f) => (
-              <button key={f} type="button" className={'chip-btn' + (tpPct === String(f) ? ' on' : '')} onClick={() => { setTpPct(String(f)); setTp(String(fromPct(f, true))); }}>+{f}%</button>
+            {TP_STEPS.filter((f) => buy || f / 100 <= roof).map((f) => (
+              <button key={f} type="button" className={'chip-btn' + (tpPct === String(f) ? ' on' : '')} onClick={() => { setTpPct(String(f)); setTp(String(fromPct(f, true))); }}>{buy ? '+' : '−'}{f}%</button>
             ))}
           </div>
           {tpErr ? <span className="field-err">{tpErr}</span> : (
@@ -260,8 +242,8 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
 
           <span className="tpsl-label">Stop loss</span>
           <div className="tpsl-inputs">
-            <div className="input-wrap sm"><span className="prefix down">−</span>
-              <input inputMode="decimal" className="num" placeholder="0" aria-label="Stop loss, percent of what you pay" value={slPct}
+            <div className="input-wrap sm"><span className="prefix down">{buy ? '−' : '+'}</span>
+              <input inputMode="decimal" className="num" placeholder="0" aria-label="Stop loss, price change in percent" value={slPct}
                 onChange={(e) => { const v = clean(e.target.value); setSlPct(v); setSl(v ? String(fromPct(parseFloat(v), false)) : ''); }} />
               <span className="prefix unit">%</span></div>
             <div className="input-wrap sm"><span className="prefix">$</span>
@@ -269,8 +251,8 @@ export function OrderTicket({ market, usdc, side, onSide, action, onAction, onLi
                 onChange={(e) => { const v = clean(e.target.value); setSl(v); setSlPct(v ? String(toPct(parseFloat(v), false)) : ''); }} /></div>
           </div>
           <div className="chips tpsl-chips sl" role="group" aria-label="Quick stop loss">
-            {SL_STEPS.filter((f) => f >= slFloor && (q.noLiquidation || -netAt(liqPriceOf()) / paid * 100 > f)).map((f) => (
-              <button key={f} type="button" className={'chip-btn' + (slPct === String(f) ? ' on' : '')} onClick={() => { setSlPct(String(f)); setSl(String(fromPct(f, false))); }}>−{f}%</button>
+            {SL_STEPS.filter((f) => (q.noLiquidation ? f < 100 || !buy : f / 100 < q.liqMove)).slice(-4).map((f) => (
+              <button key={f} type="button" className={'chip-btn' + (slPct === String(f) ? ' on' : '')} onClick={() => { setSlPct(String(f)); setSl(String(fromPct(f, false))); }}>{buy ? '−' : '+'}{f}%</button>
             ))}
           </div>
           {slErr ? <span className="field-err">{slErr}</span> : (
