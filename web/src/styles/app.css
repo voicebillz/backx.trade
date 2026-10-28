@@ -1849,7 +1849,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .mm-table-wrap { overflow-x: auto; margin: 8px 0 16px; }
 .mm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .mm-table th { text-align: left; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--line); padding: 8px 10px; vertical-align: bottom; }
-.mm-table td { border-bottom: 1px solid var(--line); padding: 8px 10px; color: var(--ink-2); vertical-align: top; }
+.mm-table td { border-bottom: 1px solid var(--line); padding: 8px 10px; color: var(--ink-2); vertical-align: top; white-space: normal; }
 .mm-table td:first-child { color: var(--ink); font-weight: 500; }
 .mm-fig { margin: 12px 0 20px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .mm-fig figcaption { font-weight: 600; font-size: 14px; margin-bottom: 12px; }
@@ -1899,4 +1899,13 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .memo-print h2 { break-after: avoid; }
   .memo-print .mm-fig, .memo-print .mm-table, .memo-print .mm-stats, .memo-print .mm-flow { break-inside: avoid; }
   .memo-print .mm-table-wrap { overflow: visible; }
+}
+/* Admin → Investors (owner 2026-10-28) */
+.inv-plan { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); }
+.inv-plan b { color: var(--ink); }
+.inv-table td { vertical-align: top; font-size: 13px; min-width: 120px; white-space: normal; }
+.inv-table td:first-child { min-width: 170px; }
+@media print {
+  .memo-print .mm-table { table-layout: fixed; font-size: 8pt; }
+  .memo-print .mm-table th, .memo-print .mm-table td { padding: 4pt 5pt; overflow-wrap: anywhere; }
 }

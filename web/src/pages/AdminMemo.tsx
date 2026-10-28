@@ -96,7 +96,7 @@ function Memo() {
 
       <section>
         <h2>2. The problem</h2>
-        <p>Leverage is the largest market in crypto, and it still runs on two flawed models.</p>
+        <p>Leverage is the largest market in crypto, and it still runs on three flawed models.</p>
         <Table head={['Model', 'Who takes the other side', 'The flaw']} rows={[
           ['Centralised exchanges', 'The exchange', 'Custody of user funds, opaque liquidations, accounts and API keys that agents cannot hold.'],
           ['On-chain perp DEXs', 'A shared vault or market makers', 'Vault depositors carry trader PnL; liquidations lag in fast crashes; deep books need professional market makers.'],
@@ -174,7 +174,7 @@ function Memo() {
 
       <section>
         <h2>6. Competitive landscape</h2>
-        <Table head={['', 'BackX', 'Perp DEX vault (e.g. GMX)', 'Order-book perp DEX (e.g. Hyperliquid)', 'AMM (e.g. Uniswap)', 'Lending (e.g. Aave)']} rows={[
+        <Table head={['', 'BackX', 'Perp vault (GMX)', 'Order book (Hyperliquid)', 'AMM (Uniswap)', 'Lending (Aave)']} rows={[
           ['Who backs the trade', 'Issuers, as lenders', 'Vault LPs, as counterparty', 'Market makers', 'Passive LPs', 'Lenders'],
           ['Capital at risk from trader PnL', 'No: principal first', 'Yes', 'Market makers', 'Yes (LVR, IL)', 'No'],
           ['Leverage in one step', 'Yes, up to 20×', 'Yes', 'Yes', 'No', 'No (loop manually)'],
