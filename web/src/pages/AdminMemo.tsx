@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Mark } from '../components/Logo';
+import { PublicLink } from './AdminPitch';
 import { VENUES_SEP_2026, PERP_SHARE, PERP_DEX_SPLIT, SPOT_DEX_SPLIT, CAPITAL, YEAR_2025, LP_LOSS } from '../lib/memoData';
 
 // Admin "Investor memo" (owner 2026-10-28): the long-form document for VCs, in English, under the pitch deck.
@@ -71,7 +72,7 @@ function Memo() {
     <article className="mm-doc">
       <header className="mm-cover">
         <p className="mm-kicker"><Mark size={22} />backx.trade</p>
-        <h1>Investor memo</h1>
+        <h1>Pitch whitepaper</h1>
         <p className="mm-lead">Open, on-chain leverage trading where every position is backed by real capital, settled by anyone, and usable by people and AI agents alike.</p>
         <p className="mm-date">{DATE} · Seed round</p>
       </header>
@@ -265,13 +266,13 @@ function Memo() {
   );
 }
 
-export function AdminMemo() {
+export function AdminMemo({ isPublic = false }: { isPublic?: boolean }) {
   const [printing, setPrinting] = useState(false);
   useEffect(() => {
     if (!printing) return;
     document.body.classList.add('memo-printing');
     const title = document.title;
-    document.title = 'BackX Investor memo';
+    document.title = 'BackX Pitch whitepaper';
     const done = () => { document.body.classList.remove('memo-printing'); document.title = title; setPrinting(false); };
     addEventListener('afterprint', done, { once: true });
     print();
@@ -280,9 +281,10 @@ export function AdminMemo() {
   return (
     <section className="card memo">
       <div className="row-between">
-        <h2>Investor memo</h2>
+        {isPublic ? <span /> : <h2>Pitch whitepaper</h2>}
         <button className="btn btn-primary" onClick={() => setPrinting(true)}>Download PDF</button>
       </div>
+      {!isPublic && <PublicLink view="whitepaper" />}
       <Memo />
       {printing && createPortal(<div className="memo-print"><Memo /></div>, document.body)}
     </section>

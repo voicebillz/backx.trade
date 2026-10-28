@@ -260,7 +260,22 @@ async function savePptx(root: HTMLElement) {
   await pptx.writeFile({ fileName: 'BackX-pitch-deck.pptx' });
 }
 
-export function AdminPitch() {
+/** The public address investors get (owner 2026-10-28: Base asked for a link): www.backx.trade/pitch, with the deck
+ *  and the pitch whitepaper (investor memo) as two tabs. Shown with a copy button on both admin pages. */
+export const PITCH_URL = 'https://www.backx.trade/pitch';
+export function PublicLink({ view }: { view?: 'whitepaper' }) {
+  const url = view ? `${PITCH_URL}?view=${view}` : PITCH_URL;
+  const [done, setDone] = useState(false);
+  return (
+    <div className="pitch-link">
+      <span className="muted">Public link</span>
+      <a className="num" href={url} target="_blank" rel="noopener noreferrer">{url.replace('https://', '')}</a>
+      <button className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(url).then(() => { setDone(true); setTimeout(() => setDone(false), 1500); })}>{done ? 'Copied' : 'Copy'}</button>
+    </div>
+  );
+}
+
+export function AdminPitch({ isPublic = false }: { isPublic?: boolean }) {
   const [i, setI] = useState(0);
   const [printing, setPrinting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -321,13 +336,14 @@ export function AdminPitch() {
   return (
     <section className="card pitch">
       <div className="row-between pitch-head">
-        <h2>Pitch deck</h2>
+        {isPublic ? <span /> : <h2>Pitch deck</h2>}
         <div className="pitch-actions">
           <button className="btn btn-primary" onClick={present}>Present</button>
           <button className="btn" onClick={() => setExporting(true)} disabled={exporting} aria-busy={exporting}>{exporting ? 'Saving…' : 'PowerPoint'}</button>
           <button className="btn" onClick={() => setPrinting(true)}>PDF</button>
         </div>
       </div>
+      {!isPublic && <PublicLink />}
       {failed && <p className="warn" role="alert">Could not make the PowerPoint file. Try again.</p>}
       <div ref={stage} className={'pitch-stage' + (full ? ' full' : '')} onClick={full ? next : undefined}>
         <SlideView s={SLIDES[i]} i={i} />

@@ -26,7 +26,9 @@ function pageHeads(): Plugin {
           .replace(/(<meta property="og:title" content=")[^"]*"/, `$1${t}"`)
           .replace(/(<meta property="og:description" content=")[^"]*"/, `$1${d}"`)
           .replace(/(<meta name="twitter:title" content=")[^"]*"/, `$1${t}"`)
-          .replace(/(<meta name="twitter:description" content=")[^"]*"/, `$1${d}"`);
+          .replace(/(<meta name="twitter:description" content=")[^"]*"/, `$1${d}"`)
+          // Unlisted pages (the investor pitch): shareable link, never in search.
+          .replace('</head>', p.indexed ? '</head>' : '<meta name="robots" content="noindex, nofollow">\n</head>');
         writeFileSync(join(outDir, p.file!), html);
       }
     },

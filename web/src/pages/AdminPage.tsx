@@ -98,7 +98,7 @@ export default function AdminPage({ route }: { route: Route }) {
       <header className="page-head">
         <div>
           <p className="eyebrow gold">Admin portal</p>
-          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : route === 'adminKeepers' ? 'Validators' : route === 'adminPitch' ? 'Pitch deck' : route === 'adminMemo' ? 'Investor memo' : route === 'adminInvestors' ? 'Investors' : 'Listed assets'}</h1>
+          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : route === 'adminKeepers' ? 'Validators' : route === 'adminPitch' ? 'Pitch deck' : route === 'adminMemo' ? 'Pitch whitepaper' : route === 'adminInvestors' ? 'Investors' : 'Listed assets'}</h1>
         </div>
       </header>
       <div className="admin-grid">
@@ -110,7 +110,7 @@ export default function AdminPage({ route }: { route: Route }) {
           <a href={href('adminParticipants')} onClick={go('adminParticipants')} className={route === 'adminParticipants' ? 'active' : ''} aria-current={route === 'adminParticipants' ? 'page' : undefined}>Participants</a>
           <a href={href('adminBranding')} onClick={go('adminBranding')} className={route === 'adminBranding' ? 'active' : ''} aria-current={route === 'adminBranding' ? 'page' : undefined}>Branding</a>
           <a href={href('adminPitch')} onClick={go('adminPitch')} className={route === 'adminPitch' ? 'active' : ''} aria-current={route === 'adminPitch' ? 'page' : undefined}>Pitch deck</a>
-          <a href={href('adminMemo')} onClick={go('adminMemo')} className={route === 'adminMemo' ? 'active' : ''} aria-current={route === 'adminMemo' ? 'page' : undefined}>Investor memo</a>
+          <a href={href('adminMemo')} onClick={go('adminMemo')} className={route === 'adminMemo' ? 'active' : ''} aria-current={route === 'adminMemo' ? 'page' : undefined}>Pitch whitepaper</a>
           <a href={href('adminInvestors')} onClick={go('adminInvestors')} className={route === 'adminInvestors' ? 'active' : ''} aria-current={route === 'adminInvestors' ? 'page' : undefined}>Investors</a>
           <a href={href('profile')} onClick={go('profile')}>← Back to profile</a>
         </nav>

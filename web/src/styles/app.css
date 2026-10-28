@@ -1891,7 +1891,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .mm-cover h1 { font-size: 34px; }
 }
 @media print {
-  @page memo { size: A4; margin: 16mm 15mm 16mm; @top-right { content: "Investor memo"; } }
+  @page memo { size: A4; margin: 16mm 15mm 16mm; @top-right { content: "Pitch whitepaper"; } }
   body.memo-printing #root { display: none !important; }
   body.memo-printing .memo-print { display: block; page: memo; }
   .memo-print .mm-doc { max-width: none; font-size: 10.5pt; }
@@ -1911,3 +1911,13 @@ html:root { --privy-color-icon-muted: var(--brand); }
 }
 .inv-reach { display: grid; gap: 4px; justify-items: start; min-width: 150px; }
 .inv-reach a:not(.btn) { font-size: 12px; overflow-wrap: anywhere; }
+/* Public investor page www.backx.trade/pitch (owner 2026-10-28) and its link in the admin portal */
+.pitch-site { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+.pitch-site .card { border: 0; background: transparent; padding: 0; }
+.pitch-tabs { justify-self: center; }
+.pitch-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; }
+.pitch-link a { overflow-wrap: anywhere; }
+.memo, .pitch { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.pitch-site > * { min-width: 0; }
+@media (max-width: 640px) { .pitch-tabs button { padding: 0 10px; font-size: 13px; } }
+.mm-doc { min-width: 0; width: 100%; max-width: min(820px, 100%); } .mm-doc section, .mm-doc .mm-fig { min-width: 0; }

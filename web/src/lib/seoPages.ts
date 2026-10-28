@@ -35,6 +35,11 @@ export const SEO_PAGES: SeoPage[] = [
     description: 'Connect Claude, ChatGPT, Cursor or any MCP agent to your own BackX account: it reads your positions and rewards and prepares trades, staking and Claim all. You sign every transaction.',
   },
   {
+    path: '/pitch', file: 'pitch.html', indexed: false, image: OG_IMAGE,
+    title: 'Pitch · BackX',
+    description: 'BackX pitch deck and pitch whitepaper: open, on-chain leverage trading backed by real capital, built for people and AI agents.',
+  },
+  {
     path: '/terms', file: null, indexed: true, image: OG_IMAGE,
     title: 'Terms of Service · backx.trade',
     description: 'Terms of Service for backx.trade, the Hedge & Issuer trading platform on Robinhood Chain operated by GAZZFUN LLC.',
