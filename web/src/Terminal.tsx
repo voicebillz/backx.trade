@@ -25,9 +25,9 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const TITLES: Record<string, string> = {
   trade: 'backx.trade · Hedge & Issuer Trading on Robinhood Chain', issue: 'Issue · backx.trade', stake: 'Staking · backx.trade', swap: 'Swap portal · backx.trade', whitepaper: 'Whitepaper · backx.trade',
   profile: 'Profile · backx.trade', security: 'Security · backx.trade', wallet: 'Wallet · backx.trade', documents: 'Documents · backx.trade',
-  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts', adminBranding: 'Admin · Branding', adminKeepers: 'Admin · Validators', adminPitch: 'Admin · Pitch deck',
+  admin: 'Admin · Listed assets', adminUsers: 'Admin · Users', adminParticipants: 'Admin · Participants', adminContracts: 'Admin · Contracts', adminBranding: 'Admin · Branding', adminKeepers: 'Admin · Validators', adminPitch: 'Admin · Pitch deck', adminMemo: 'Admin · Investor memo', adminInvestors: 'Admin · Investors',
 };
-const PRIVATE = new Set(['profile', 'security', 'wallet', 'stake', 'agents', 'documents', 'admin', 'adminUsers', 'adminParticipants', 'adminContracts', 'adminBranding', 'adminKeepers', 'adminPitch']);
+const PRIVATE = new Set(['profile', 'security', 'wallet', 'stake', 'agents', 'documents', 'admin', 'adminUsers', 'adminParticipants', 'adminContracts', 'adminBranding', 'adminKeepers', 'adminPitch', 'adminMemo', 'adminInvestors']);
 
 /** Per-page title, and noindex on private pages (vercel.json also sends X-Robots-Tag there). */
 function usePageMeta(route: string) {
@@ -95,7 +95,7 @@ export default function Terminal() {
       {route === 'whitepaper' && <WhitepaperPage />}
       {route === 'swap' && <SwapPage onDone={() => setTimeout(balances.refresh, 4000)} />}
       {(route === 'profile' || route === 'security' || route === 'wallet' || route === 'stake' || route === 'agents' || route === 'documents') && <ProfilePage route={route} balances={balances} />}
-      {(route === 'admin' || route === 'adminUsers' || route === 'adminParticipants' || route === 'adminContracts' || route === 'adminBranding' || route === 'adminKeepers' || route === 'adminPitch') && (me?.isAdmin
+      {(route === 'admin' || route === 'adminUsers' || route === 'adminParticipants' || route === 'adminContracts' || route === 'adminBranding' || route === 'adminKeepers' || route === 'adminPitch' || route === 'adminMemo' || route === 'adminInvestors') && (me?.isAdmin
         ? <Suspense fallback={<main id="main" className="page" aria-busy="true"><div className="card"><span className="sk sk-w60" /></div></main>}><AdminPage route={route} /></Suspense>
         : <main id="main" className="page"><h1>Page not found</h1><p className="muted"><a href="/">Back to trading</a></p></main>)}
     </div>

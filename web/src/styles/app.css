@@ -1827,3 +1827,76 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pd-uses > div > :first-child { width: 7.6cqw; height: 7.6cqw; }
 .pd-paper { width: 5.2cqw; height: 5.2cqw; }
 .pd-nib { width: 4.6cqw; height: 4.6cqw; }
+
+/* Admin → Investor memo (owner 2026-10-28): the long-form VC document. Reads like the whitepaper; one accent per
+   chart (the point being made), neutral grey for the rest, every bar labelled. Prints on A4 as its own document. */
+.memo { display: grid; gap: 16px; }
+.mm-doc { max-width: 820px; margin: 0 auto; color: var(--ink); font-size: 15px; line-height: 1.6; }
+.mm-doc section { margin-top: 36px; }
+.mm-doc h2 { font-size: 22px; margin: 0 0 12px; letter-spacing: -.01em; }
+.mm-doc p { margin: 0 0 12px; color: var(--ink-2); }
+.mm-cover { padding: 40px 0 24px; border-bottom: 1px solid var(--line); }
+.mm-kicker { display: flex; align-items: center; gap: 10px; color: var(--brand-text) !important; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+.mm-cover h1 { font-size: 44px; margin: 12px 0; letter-spacing: -.02em; }
+.mm-lead { font-size: 19px; color: var(--ink) !important; max-width: 640px; }
+.mm-date { font-size: 13px; color: var(--ink-3) !important; }
+.mm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 8px 0 16px; }
+.mm-stat { display: grid; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.mm-stat b { font-size: 26px; color: var(--brand-text); font-weight: 600; }
+.mm-stat span { font-size: 12px; color: var(--ink-3); }
+.mm-points { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); }
+.mm-points b { color: var(--ink); }
+.mm-table-wrap { overflow-x: auto; margin: 8px 0 16px; }
+.mm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mm-table th { text-align: left; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--line); padding: 8px 10px; vertical-align: bottom; }
+.mm-table td { border-bottom: 1px solid var(--line); padding: 8px 10px; color: var(--ink-2); vertical-align: top; }
+.mm-table td:first-child { color: var(--ink); font-weight: 500; }
+.mm-fig { margin: 12px 0 20px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.mm-fig figcaption { font-weight: 600; font-size: 14px; margin-bottom: 12px; }
+.mm-src { font-size: 11px !important; color: var(--ink-3) !important; margin: 10px 0 0 !important; }
+.mm-note { font-size: 13px !important; margin: 10px 0 0 !important; }
+.mm-hbars { display: grid; gap: 8px; }
+.mm-hbar { display: grid; grid-template-columns: minmax(120px, 34%) 1fr auto; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-2); }
+.mm-track { height: 14px; background: var(--raised); border-radius: 4px; overflow: hidden; }
+.mm-track i { display: block; height: 100%; background: var(--ink-3); border-radius: 0 4px 4px 0; }
+.mm-hbar.hi .mm-track i { background: var(--brand); }
+.mm-hbar.hi span:first-child { color: var(--ink); font-weight: 600; }
+.mm-hbar b { color: var(--ink); font-weight: 600; min-width: 64px; text-align: right; }
+.mm-split-bar { display: flex; gap: 2px; height: 28px; border-radius: 6px; overflow: hidden; }
+.mm-split-bar i { background: var(--ink-3); }
+.mm-split-bar i:nth-child(odd):not(.hi) { background: var(--ink-2); }
+.mm-split-bar i.hi { background: var(--brand); }
+.mm-split-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+.mm-split-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.mm-split-legend i { width: 10px; height: 10px; border-radius: 2px; background: var(--ink-3); }
+.mm-split-legend span:nth-child(odd):not(.hi) i { background: var(--ink-2); }
+.mm-split-legend span.hi i { background: var(--brand); }
+.mm-split-legend b { color: var(--ink); }
+.mm-long { display: flex; gap: 3px; height: 56px; border-radius: 8px; overflow: hidden; }
+.mm-long div { display: grid; align-content: center; padding: 0 12px; }
+.mm-long b { font-size: 16px; } .mm-long span { font-size: 11px; }
+.mm-long .you { background: var(--brand); color: #0A0A0A; min-width: 90px; }
+.mm-long .lent { background: var(--raised); border: 1px solid var(--line); border-radius: 0 8px 8px 0; }
+.mm-flow { display: flex; align-items: stretch; gap: 10px; margin: 8px 0 16px; }
+.mm-flow > div { flex: 1; display: grid; gap: 4px; align-content: center; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); text-align: center; }
+.mm-flow > div.core { border-color: var(--brand); }
+.mm-flow b { font-size: 15px; } .mm-flow span { font-size: 12px; color: var(--ink-3); }
+.mm-flow > i { align-self: center; color: var(--ink-3); font-style: normal; font-size: 20px; }
+.mm-fine { font-size: 12px !important; color: var(--ink-3) !important; margin-top: 16px !important; }
+.memo-print { display: none; }
+@media (max-width: 640px) {
+  .mm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mm-flow { flex-direction: column; } .mm-flow > i { transform: rotate(90deg); }
+  .mm-hbar { grid-template-columns: 1fr auto; } .mm-hbar .mm-track { grid-column: 1 / -1; grid-row: 2; }
+  .mm-cover h1 { font-size: 34px; }
+}
+@media print {
+  @page memo { size: A4; margin: 16mm 15mm 16mm; @top-right { content: "Investor memo"; } }
+  body.memo-printing #root { display: none !important; }
+  body.memo-printing .memo-print { display: block; page: memo; }
+  .memo-print .mm-doc { max-width: none; font-size: 10.5pt; }
+  .memo-print .mm-doc section { break-inside: auto; margin-top: 18pt; }
+  .memo-print h2 { break-after: avoid; }
+  .memo-print .mm-fig, .memo-print .mm-table, .memo-print .mm-stats, .memo-print .mm-flow { break-inside: avoid; }
+  .memo-print .mm-table-wrap { overflow: visible; }
+}
