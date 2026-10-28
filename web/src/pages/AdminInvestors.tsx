@@ -42,6 +42,8 @@ export function AdminInvestors() {
           <li><b>Lead:</b> Variant, Dragonfly, Haun, Archetype or Lightspeed Faction. One leads the seed and follows into the Series A.</li>
           <li><b>Anchor co-investor:</b> Coinbase Ventures (Base, agents, signal). It rarely leads alone.</li>
           <li><b>Before the meetings:</b> apply to the Arbitrum Security Program for the audit; an audit date answers the first diligence question.</li>
+          <li><b>Deadlines:</b> Y Combinator Winter 2027 on 2 Nov (8 pm PT, the only route to Robinhood's fund); Alliance DAO ALL19 on 18 Nov.</li>
+          <li><b>No form?</b> Ask for a warm intro (Privy for Archetype, Arbitrum/Offchain Labs for Robinhood Chain) or DM on X.</li>
         </ol>
       </section>
       {ORDER.map((t) => {
