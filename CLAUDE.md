@@ -88,7 +88,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   DEX pool (PancakeSwap Infinity / Uniswap v4, price range). "Your rewards" card (claimable USDC; Claim opens at launch).
   Trade ticket (owner 2026-10-25): Long | Short flip at the top (UI says Long; contracts and docs keep "Hedge"), Buy | Sell
   tabs below, multiplication dial always on from 1× (`MultRoller`: values slide under a centre mark, drag/scroll/tap/keys;
-  hidden only when the coin's cap is 1×), TP/SL switch (take profit and stop loss as % on the margin or a price, quick picks
+  hidden only when the coin's cap is 1×), TP/SL switch (take profit and stop loss as % or a price; the % is the NET result on what the trader pays, after fees, gas, swap costs, gain shares and the 1 % fill slip, so +300 % on $100 = +$300 (owner 2026-10-28), found by bisection on the quote; a stop below what costs alone lose shows "Costs alone are −X %", quick picks
   +25/50/100/200 % and −10/15/25/50 %, potential profit/loss, drawn on the chart as TP (--up) and SL (--warning)
   lines next to Entry and Liq. (all four come from the ticket and start at the limit price when one is set, labelled
   "Limit"); the price scale stretches to keep every line in view; contracts `setStop(id, price)`, `stopValue`, filled by
