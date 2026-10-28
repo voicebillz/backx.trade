@@ -4,6 +4,10 @@
 
 export type Tier = 'lead' | 'strategic' | 'co' | 'program' | 'dropped';
 export interface Investor { name: string; url: string; type: string; stage: string; leads: string; recent: string; fit: string; tier: Tier; note?: string }
+/** How to reach a firm (owner 2026-10-28): the official pitch/apply form, a published founder email, the X handle,
+ *  and a short "how" (e.g. warm intro only). Only what the firm publishes itself; never guessed emails. */
+export interface Contact { apply?: string; email?: string; x?: string; how?: string }
+export const CONTACT: Record<string, Contact> = {};
 
 export const INVESTORS: Investor[] = [
   // Lead candidates, in order

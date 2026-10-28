@@ -1909,3 +1909,5 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .memo-print .mm-table { table-layout: fixed; font-size: 8pt; }
   .memo-print .mm-table th, .memo-print .mm-table td { padding: 4pt 5pt; overflow-wrap: anywhere; }
 }
+.inv-reach { display: grid; gap: 4px; justify-items: start; min-width: 150px; }
+.inv-reach a:not(.btn) { font-size: 12px; overflow-wrap: anywhere; }
