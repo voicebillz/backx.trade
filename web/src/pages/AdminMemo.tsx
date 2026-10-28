@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Mark } from '../components/Logo';
-import { MARKET, AMM } from '../lib/memoData';
+import { VENUES_SEP_2026, PERP_SHARE, PERP_DEX_SPLIT, SPOT_DEX_SPLIT, CAPITAL, YEAR_2025, LP_LOSS } from '../lib/memoData';
 
 // Admin "Investor memo" (owner 2026-10-28): the long-form document for VCs, in English, under the pitch deck.
 // Everything a fund asks in diligence: what BackX is, how a trade works, who earns what, the market next to DEXs and
@@ -160,8 +160,16 @@ function Memo() {
 
       <section>
         <h2>5. The market</h2>
-        {MARKET.intro}
-        {MARKET.figures}
+        <p>Leverage is the largest market in crypto, and it is moving on-chain. Derivatives are about 3.5× the size of spot on centralised exchanges, yet perp DEXs still hold only about 12–14 % of perpetual volume.</p>
+        <div className="mm-stats">{YEAR_2025.map((s) => <Stat key={s.l} v={s.v} l={s.l} />)}</div>
+        <Fig title="Monthly volume by venue, September 2026" source={VENUES_SEP_2026.source}><HBars rows={VENUES_SEP_2026.rows} /></Fig>
+        <Fig title="Perp DEX share of all perpetual volume" source={PERP_SHARE.source}><HBars rows={PERP_SHARE.rows} /></Fig>
+        <p>The on-chain leverage market is young and concentrated: one venue does about four in ten dollars, and a long tail competes on incentives. Much of that volume relies on market makers or a shared vault taking the other side.</p>
+        <Fig title="Perp DEX volume share, 27 October 2026" source={PERP_DEX_SPLIT.source}><HBars unit=" %" rows={PERP_DEX_SPLIT.rows} /></Fig>
+        <Fig title="Spot DEX volume share, last 30 days" source={SPOT_DEX_SPLIT.source}><HBars unit=" %" rows={SPOT_DEX_SPLIT.rows} /></Fig>
+        <p>Capital already votes for lending over liquidity provision: four dollars sit in DeFi lending for every dollar in AMM pools. BackX issuers are lenders with principal-first repayment, so BackX draws on the larger pool.</p>
+        <Fig title="Where DeFi capital sits" source={CAPITAL.source}><HBars rows={CAPITAL.rows} /></Fig>
+        <p><b>Robinhood Chain</b>, one of our launch chains, opened its mainnet on 1 July 2026 (Arbitrum Orbit) and passed $1.1B in TVL within four months (DefiLlama), with few native leverage products yet.</p>
       </section>
 
       <section>
@@ -179,7 +187,15 @@ function Memo() {
 
       <section>
         <h2>7. Why AMM liquidity is a weak foundation</h2>
-        {AMM.body}
+        <p>An AMM liquidity provider quotes a price to anyone, at any time. Every time the market moves, the first trader to correct that stale price takes the difference out of the pool. That cost is structural, it is measured, and it grows with volatility and with the speed of the bots.</p>
+        <Fig title="Uniswap v3: LP fees vs impermanent loss (17 largest pools)" source={LP_LOSS.source}><HBars rows={LP_LOSS.rows} /></Fig>
+        <ul className="mm-points">
+          <li><b>Losing on average:</b> in that study LPs were net about −$61M, and 49.5 % of them lost money.</li>
+          <li><b>Loss-versus-rebalancing (LVR):</b> LPs lose to arbitrageurs every time their price lags the market, and the loss grows with volatility squared (Milionis, Moallemi, Roughgarden, Zhang, 2022). Measured on Uniswap, arbitrage losses exceed LP fees in many of the largest pools; faster blocks cut them by only 20–70 % (Fritsch and Canidio, 2024).</li>
+          <li><b>Toxic flow:</b> over 25 % of volume on Ethereum's five largest DEXs is CEX–DEX arbitrage, and 11 searchers do over 80 % of it (Heimbach, Pahari, Schertenleib, 2024).</li>
+          <li><b>MEV:</b> sandwich attacks took about $60M a year from traders on Ethereum alone (EigenPhi, Nov 2024 – Oct 2025); just-in-time liquidity takes about 5 % of volume in mature Uniswap v3 pools (Glassnode).</li>
+          <li><b>It gets worse from here:</b> AI agents already do an estimated 19 % of DeFi volume (DWF, 2026, indicative). Every faster, better-informed bot is a sharper counterparty for a passive LP. A lender who is repaid first is not on the other side of that trade.</li>
+        </ul>
         <Table head={['', 'AMM liquidity provider', 'BackX issuer']} rows={[
           ['Loses to arbitrage on every price move', 'Yes (LVR)', 'No: lends, does not quote prices'],
           ['Exposed to sandwiches and JIT liquidity', 'Yes', 'No'],
