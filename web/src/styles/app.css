@@ -1903,8 +1903,6 @@ html:root { --privy-color-icon-muted: var(--brand); }
 /* Admin → Investors (owner 2026-10-28) */
 .inv-plan { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); }
 .inv-plan b { color: var(--ink); }
-.inv-table td { vertical-align: top; font-size: 13px; min-width: 120px; white-space: normal; }
-.inv-table td:first-child { min-width: 170px; }
 @media print {
   .memo-print .mm-table { table-layout: fixed; font-size: 8pt; }
   .memo-print .mm-table th, .memo-print .mm-table td { padding: 4pt 5pt; overflow-wrap: anywhere; }
@@ -1921,3 +1919,34 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .pitch-site > * { min-width: 0; }
 @media (max-width: 640px) { .pitch-tabs button { padding: 0 10px; font-size: 13px; } }
 .mm-doc { min-width: 0; width: 100%; max-width: min(820px, 100%); } .mm-doc section, .mm-doc .mm-fig { min-width: 0; }
+/* Admin → Branding → Email signature (owner 2026-11-02): preview on white, like an email body */
+.sig-grid { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 20px; margin-top: 12px; }
+.sig-fields { display: grid; gap: 10px; }
+.sig-fields .field { display: grid; gap: 4px; }
+.sig-fields input { min-height: 44px; font-size: 16px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--raised); color: var(--ink); }
+.sig-preview-wrap { background: #FFFFFF; border-radius: 10px; padding: 24px; overflow-x: auto; align-self: start; }
+@media (max-width: 900px) { .sig-grid { grid-template-columns: minmax(0, 1fr); } }
+.sig-preview table { width: auto !important; } .sig-preview td { border-bottom: 0; }
+/* Admin → Investors as an expandable list (owner 2026-11-02): no sideways scrolling, tap a firm to open it */
+.inv-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.inv-row { border-top: 1px solid var(--line); }
+.inv-row:first-child { border-top: 0; }
+.inv-head { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) 28px; align-items: center; gap: 12px; min-height: 56px; padding: 8px 4px; text-align: left; color: var(--ink); }
+.inv-head:hover { background: var(--raised); }
+.inv-name { display: grid; gap: 2px; min-width: 0; }
+.inv-name b { font-size: 15px; }
+.inv-name small { font-size: 12px; color: var(--ink-3); }
+.inv-stage { font-size: 13px; color: var(--ink-2); text-align: right; }
+.inv-chev { font-size: 20px; color: var(--ink-3); text-align: center; }
+.inv-row.open .inv-head { background: var(--raised); }
+.inv-body { padding: 12px 4px 20px; display: grid; gap: 16px; }
+.inv-facts { margin: 0; display: grid; gap: 8px; }
+.inv-facts > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; font-size: 14px; }
+.inv-facts dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; }
+.inv-facts dd { margin: 0; color: var(--ink); }
+.inv-facts .inv-reach { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.inv-mail { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--panel); display: grid; gap: 10px; }
+.inv-mail h3 { margin: 0; font-size: 15px; }
+.inv-subject { margin: 0; font-size: 14px; }
+.inv-letter { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+@media (max-width: 640px) { .inv-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } .inv-stage { display: none; } .inv-head { grid-template-columns: minmax(0, 1fr) 28px; } }

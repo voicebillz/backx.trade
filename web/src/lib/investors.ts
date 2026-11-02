@@ -144,3 +144,35 @@ export const INVESTORS: Investor[] = [
 export const TIER_TITLE: Record<Tier, string> = {
   lead: 'Seed lead candidates', strategic: 'Strategic and ecosystem', co: 'Co-investors', program: 'Grants, accelerators and banking', dropped: 'Dropped or deprioritised',
 };
+
+/** One tailored sentence per firm for the outreach email (owner 2026-11-02): why this fund, from its public record. */
+export const WHY: Record<string, string> = {
+  'Variant': 'You co-led Cascade, a 24/7 perps neo-broker, and you back user-owned protocols: BackX is open leverage owned by its users and issuers.',
+  'Dragonfly': 'Your new Fund IV is built for DeFi and onchain finance, and you can back a team from seed through Series A.',
+  'Haun Ventures': 'Your new funds focus on financial infrastructure and AI agents, which is exactly where BackX sits: leverage built for agents as much as for people.',
+  'Archetype': 'You backed Privy, which powers our login and wallets, and Cascade in perps, and your crypto-AI thesis matches our agent-first design.',
+  'Lightspeed Faction': 'You lead seed rounds in onchain finance this year, and Lightspeed can stand behind the Series A.',
+  'Blockchain Capital': 'You lead rounds in onchain financial infrastructure and have the growth fund to follow on.',
+  'Polychain': 'You co-led Cascade in retail perps, and BackX takes that to open, issuer-backed leverage across four chains.',
+  'Coinbase Ventures': 'Base is one of our four launch chains, USDC is our reserve asset, and we are built for AI agents, which Coinbase is backing heavily.',
+  'Base Ecosystem Fund / Base Batches': 'Base is one of our four launch chains and our trading and agent features fit Base’s focus areas.',
+  'YZi Labs + BNB Chain MVB': 'BNB Chain is one of our four launch chains, and BackX brings issuer-backed leverage and AI-agent trading to it.',
+  'Circle Ventures': 'USDC is the reserve asset behind every Long on BackX, and you have backed both perps and AI-agent finance.',
+  'Kraken Ventures': 'BackX brings exchange-grade leverage onchain, with every position backed by real capital.',
+  'OKX Ventures': 'BackX brings exchange-grade leverage onchain and is built for AI agents.',
+  'Jump Crypto / Jump Capital': 'Our liquidations run on Pyth prices in half a second, and your trading expertise is exactly what this market needs.',
+  'Wintermute Ventures': 'Every BackX position routes volume through DEX pools, and we want a liquidity partner from day one.',
+  'GSR': 'Every BackX position routes volume through DEX pools, and we want a liquidity partner from day one.',
+  'Uniswap Labs Ventures': 'Our liquidations and positions route through Uniswap pools, and we are planning a v4 hook.',
+  'Robinhood Ventures Fund II': 'Robinhood Chain is our home chain, and BackX is one of the first leverage products native to it.',
+  'Paradigm': 'You led Liquid in perps, and BackX takes leverage onchain with issuers, not market makers, on the other side.',
+  'Multicoin': 'You backed LI.FI, which powers our swaps and bridging, and BackX is built for high-volume onchain trading.',
+  'Delphi Ventures': 'You back DeFi derivatives, and BackX is a new model for them: leverage backed by lenders, not AMM pools.',
+  'Framework Ventures': 'You have backed DeFi from Aave to Synthetix, and BackX is the next step for onchain leverage.',
+  'Robot Ventures': 'Your team built Compound and Gauntlet, and our liquidation design would benefit from your eyes.',
+  'Galaxy Ventures': 'Your trading roots make you a natural partner for an onchain leverage venue.',
+  'Foresight Ventures': 'You just led a perp DEX seed, and BackX brings a different model: issuer-backed leverage across four chains.',
+  'Fabric Ventures': 'Your machine-economy thesis matches BackX: a trading venue built for AI agents.',
+  'Bankless Ventures': 'You back AI agents and DeFi, and BackX is where those meet.',
+  'Hack VC': 'You back markets and AI-crypto, and BackX is a market built for AI agents.',
+};

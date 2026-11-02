@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { EmailSignature } from '../components/EmailSignature';
 import { SEO_PAGES, pageUrl, type SeoPage } from '../lib/seoPages';
 import { CHAINS, chainSrc } from '../components/home/ChainCarousel';
 
@@ -64,6 +65,8 @@ export function AdminBranding() {
   const [tone, setTone] = useState<'dark' | 'light'>('dark');
   return (
     <>
+      <EmailSignature />
+
       <section className="card">
         <div className="row-between docs-head">
           <h2>Brand images</h2>
