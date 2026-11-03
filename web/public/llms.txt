@@ -68,3 +68,7 @@
 
 ## Not for
 - Investment advice. Nothing on backx.trade promises returns.
+
+## Contact
+
+- Partnerships (chains, liquidity, data, integrations, investors): partner@backx.trade

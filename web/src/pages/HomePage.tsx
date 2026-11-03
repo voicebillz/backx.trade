@@ -132,6 +132,11 @@ export function HomePage() {
         </section>
       </main>
 
+      {/* Partner contact (owner 2026-11-03): chains, liquidity, data, integrations and investors write here. */}
+      <section className="h-partner" aria-labelledby="partner-title">
+        <h2 id="partner-title">Partnerships</h2>
+        <a className="h-btn h-btn-ghost" href="mailto:partner@backx.trade">partner@backx.trade</a>
+      </section>
       <footer className="h-footer">
         <Logo />
         <nav aria-label="Footer"><a href="/whitepaper">Whitepaper</a><a href="/mcp">MCP</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>

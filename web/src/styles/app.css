@@ -1950,3 +1950,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .inv-subject { margin: 0; font-size: 14px; }
 .inv-letter { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
 @media (max-width: 640px) { .inv-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } .inv-stage { display: none; } .inv-head { grid-template-columns: minmax(0, 1fr) 28px; } }
+/* Front page: partner contact above the footer (owner 2026-11-03) */
+.h-partner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 40px max(16px, calc((100vw - 1200px) / 2)); border-top: 1px solid var(--line); }
+.h-partner h2 { margin: 0; font-size: 22px; }
+.h-partner .h-btn { min-height: 44px; display: inline-flex; align-items: center; }
