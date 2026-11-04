@@ -183,6 +183,11 @@
   ],
   "redirects": [
     {
+      "source": "/proposal",
+      "destination": "/proposals",
+      "permanent": false
+    },
+    {
       "source": "/stake",
       "has": [
         {

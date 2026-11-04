@@ -103,6 +103,9 @@ export async function migrate() {
       opened_at  timestamptz,
       closed_at  timestamptz
     );
+    -- Timer (owner 2026-11-04): runs days (default 14) from opened_at; editable while open; closes itself at ends_at.
+    alter table proposals add column if not exists days integer not null default 14;
+    alter table proposals add column if not exists ends_at timestamptz;
     create table if not exists proposal_signals (
       proposal_id    integer not null references proposals(id) on delete cascade,
       privy_did      text not null references users(privy_did) on delete cascade,
@@ -110,6 +113,14 @@ export async function migrate() {
       choice         text not null check (choice in ('yes', 'no')),
       at             timestamptz not null default now(),
       primary key (proposal_id, privy_did)
+    );
+    -- Agents with their own wallet (EIP-191 signature, /agent/proposals). One per wallet; at = the signed time.
+    create table if not exists proposal_agent_signals (
+      proposal_id    integer not null references proposals(id) on delete cascade,
+      wallet_address text not null,
+      choice         text not null check (choice in ('yes', 'no')),
+      at             timestamptz not null,
+      primary key (proposal_id, wallet_address)
     );
 
     -- Core contracts per chain (admin portal "Contracts", owner 2026-10-22). Bookkeeping only: the chain is the

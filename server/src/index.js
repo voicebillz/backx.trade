@@ -8,7 +8,7 @@ import { marketsRouter } from './markets.js';
 import { swapRouter } from './swap.js';
 import { adminRouter } from './admin.js';
 import { ventureRouter } from './venture.js';
-import { proposalsRouter } from './proposals.js';
+import { proposalsRouter, agentProposalsRouter } from './proposals.js';
 import { stakeRouter, startTankScanner } from './stake.js';
 import { keeperReportRouter } from './keepers.js';
 import { mcpRouter, mcpPublicRouter, mcpInternalRouter, loadGrantKey } from './mcp.js';
@@ -54,6 +54,10 @@ app.use('/keeper', keeperReportRouter);
 // (ed25519 with MCP_PUBLIC_KEY, timestamp, replay guard, own rate limit in mcp.js). Machines, not browsers.
 app.use('/mcp', mcpPublicRouter);
 app.use('/internal/mcp', mcpInternalRouter);
+
+// BackX Proposals for agents with their own wallet (owner 2026-11-04): an EIP-191 signature is the login, so no
+// cookie, no session and any origin; own rate limit, replay guard and on-chain history check in proposals.js.
+app.use('/agent/proposals', agentProposalsRouter);
 
 // --- Everything under /api is closed by default ---------------------------
 

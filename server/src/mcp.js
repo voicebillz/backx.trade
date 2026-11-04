@@ -3,6 +3,7 @@ import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, ran
 import { SignJWT } from 'jose';
 import { config } from './config.js';
 import { db } from './db.js';
+import { proposalView, signalAccount } from './proposals.js';
 import { privyAccount } from './auth.js';
 import { CHAINS, LAUNCH_CHAIN_IDS, ethCall, decodeUint, pad, padAddr } from './chains.js';
 import { factoryAddress, stakingConfig, selector } from './deployments.js';
@@ -13,7 +14,7 @@ import { factoryAddress, stakingConfig, selector } from './deployments.js';
 // is its wallet?". Only accounts that log in with a social method may connect (owner 2026-10-26); accounts that
 // log in with their own external wallet use the plain on-chain path (/skill.md) instead.
 
-export const SCOPES = ['account:read', 'trade:prepare', 'issue:prepare', 'stake:prepare', 'claim:prepare'];
+export const SCOPES = ['account:read', 'trade:prepare', 'issue:prepare', 'stake:prepare', 'claim:prepare', 'proposal:signal'];
 
 let signer = null; // { key, spki }
 /** This API's grant key: made once, kept in Postgres (private network only), never printed or sent anywhere. */
@@ -144,6 +145,22 @@ mcpInternalRouter.post('/:op', express.raw({ type: 'application/json', limit: '4
       if (!rows[0] || rows[0].disconnected) return res.json({ eligible: false });
       const e = await eligibility(b.sub);
       return res.json(e.eligible ? { eligible: true, wallet: e.wallet } : { eligible: false });
+    }
+    // BackX Proposals (owner 2026-11-04): the assistant reads the proposal and signals for ITS OWN user only.
+    if (b.op === 'proposal' || b.op === 'proposal_signal') {
+      if (await mcpPaused(redis)) return res.status(423).json({ error: 'paused' });
+      if (typeof b.sub !== 'string' || !/^did:privy:[A-Za-z0-9]{10,64}$/.test(b.sub)) return res.status(400).json({ error: 'bad_request' });
+      const id = b.id == null ? null : Number.isInteger(b.id) && b.id >= 1 && b.id <= 1e6 ? b.id : -1;
+      if (id === -1) return res.status(400).json({ error: 'bad_request' });
+      const { rows } = await db.query(
+        `select u.wallet_address, d.privy_did as disconnected from users u left join mcp_disconnects d on d.privy_did = u.privy_did where u.privy_did = $1`, [b.sub]);
+      if (!rows[0] || rows[0].disconnected || !(await eligibility(b.sub)).eligible) return res.status(403).json({ error: 'not_eligible' });
+      if (b.op === 'proposal') return res.json({ proposal: await proposalView(redis, id, b.sub) });
+      let pid = id;
+      if (!pid) pid = (await proposalView(redis, null, null))?.id ?? null;
+      if (!pid) return res.status(404).json({ error: 'not_found' });
+      const r = await signalAccount(redis, pid, b.sub, rows[0].wallet_address, b.choice);
+      return r.error ? res.status(r.status).json({ error: r.error }) : res.json(r);
     }
     return res.status(404).json({ error: 'not_found' });
   } catch (e) { next(e); }

@@ -56,5 +56,5 @@ export const NEVER = [
 
 export const SCOPE_TEXT: Record<string, string> = {
   'account:read': 'Read account', 'trade:prepare': 'Prepare trades', 'issue:prepare': 'Prepare issuing',
-  'stake:prepare': 'Prepare staking', 'claim:prepare': 'Prepare Claim all',
+  'stake:prepare': 'Prepare staking', 'claim:prepare': 'Prepare Claim all', 'proposal:signal': 'Signal on Validator Proposals',
 };

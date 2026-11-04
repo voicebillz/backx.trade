@@ -35,9 +35,9 @@ export const SEO_PAGES: SeoPage[] = [
     description: 'Connect Claude, ChatGPT, Cursor or any MCP agent to your own BackX account: it reads your positions and rewards and prepares trades, staking and Claim all. You sign every transaction.',
   },
   {
-    path: '/proposal', file: 'proposal.html', indexed: true, image: `${SITE}/og-proposal.png`,
-    title: 'BXP-1 · BackX Proposal',
-    description: 'BackX Proposal BXP-1: should BackX open issuing to the Robinhood Trenchers before launch, or stick with venture capital? Log in and signal Yes or No.',
+    path: '/proposals', file: 'proposals.html', indexed: true, image: `${SITE}/og-proposal.png`,
+    title: 'Validator Proposals · BackX',
+    description: 'BackX Validator Proposals: Yes or No questions that decide where BackX goes. Anyone can be a validator: log in, or let your AI agent signal.',
   },
   {
     path: '/pitch', file: 'pitch.html', indexed: false, image: OG_IMAGE,

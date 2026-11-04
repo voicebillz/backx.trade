@@ -1981,7 +1981,7 @@ html:root { --privy-color-icon-muted: var(--brand); }
   .bxp-live { animation: none; }
 }
 
-.bxp-page { display: flex; justify-content: center; padding: 48px 16px 72px; }
+.bxp-page { display: flex; flex-direction: column; align-items: center; padding: 48px 16px 72px; }
 .bxp-card { width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 20px; }
 .bxp-meta { display: flex; align-items: center; gap: 10px; }
 .bxp-code { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); }
@@ -2012,3 +2012,49 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .bxp-sk-title { width: 80%; height: 40px; } .bxp-sk-bar { width: 100%; height: 22px; border-radius: 999px; }
 @media (prefers-reduced-motion: reduce) { .bxp-bar > span, .bxp-choice { transition: none; } }
 .bxp-admin-form { display: flex; flex-direction: column; gap: 12px; } .bxp-admin-form textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); resize: vertical; }
+.bxp-kind { font-size: 13px; font-weight: 600; color: var(--brand-text); }
+.bxp-anyone { margin: -8px 0 0; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.bxp-agents { width: 100%; max-width: 680px; margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
+.bxp-agents h2 { margin: 0 0 16px; font-size: 22px; letter-spacing: -.01em; }
+.bxp-agent-grid { display: grid; gap: 14px; }
+.bxp-agent-card { min-width: 0; padding: 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); }
+.bxp-agent-card h3 { margin: 0 0 10px; font-size: 16px; }
+.bxp-agent-card ol { margin: 0 0 12px; padding-left: 20px; color: var(--ink-2); font-size: 14px; line-height: 1.55; }
+.home .bxp-agent-card a { color: var(--brand-text); }
+.bxp-code-block { position: relative; }
+.bxp-code-block pre { margin: 0; padding: 14px 14px 14px 14px; padding-right: 72px; border-radius: 10px; background: var(--raised); overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; color: var(--ink); }
+.bxp-copy { position: absolute; top: 8px; right: 8px; min-height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 12px; font-weight: 600; }
+.bxp-agent-more { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }
+.bxp-left { flex: none; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--brand-ink) 35%, transparent); }
+.bxp-timer { margin-left: auto; font-family: var(--mono); font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--up); color: var(--up); }
+.bxp-timer.ended { border-color: var(--line); color: var(--ink-3); font-family: inherit; }
+.bxp-outcome { display: flex; align-items: baseline; justify-content: center; gap: 12px; padding: 16px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); }
+.bxp-outcome-label { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.bxp-outcome b { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+.bxp-outcome.yes { border-color: var(--up); background: var(--up-bg); } .bxp-outcome.yes b { color: var(--up); }
+.bxp-outcome.no { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 12%, transparent); } .bxp-outcome.no b { color: var(--pink); }
+.bxp-back { align-self: flex-start; font-size: 14px; color: var(--ink-2); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
+.bxp-back:hover { color: var(--ink); }
+.bxp-index-head { width: 100%; max-width: 680px; margin-bottom: 24px; }
+.bxp-index-head h1 { margin: 0; font-size: clamp(32px, 6vw, 52px); line-height: 1.05; letter-spacing: -.03em; }
+.bxp-index-head .bxp-anyone { margin: 10px 0 0; }
+.bxp-feature { width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 18px; padding: 24px; border-radius: 20px; border: 1px solid var(--line); background: var(--panel); }
+.bxp-feature h2 { margin: 0; font-size: clamp(26px, 5vw, 40px); line-height: 1.08; letter-spacing: -.025em; }
+.bxp-feature h2 a { color: inherit; text-decoration: none; }
+.bxp-feature .bxp-choice { background: var(--bg); }
+.bxp-feature .bxp-more { align-self: center; font-size: 14px; font-weight: 600; color: var(--brand-text); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
+.bxp-history { width: 100%; max-width: 680px; margin-top: 40px; }
+.bxp-history h2 { margin: 0 0 12px; font-size: 18px; color: var(--ink-2); }
+.bxp-history ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bxp-history a { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 14px; border: 1px solid var(--line); color: inherit; text-decoration: none; }
+.bxp-history a:hover { border-color: var(--ink-3); }
+.bxp-h-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bxp-h-title { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bxp-code.sm { font-size: 11px; padding: 2px 7px; }
+.bxp-h-out { flex: none; font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3); }
+.bxp-h-out.yes { border-color: var(--up); color: var(--up); } .bxp-h-out.no { border-color: var(--pink); color: var(--pink); }
+.bxp-mini { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: var(--raised); }
+.bxp-mini i { display: block; height: 100%; } .bxp-mini .y { background: linear-gradient(90deg, var(--brand), var(--up)); } .bxp-mini .n { background: linear-gradient(90deg, var(--pink), var(--violet)); }
+.bxp-h-date { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .bxp-feature { padding: 18px; } }
+.bxp-admin-mini { margin: 0 16px 12px; } .inv-stage .bxp-h-out { margin-right: 6px; }

@@ -19,7 +19,7 @@ export function App() {
   const { me, status } = useAuth();
   if (!IS_APP) {
     const p = location.pathname.replace(/\/+$/, '');
-    if (p === '/whitepaper' || p === '/mcp' || p === '/pitch' || p === '/proposal') return <Suspense fallback={<div className="app-loading" aria-busy="true" />}>{p === '/mcp' ? <McpSite /> : p === '/pitch' ? <PitchSite /> : p === '/proposal' ? <ProposalSite /> : <Whitepaper />}</Suspense>;
+    if (p === '/whitepaper' || p === '/mcp' || p === '/pitch' || p === '/proposals' || p === '/proposal') return <Suspense fallback={<div className="app-loading" aria-busy="true" />}>{p === '/mcp' ? <McpSite /> : p === '/pitch' ? <PitchSite /> : p === '/proposals' || p === '/proposal' ? <ProposalSite /> : <Whitepaper />}</Suspense>;
     return <HomePage />;
   }
   if (status === 'checking') return <div className="app-loading" aria-busy="true" />;

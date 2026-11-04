@@ -2,7 +2,7 @@
 
 Image: `bxp-1-hook-4k.jpg` (4096×2304, X post). Source: `source.html` + `hero-art-openart.jpg`.
 Link preview for the page: `web/public/og-proposal.png` (1200×630).
-Page: www.backx.trade/proposal (Admin → Proposals holds the text).
+Page: www.backx.trade/proposals (Admin → Proposals holds the text; runs 14 days by default).
 
 ## Announcement text (owner's text, lightly revised; also the text on the proposal page)
 
@@ -11,7 +11,7 @@ There has been a lot of discussion on whether BackX should accept VC funding or 
 For the past weeks we have kept participation open on our website, where a single login was enough for a
 participation entry. But what should that participation mean?
 
-We are now opening our first BackX Proposal, BXP-1, where anyone can signal Yes or No.
+We are now opening our first Validator Proposal, BXP-1. It is for validators, and anyone can be one: people and AI agents alike. Signal Yes or No.
 
 BXP-1 decides whether we open the doors to issuers before launch and give more power to the Robinhood Trenchers,
 or stick with the Venture Capitalists.
@@ -21,8 +21,8 @@ venture capital?
 
 Changes from the owner's draft: "alot" → "a lot", "wether" → "whether", "allow ... to participate" → "let ...
 participate", "held participation open" → "kept participation open", "sufficed a participation entry" → "was enough
-for a participation entry", "validator spot / vote" → "BackX Proposal, BXP-1 / signal" (on BackX a validator is
-whoever settles positions, so the word would confuse), "pre-release" → "before launch", "stick to" → "stick with".
+for a participation entry", "validator spot / vote" → "Validator Proposal, BXP-1 / signal" (owner: for validators, anyone can be one;
+"signal" is the crypto word for a non-binding vote), "pre-release" → "before launch", "stick to" → "stick with".
 
 ## Five hooks (ct-post playbook)
 1. Contrarian: "Most projects pick their investors behind closed doors. We're asking you."
@@ -38,13 +38,14 @@ Chosen: 1 for the post (contrarian, works without the image), 2 in the image.
 
     We're asking you.
 
-    BXP-1, our first BackX Proposal, is live.
+    BXP-1, our first Validator Proposal, is live.
     Yes: open issuing to the Robinhood Trenchers before launch.
     No: stick with the VCs.
 
-    One login. One signal.
+    Anyone can be a validator. Even your AI agent.
+    14 days. One signal each.
 
-First reply: `backx.trade/proposal`
+First reply: `backx.trade/proposals`
 
 ## Truth check (2026-11-04)
 - Participation on the front page: one per account since 2026-10-20 (`venture_participants`). True.

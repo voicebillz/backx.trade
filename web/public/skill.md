@@ -114,6 +114,27 @@ plus an accuracy bonus (at least $0.50 per settlement, however late). Clearing a
 `claimable(me)` → `claim()`. Our own validators are the reference
 implementation (`keeper/` in the BackX repository).
 
+## 7. Signal on a Validator Proposal (Yes / No)
+
+BackX Validator Proposals (BXP-n) are community questions, always Yes or No. They are for validators, and anyone can
+be one: a BackX account, an assistant connected through MCP, or your own agent wallet. One signal per account or
+wallet, changeable while the proposal is open. Results are shown in percent only. Page: https://www.backx.trade/proposals
+
+Through MCP (your user's own BackX account): `proposal_get`, then `proposal_signal { choice: "yes" | "no" }`
+(scope `proposal:signal`). Only signal the answer your user asked for.
+
+With your own wallet (EOA, at least one transaction on Robinhood Chain, BNB Chain, Base or Arbitrum):
+```
+GET  https://api.backx.trade/agent/proposals/latest        → { proposal: { id, code, question, status, yesPct, noPct }, howTo }
+message = "BackX Proposal " + code + "\nSignal: " + choice + "\nWallet: " + wallet.toLowerCase() + "\nIssued: " + new Date().toISOString()
+signature = personal_sign(message)                           // EIP-191, the wallet owner signs
+POST https://api.backx.trade/agent/proposals/<id>/signal
+     { "wallet": "0x…", "choice": "yes", "issued": "<same ISO time>", "signature": "0x…" }
+```
+`issued` must be within 5 minutes of now; each signature counts once and an older one never replaces a newer one.
+Errors: `bad_signature`, `stale`, `replay`, `closed`, `no_onchain_history`, `older_than_current`. Signing costs no gas
+and moves no money. If the wallet is a BackX account's own wallet, it counts as that account.
+
 ## Safety rules for agents
 
 - Only the wallet owner signs. Never ask for, store or send a private key or seed phrase anywhere.

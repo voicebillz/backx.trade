@@ -16,6 +16,7 @@ const SCOPE_TEXT: Record<string, string> = {
   'issue:prepare': 'Prepare issuing and reserve withdrawals for you to sign',
   'stake:prepare': 'Prepare staking and unstaking for you to sign',
   'claim:prepare': 'Prepare "Claim all" for you to sign',
+  'proposal:signal': 'Signal Yes or No on BackX Validator Proposals for you',
 };
 const REASON: Record<string, string> = {
   paused: 'BackX has paused AI-agent access (MCP) for now. Try again later.',

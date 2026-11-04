@@ -54,7 +54,7 @@ export default function McpSite() {
       </main>
       <footer className="h-footer">
         <Logo />
-        <nav aria-label="Footer"><a href="/whitepaper">Whitepaper</a><a href="/mcp">MCP</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+        <nav aria-label="Footer"><a href="/whitepaper">Whitepaper</a><a href="/proposals">Proposals</a><a href="/mcp">MCP</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
         <span className="h-footer-legal">Not financial advice.</span>
       </footer>
     </div>

@@ -247,7 +247,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   refuses every call (internal `status` op, fail closed), Profile → AI agents shows an "MCP Paused" badge.
 
 ## API (server/) — closed by default
-- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`. One deliberate exception: the public read of BackX Proposals (`GET /api/proposals/latest|:id`, text + percentages only, see "BackX Proposals").
+- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`. One deliberate exception: the public read of Validator Proposals (`GET /api/proposals[/latest|/:id]`, text + percentages only, see "Validator Proposals"); agents signal at `/agent/proposals` (wallet signature).
 - CORS + Origin/Referer guard: exact allowlist from `ALLOWED_ORIGINS` (https only, no wildcards, no preview domains). Fail closed.
 - The origin guard only stops other websites. Every route that reads or writes user data MUST require a verified session; there are no public write routes, ever.
 - Sessions: HttpOnly + Secure + SameSite=Lax cookie, only the SHA-256 hash stored in Postgres. Never tokens in query or body.
@@ -301,16 +301,25 @@ The owner is not a developer: explain briefly, in Norwegian.
   for Gmail/Outlook/Apple Mail, also Copy HTML / Download .htm. Logo = PNG at https://www.backx.trade/email/backx-mark-v1.png
   (Cache-Control immutable): NEVER edit or delete it, a new logo gets a new name (-v2) so sent mail keeps working.
   img-src in the CSP includes https://www.backx.trade for the admin preview.
-- BackX Proposals (owner 2026-11-04, `server/src/proposals.js`, tables `proposals` + `proposal_signals`): community
-  questions, always Yes / No, called "BackX Proposal BXP-<id>" and "signal" (never "vote"; "validator" means settlers).
-  Admin → Proposals (`/admin/proposals`, `pages/AdminProposals.tsx`): title, question, text, rolling banner text;
-  Draft / Open / Close, audited, admins see the counts. Public: www.backx.trade/proposal (`pages/ProposalSite.tsx`,
-  `?bxp=<id>` for an older one): clean page, colourful Yes/No split bar in percent, NEVER totals; Yes/No buttons
-  log in first (one signal per account, changeable while open; a signal also records the participation).
-  Front page: rolling yellow banner on top while one is open (`components/ProposalBanner.tsx`, pauses on hover,
-  still with reduced motion; the continuous roll is an owner-requested exception to the 300 ms motion rule).
-  `GET /api/proposals/latest|:id` is the ONE deliberate public read under /api: no user data, only text + percent
-  (Redis cache 10 s, own rate limit 60/min per IP); `POST /api/proposals/:id/signal` needs a session (10/min).
+- Validator Proposals (owner 2026-11-04, `server/src/proposals.js`, tables `proposals`, `proposal_signals`,
+  `proposal_agent_signals`): community questions, always Yes / No, "Validator Proposal BXP-<id>", "signal" (not
+  "vote"). Framing (owner): they are for validators, and anyone can be one, people and AI agents alike.
+  Timer: `days` (default 14) from opening, editable while running (moves the end), closes itself at `ends_at`;
+  the outcome (Yes / No / Tie) then shows in the same bar design. Only one runs at a time in practice.
+  Admin → Proposals (`/admin/proposals`, `pages/AdminProposals.tsx`): Running / Drafts / New / History (outcome +
+  counts incl. agents); title, question, text, banner text, days; audited.
+  Public: www.backx.trade/proposals (`pages/ProposalSite.tsx`; /proposal redirects): the running one big on top with
+  Yes/No + countdown, Earlier list with outcomes, `?bxp=<id>` = one proposal; percent only, NEVER totals; footer
+  link "Proposals" next to Whitepaper. Front page: rolling yellow banner with the countdown while one runs
+  (`components/ProposalBanner.tsx`, pauses on hover, still with reduced motion; the continuous roll is an
+  owner-requested exception to the 300 ms motion rule). Bottom of the page: "Signal as an AI agent" recipe.
+  Who signals: a session (web; also records participation); an MCP assistant for its own user (internal ops
+  `proposal` / `proposal_signal`, scope `proposal:signal`, tools `proposal_get` / `proposal_signal` in the MCP repo);
+  an agent's own EOA wallet at `/agent/proposals` (outside /api, CORS *, no cookies): EIP-191 over
+  "BackX Proposal BXP-n\nSignal: yes|no\nWallet: <lowercase>\nIssued: <ISO>", ±5 min, each signature once, an older
+  one never replaces a newer one, the wallet needs ≥ 1 tx on a launch chain, a BackX account's own wallet counts as
+  that account (skill.md §7). `GET /api/proposals[/latest|/:id]` is the ONE deliberate public read under /api (text +
+  percent, Redis cache 10 s, 60/min per IP); signals are 10/min.
 - Marketing (owner 2026-11-04): follow `.claude/skills/backx-marketing/SKILL.md` for every post, image and video
   (hooks, X rules, truth check, 4K pipeline, OpenArt, video + sound); the long gazz.fun originals are in
   `docs/marketing/reference-gazz/`. Campaign folders: `docs/marketing/<date>-<campaign>/`.
