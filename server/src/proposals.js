@@ -8,13 +8,13 @@ import { CHAINS } from './chains.js';
 // BackX Proposals (owner 2026-11-04): a Yes/No question the community signals on, written in Admin → Proposals.
 // Reading is public ON PURPOSE (the front-page banner and www.backx.trade/proposal are seen signed out), but it
 // returns no user data and no totals: only the proposal text and the Yes/No split in percent, cached in Redis.
-// Who may signal, one signal each, changeable while open:
+// Who may signal: ONE signal each, final (owner 2026-11-04: no changes, no retracts once signalled):
 // - a signed-in account (session, www.backx.trade/proposal); it also counts as the account's participation;
 // - an AI assistant connected through MCP, for its own user's account (signed internal call, server/src/mcp.js);
 // - an agent with its own wallet (owner 2026-11-04 "voting for agents"): an EIP-191 signature over a fixed message,
 //   outside /api at /agent/proposals (scripts send no Origin). EOA only, the wallet needs at least one transaction
-//   on a launch chain (a speed bump against fresh throwaway wallets), the signature is used once and an older
-//   signature can never replace a newer one. A wallet that is a BackX account's own wallet counts as that account.
+//   on a launch chain (a speed bump against fresh throwaway wallets), the signature is used once, and the first
+//   signal of a wallet is final. A wallet that is a BackX account's own wallet counts as that account.
 export const proposalsRouter = express.Router();
 
 const CACHE_S = 10;
@@ -105,10 +105,12 @@ export async function signalAccount(redis, id, did, wallet, choice) {
   const p = await loadProposal(id);
   if (!p) return { error: 'not_found', status: 404 };
   if (p.status !== 'open') return { error: 'closed', status: 409 };
-  await db.query(
+  // First signal is final: no change, no retract (the primary key + do nothing; there is no delete route).
+  const { rowCount } = await db.query(
     `insert into proposal_signals (proposal_id, privy_did, wallet_address, choice) values ($1, $2, $3, $4)
-     on conflict (proposal_id, privy_did) do update set choice = excluded.choice, at = now()`,
+     on conflict (proposal_id, privy_did) do nothing`,
     [p.id, did, wallet, choice]);
+  if (!rowCount) return { error: 'already_signalled', status: 409, proposal: publicOut(p, await aggregate(redis, p.id), await mineOf(p.id, did)) };
   // A signal is a participation too (idempotent, one row per account).
   await db.query('insert into venture_participants (privy_did, wallet_address) values ($1, $2) on conflict (privy_did) do nothing', [did, wallet]);
   try { await redis.del(cacheKey(p.id)); } catch { /* expires in 10 s anyway */ }
@@ -147,7 +149,7 @@ proposalsRouter.post('/:id/signal', async (req, res, next) => {
   if (!id) return res.status(404).json({ error: 'not_found' });
   try {
     const r = await signalAccount(req.app.locals.redis, id, req.user.did, req.user.address, req.body?.choice);
-    if (r.error) return res.status(r.status).json({ error: r.error });
+    if (r.error) return res.status(r.status).json({ error: r.error, proposal: r.proposal });
     res.json(r);
   } catch (e) { next(e); }
 });
@@ -259,10 +261,9 @@ agentProposalsRouter.post('/:id/signal', async (req, res, next) => {
     if (!history) return res.status(403).json({ error: 'no_onchain_history', hint: 'The wallet needs at least one transaction on Robinhood Chain, BNB Chain, Base or Arbitrum.' });
     const { rowCount } = await db.query(
       `insert into proposal_agent_signals (proposal_id, wallet_address, choice, at) values ($1, $2, $3, $4)
-       on conflict (proposal_id, wallet_address) do update set choice = excluded.choice, at = excluded.at
-       where proposal_agent_signals.at < excluded.at`,
+       on conflict (proposal_id, wallet_address) do nothing`,
       [p.id, w, choice, new Date(t)]);
-    if (!rowCount) return res.status(409).json({ error: 'older_than_current', hint: 'A newer signal from this wallet is already counted.' });
+    if (!rowCount) return res.status(409).json({ error: 'already_signalled', hint: 'This wallet has already signalled on this proposal. A signal is final.' });
     try { await redis.del(cacheKey(p.id)); } catch { /* expires in 10 s anyway */ }
     res.json({ proposal: publicOut(p, await aggregate(redis, p.id), choice) });
   } catch (e) { next(e); }

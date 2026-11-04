@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api } from './api';
+import { api, ApiError } from './api';
 import { useAuth } from './auth';
 
 // BackX Proposals (owner 2026-11-04, server/src/proposals.js): a Yes/No question the community signals on.
@@ -61,15 +61,20 @@ export function useProposal(id?: number | null) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ choice }),
       });
       setP(r.proposal);
-    } catch { setErr('That did not go through. Try again.'); }
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'already_signalled') {
+        if (e.body.proposal) setP(e.body.proposal as Proposal);
+        setErr('You have already signalled. A signal is final.');
+      } else setErr('That did not go through. Try again.');
+    }
     finally { setBusy(false); intent.current = null; }
   }, []);
 
   // Back from the login modal with a pending choice.
-  useEffect(() => { if (me && p && intent.current) void send(intent.current, p); }, [me, p, send]);
+  useEffect(() => { if (me && p && intent.current) { if (p.mine) intent.current = null; else void send(intent.current, p); } }, [me, p, send]);
 
   const signal = (choice: Choice) => {
-    if (!p || p.status !== 'open') return;
+    if (!p || p.status !== 'open' || p.mine) return; // one signal per account, final
     if (me) { void send(choice, p); return; }
     intent.current = choice;
     signIn();

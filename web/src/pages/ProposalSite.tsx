@@ -127,7 +127,7 @@ function Decide({ id, initial }: { id: number; initial: Proposal }) {
           <div className="bxp-choices" role="group" aria-label="Your signal">
             {(['yes', 'no'] as const).map((c) => (
               <button key={c} className={`bxp-choice ${c}` + (p.mine === c ? ' picked' : '')} aria-pressed={p.mine === c}
-                disabled={busy || !canSignal} onClick={() => signal(c)}>{c === 'yes' ? 'Yes' : 'No'}</button>
+                disabled={busy || !canSignal || !!p.mine} onClick={() => signal(c)}>{c === 'yes' ? 'Yes' : 'No'}</button>
             ))}
           </div>
           <p className="bxp-mine" aria-live="polite">{err ? <span role="alert" className="h-err">{err}</span> : p.mine ? `Your signal: ${WORD[p.mine]}` : ''}</p>

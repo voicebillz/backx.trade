@@ -313,11 +313,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   link "Proposals" next to Whitepaper. Front page: rolling yellow banner with the countdown while one runs
   (`components/ProposalBanner.tsx`, pauses on hover, still with reduced motion; the continuous roll is an
   owner-requested exception to the 300 ms motion rule). Bottom of the page: "Signal as an AI agent" recipe.
-  Who signals: a session (web; also records participation); an MCP assistant for its own user (internal ops
+  One signal per account / wallet and it is FINAL (owner 2026-11-04: no change, no retract; 409
+  `already_signalled`, buttons lock). Who signals: a session (web, login required; also records participation); an MCP assistant for its own user (internal ops
   `proposal` / `proposal_signal`, scope `proposal:signal`, tools `proposal_get` / `proposal_signal` in the MCP repo);
   an agent's own EOA wallet at `/agent/proposals` (outside /api, CORS *, no cookies): EIP-191 over
-  "BackX Proposal BXP-n\nSignal: yes|no\nWallet: <lowercase>\nIssued: <ISO>", ±5 min, each signature once, an older
-  one never replaces a newer one, the wallet needs ≥ 1 tx on a launch chain, a BackX account's own wallet counts as
+  "BackX Proposal BXP-n\nSignal: yes|no\nWallet: <lowercase>\nIssued: <ISO>", ±5 min, each signature once, the wallet needs ≥ 1 tx on a launch chain, a BackX account's own wallet counts as
   that account (skill.md §7). `GET /api/proposals[/latest|/:id]` is the ONE deliberate public read under /api (text +
   percent, Redis cache 10 s, 60/min per IP); signals are 10/min.
 - Marketing (owner 2026-11-04): follow `.claude/skills/backx-marketing/SKILL.md` for every post, image and video
