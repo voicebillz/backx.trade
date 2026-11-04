@@ -10,3 +10,4 @@ dist/
 .DS_Store
 *.tsbuildinfo
 __pycache__/
+dump.rdb
