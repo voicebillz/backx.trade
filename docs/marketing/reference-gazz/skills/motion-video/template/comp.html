@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Composition</title>
+<style>
+  @font-face { font-family: "Geist"; font-weight: 500; font-display: block; src: url(fonts/Geist-500.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; font-display: block; src: url(fonts/Geist-600.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 700; font-display: block; src: url(fonts/Geist-700.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 800; font-display: block; src: url(fonts/Geist-800.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fff; }
+  * { box-sizing: border-box; }
+  #stage {
+    position: absolute; inset: 0; overflow: hidden;
+    background: radial-gradient(120% 95% at 50% 38%, #ffffff 0%, #f7f7f9 58%, #eeeef2 100%);
+    -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision;
+    font-family: "Geist", system-ui, sans-serif; color: #0b0b0f;
+  }
+  #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .abs { position: absolute; left: 0; top: 0; }
+  /* kinetic type: each word rises out of the line's clip */
+  .line { position: absolute; overflow: hidden; white-space: nowrap; padding: 0.06em 0 0.14em; }
+  .line > span { display: inline-block; will-change: transform; }
+  .disp { font-weight: 800; letter-spacing: -0.055em; line-height: 1; }
+  .sub { font-weight: 500; letter-spacing: -0.015em; color: #6e6e73; }
+  .num { font-weight: 700; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cam"></div>
+  <div id="hud" class="abs" style="width:1920px;height:1080px"></div>
+</div>
+<script>
+// =====================================================================
+// helpers (pure functions of t; never timers, CSS animations or rAF)
+// =====================================================================
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, t0, d) => clamp((t - t0) / d);
+function bez(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => {
+    if (x <= 0) return 0; if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(clamp(t));
+  };
+}
+const EO = bez(0.23, 1, 0.32, 1);     // strong ease-out: enters
+const EIO = bez(0.77, 0, 0.175, 1);   // ease-in-out: camera + on-screen moves
+const DR = bez(0.32, 0.72, 0, 1);     // drawer / sheet
+const EI = bez(0.5, 0, 0.75, 0);      // ease-in: exits only
+// damped spring normalised to settle at p=1; zeta 0.72 ~ 4% overshoot
+function spring(p, zeta = 0.72) {
+  if (p <= 0) return 0; if (p >= 1) return 1;
+  const w = 5.3 / zeta, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * p) * (Math.cos(wd * p) + (zeta * w / wd) * Math.sin(wd * p));
+}
+const sp = (t, t0, d, z) => spring(prog(t, t0, d), z);
+const el = (tag, parent, style = {}, cls = "") => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, style); parent.appendChild(e); return e; };
+const px = (v) => v.toFixed(3) + "px";
+const show = (e, on) => { e.style.visibility = on ? "visible" : "hidden"; };
+function setRect(e, x, y, w, h, r) { e.style.left = px(x); e.style.top = px(y); e.style.width = px(w); e.style.height = px(h); if (r != null) e.style.borderRadius = px(r); }
+// tween a rect between two states (shape change instead of fade)
+const rectLerp = (A, B, p) => ({ x: lerp(A.x, B.x, p), y: lerp(A.y, B.y, p), w: lerp(A.w, B.w, p), h: lerp(A.h, B.h, p), r: lerp(A.r, B.r, p) });
+
+function textLine(parent, o) {
+  const l = el("div", parent, { left: px(o.x), top: px(o.y), fontSize: px(o.size), color: o.color || "", width: o.w ? px(o.w) : "", textAlign: o.align || "left" }, "line " + (o.cls || "disp"));
+  if (o.align === "center") l.style.left = px(o.x - o.w / 2);
+  l._words = o.words.map((wd, k) => { const s = el("span", l, { color: (o.colors && o.colors[k]) || "" }); s.textContent = wd + (k < o.words.length - 1 ? " " : ""); return s; });
+  return l;
+}
+// words rise out of the clip at tin, leave upward at tout (null = stay)
+function lineAt(l, t, tin, tout, stagger = 0.06, dIn = 0.62, dOut = 0.42) {
+  let vis = false;
+  l._words.forEach((s, k) => {
+    const pi = EO(prog(t, tin + k * stagger, dIn));
+    const po = tout == null ? 0 : EI(prog(t, tout + k * stagger * 0.5, dOut));
+    s.style.transform = `translate3d(0,${((1 - pi) * 112 - po * 112).toFixed(3)}%,0)`;
+    if (pi > 0 && po < 1) vis = true;
+  });
+  show(l, vis);
+}
+
+// =====================================================================
+// timeline (seconds on the music grid; 120 BPM => beat 0.5, bar 2.0)
+// =====================================================================
+const DUR = 8.0;
+const CUES = [];
+function cue(t, f, g = 1) { CUES.push({ t: +t.toFixed(3), f, g }); }
+cue(0.0, "pop-soft", 0.7);
+cue(2.0, "whoosh-soft", 0.5);
+cue(2.5, "click-ui", 0.8);
+cue(4.0, "pop-soft", 0.6);
+cue(6.0, "impact-soft", 0.85);
+window.CUES = CUES; window.DUR = DUR;
+
+// =====================================================================
+// scene graph: build() once, seek(t) only writes styles
+// =====================================================================
+const N = {};
+function build() {
+  const cam = document.getElementById("cam");
+  N.cam = cam;
+  N.title = textLine(cam, { x: 960, y: 420, w: 1600, size: 132, align: "center", words: ["Something", "new."] });
+  N.sub = textLine(cam, { x: 960, y: 590, w: 1400, size: 44, align: "center", cls: "sub", words: ["One idea per line."] });
+  // a pill that grows into a card (shape change, no fade)
+  N.box = el("div", cam, { position: "absolute", background: "#0b0b0f", boxShadow: "0 40px 80px -30px rgba(20,20,40,.35)", overflow: "hidden" });
+  N.boxLabel = el("div", N.box, { position: "absolute", left: "0", right: "0", top: "50%", transform: "translateY(-50%)", textAlign: "center", color: "#fff", fontWeight: "700", fontSize: "34px", letterSpacing: "-0.02em" });
+  N.boxLabel.textContent = "Get started";
+  N.end = textLine(cam, { x: 960, y: 470, w: 1600, size: 120, align: "center", words: ["gazz.fun"] });
+}
+
+function seek(t) {
+  // scene 1: title
+  lineAt(N.title, t, 0.0, 2.0, 0.1); lineAt(N.sub, t, 0.35, 2.05, 0.05);
+  // scene 2: pill lands (spring), then grows into a card
+  const PILL = { x: 960 - 150, y: 500, w: 300, h: 84, r: 42 }, CARD = { x: 360, y: 190, w: 1200, h: 700, r: 36 };
+  const land = sp(t, 2.0, 0.7);
+  const grow = EIO(prog(t, 3.2, 0.8));
+  const R = rectLerp(PILL, CARD, grow);
+  setRect(N.box, R.x, R.y + (1 - land) * 160, R.w, R.h, R.r);
+  const press = 1 - 0.06 * Math.sin(Math.PI * prog(t, 2.45, 0.22));
+  N.box.style.transform = `scale(${(press * lerp(0.9, 1, land)).toFixed(4)})`;
+  N.boxLabel.style.opacity = (1 - prog(t, 3.2, 0.25)).toFixed(3);
+  show(N.box, t >= 2.0 && t < 6.0);
+  // camera: one move at a time (slow push while the card is up)
+  const push = EIO(prog(t, 4.0, 2.0));
+  const z = lerp(1, 1.04, push);
+  N.cam.style.transform = `translate(${px(960 * (1 - z))},${px(540 * (1 - z))}) scale(${z.toFixed(5)})`;
+  // end card
+  lineAt(N.end, t, 6.0, null, 0.1);
+}
+
+// =====================================================================
+// boot: decode fonts/images, then READY (or BOOT_ERR)
+// =====================================================================
+async function boot() {
+  await Promise.all(["800 100px Geist", "700 100px Geist", "600 40px Geist", "500 40px Geist"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+  build();
+  seek(0);
+  window.seek = seek;
+  window.READY = true;
+}
+boot().catch((e) => { window.BOOT_ERR = String((e && e.stack) || e); });
+</script>
+</body>
+</html>

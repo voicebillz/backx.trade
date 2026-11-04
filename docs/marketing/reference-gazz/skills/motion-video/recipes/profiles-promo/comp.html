@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gazz.fun public profiles promo</title>
+<!-- PROFILES PROMO (owner 2026-11-03): X feed post, 16:9 4K/60, LIGHT look.
+     TikTok-style hook in the first 2 s ("Stop screenshotting your wins.":
+     motion on frame 1, the big caption is on screen from frame 0, a strike
+     on the habit, then the payoff), then a normal-paced feature tour of the
+     real public profile, rebuilt crisply in HTML from its live design
+     (light theme tokens of web/src/styles, PublicProfile.tsx,
+     ProfilePredict.tsx PnlFlipCard, ProfileWins.tsx). Win tiles use the real
+     StockSlot lobby cards (img/card-*.png = element captures of
+     gazz.fun/stockslot at DPR 3). Stats are illustrative ("Demo profile").
+     Voice: ElevenLabs cues vo-1..8 (mix.py ducks the music), plain ui-* sounds. -->
+<style>
+  @font-face { font-family: "Geist"; font-weight: 500; font-display: block; src: url(fonts/Geist-500.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; font-display: block; src: url(fonts/Geist-600.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 700; font-display: block; src: url(fonts/Geist-700.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 800; font-display: block; src: url(fonts/Geist-800.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #f6f7f3; }
+  * { box-sizing: border-box; }
+  #stage { position: absolute; inset: 0; overflow: hidden; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-family: "Geist", system-ui, sans-serif; color: #0f1115; }
+  .full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .phrase { position: absolute; left: 0; width: 1920px; text-align: center; white-space: nowrap; font-weight: 600; letter-spacing: -0.045em; line-height: 1.04; }
+  .phrase > span { display: inline-block; will-change: transform, filter, opacity; }
+  .num { font-variant-numeric: tabular-nums; }
+  .abs { position: absolute; }
+  .card { position: absolute; background: #fff; border: 1.5px solid rgba(15,17,21,.08); border-radius: 28px;
+          box-shadow: 0 2px 4px rgba(15,17,21,.04), 0 30px 70px rgba(15,17,21,.10); transform-origin: 50% 50%; }
+  .muted { color: #5b5f68; }
+  .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+  .btn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 600; font-size: 26px; letter-spacing: -0.01em; }
+  .tap { position: absolute; width: 96px; height: 96px; margin: -48px 0 0 -48px; border-radius: 50%; border: 5px solid #65a30d; }
+  .pill { position: absolute; display: inline-flex; align-items: center; border-radius: 999px; white-space: nowrap; }
+  img { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="gLight" class="full"></div>
+  <div id="dots" class="full"></div>
+  <div id="gWhite" class="full"></div>
+  <div id="cam" class="full"></div>
+  <div id="demo"></div>
+</div>
+<script>
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, t0, d) => clamp((t - t0) / d);
+function bez(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(clamp(t)); };
+}
+const EO = bez(0.16, 1, 0.3, 1), EIO = bez(0.76, 0, 0.24, 1), EI = bez(0.7, 0, 0.84, 0), FLIP = bez(0.65, 0, 0.35, 1);
+function spring(p, zeta = 0.72) { if (p <= 0) return 0; if (p >= 1) return 1; const w = 5.3 / zeta, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * p) * (Math.cos(wd * p) + (zeta * w / wd) * Math.sin(wd * p)); }
+const sp = (t, t0, d, z) => spring(prog(t, t0, d), z);
+const el = (tag, parent, style = {}, cls = "") => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, style); parent.appendChild(e); return e; };
+const tx = (tag, parent, text, style = {}, cls = "") => { const e = el(tag, parent, style, cls); e.textContent = text; return e; };
+const px = (v) => v.toFixed(2) + "px";
+const show = (e, on) => { if (e._disp == null) e._disp = e.style.display && e.style.display !== "none" ? e.style.display : ""; e.style.display = on ? e._disp : "none"; };
+// light theme tokens (web/src/styles/global.css [data-theme="light"]); lime darkened for AA text on white
+const C = { bg: "#f6f7f3", white: "#ffffff", ink: "#0f1115", ink2: "#474b54", mute: "#5b5f68", line: "rgba(15,17,21,.08)", line2: "rgba(15,17,21,.14)",
+  lime: "#b8f43a", limeInk: "#4d7c0f", success: "#15803d", info: "#0369a1", warning: "#b45309", surf: "rgba(15,17,21,.045)" };
+const money = (v, sign = false) => { const s = "$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return v < 0 ? "-" + s : sign && v > 0 ? "+" + s : s; };
+const xOf = (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 100 ? 0 : 2 }) + "x";
+
+function phrase(parent, o) {
+  const l = el("div", parent, { zIndex: "50", top: px(o.y), fontSize: px(o.size), fontWeight: String(o.weight || 600), color: o.color || C.ink }, "phrase" + (o.num ? " num" : ""));
+  l._w = o.words.map((wd, k) => { const s = el("span", l, { color: (o.colors && o.colors[k]) || "", marginRight: k < o.words.length - 1 ? "0.24em" : "0" }); s.textContent = wd; return s; });
+  return l;
+}
+function phraseAt(l, t, tin, tout, st = 0.1, dIn = 0.42, dOut = 0.26) {
+  let vis = false;
+  l._w.forEach((s, k) => {
+    const p = EO(prog(t, tin + k * st, dIn));
+    const q = tout == null ? 0 : EI(prog(t, tout + k * 0.04, dOut));
+    const b = (1 - p) * 16 + q * 14;
+    s.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+    s.style.opacity = (p * (1 - q)).toFixed(3);
+    s.style.transform = `translate3d(${((1 - p) * 30 - q * 18).toFixed(2)}px,0,0) scale(${(1 + (1 - p) * 0.05).toFixed(4)})`;
+    if (p > 0 && q < 1) vis = true;
+  });
+  show(l, vis);
+}
+function focus(e, t, tin, tout, dIn = 0.4, dOut = 0.3) {
+  const p = tin == null ? 1 : EO(prog(t, tin, dIn)), q = tout == null ? 0 : EI(prog(t, tout, dOut));
+  const b = (1 - p) * 22 + q * 22;
+  e.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+  e.style.opacity = (Math.min(1, p * 1.6) * (1 - q)).toFixed(3);
+  e.style.transform = `scale(${(1 + (1 - p) * 0.04 + q * 0.05).toFixed(4)})`;
+  show(e, p > 0 && q < 1);
+  return p > 0 && q < 1;
+}
+// a card with a fixed layout box; cx/cy = centre in stage px
+function box(parent, w, h, cls = "card", r = 28) { const d = el("div", parent, { width: px(w), height: px(h), borderRadius: px(r) }, cls); d._w = w; d._h = h; return d; }
+function put(d, cx, cy, s = 1, extra = "", blur = 0, op = 1) {
+  d.style.left = px(cx - d._w / 2); d.style.top = px(cy - d._h / 2);
+  d.style.transform = `${extra} scale(${s.toFixed(4)})`;
+  d.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "";
+  d.style.opacity = clamp(op).toFixed(3);
+}
+function tapAt(ring, t, t0) { const p = prog(t, t0, 0.55); ring.style.transform = `scale(${lerp(0.45, 1.5, EO(p)).toFixed(3)})`; ring.style.opacity = (p > 0 ? 1 - p : 0).toFixed(3); show(ring, p > 0 && p < 1); }
+// deterministic noise
+function rnd(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+// "Demo profile" pill top-right: OFF by default (owner 2026-11-03: removed from the final film).
+// Set true (or ?demo=1) to show it on every profile scene when the numbers must be flagged as illustrative.
+const SHOW_DEMO_BADGE = new URLSearchParams(location.search).get("demo") === "1" || false;
+// ---------------------------------------------------------------- timeline
+// Music: Mixkit "Happy Times" (A. M.), 120 BPM, first beat 0.017 s -> --music-start 0.017,
+// so every whole/half second is a beat. Scene cuts sit on beats, ~0.3 s before their line.
+const DUR = 28.0;
+const CUES = []; function cue(t, f, g = 1, extra) { CUES.push({ t: +t.toFixed(3), f, g, ...(extra || {}) }); }
+window.DUR = DUR; window.CUES = CUES;
+// ElevenLabs "Luke" take 2, one wav per line (cut on its pauses)
+const VO = [0.12, 2.70, 6.30, 7.80, 10.95, 14.45, 17.95, 21.20];
+VO.forEach((t, i) => cue(t, `vo-${i + 1}`, 1));
+const T1 = 2.5, T2 = 6.0, T3 = 10.5, T4 = 14.0, T5 = 17.5, T6 = 21.0;
+// word moments (take timing + line offset)
+const W_WINS = 1.45, W_SHOWS = 4.83, W_FLIP = 7.84, W_SS = 8.44, W_ONE = 12.53, W_BIG = 15.69, W_READ = 19.0,
+      W_GAZZ = 21.24, W_NOT = 22.56, W_FUN = 23.97;
+
+// ---------------------------------------------------------------- data (illustrative demo profile)
+const WINS = [["razor-short", 48250, 4825], ["bonanza-megablocks", 21600, 2160], ["bulldog-mansion", 12940, 1294],
+              ["thunderstruck-markets", 8812.5, 1175], ["book-of-the-ledger", 5120, 512], ["immortal-hodl", 3366, 1683]];
+const STATS = [["Rewards earned", 9842.17, (v) => money(v), ""], ["GAZZ held", 2450000, (v) => v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? (v / 1e3).toFixed(1) + "K" : Math.round(v) + "", ""],
+               ["GAZZ TANKS", 12, (v) => String(Math.round(v)), "tanks held"], ["Total wagered", 1240000, (v) => v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M" : v >= 1e4 ? "$" + (v / 1e3).toFixed(1) + "K" : money(v), "on StockSlot"]];
+const THESES = [
+  ["predict · Macro", C.info, "Rate-cut odds look too low to me", "The last three prints all came in soft and the market still prices one cut. I am on Yes and adding slowly. Here is what would flip me.", "10/28/2026"],
+  ["funds · High yield", C.limeInk, "Why I hold high-yield funds through red weeks", "Rotation does the work, not my timing. I add on red days, never sell into panic and let the basket rebalance. My sizing rule inside.", "10/24/2026"],
+  ["slots · Bulldog Mansion", C.warning, "Bulldog Mansion: bonus buy or base game?", "I logged 400 spins both ways. The base game is calmer, the bonus is where the big hits live. My split and bankroll plan.", "10/19/2026"]];
+const READER = ["The last three prints all came in soft and the market still prices one cut by March. I think that is too low.",
+  "I am on Yes and adding slowly, never more than a tenth of my Predict balance per week. If the next print runs hot, I cut it in half.",
+  "Here is what would flip me: a strong jobs number and sticky core inflation two months in a row."];
+
+// cumulative daily P&L series ending exactly on the total (30 days)
+function series(seed, total, spiky) {
+  const r = rnd(seed), n = 30, v = []; let run = 0;
+  for (let i = 0; i < n; i++) {
+    let d = spiky ? (r() < 0.16 ? r() * 9 + 3 : (r() - 0.62) * 1.6) : (r() - 0.34) * 2.2;
+    run += d; v.push(run);
+  }
+  const min = Math.min(0, ...v), k = (total - 0) / (v[n - 1] - min);
+  return v.map((x) => (x - min) * k + (spiky ? 0 : 900 * (1 - x / v[n - 1]) * 0));
+}
+
+// StockSlot running P&L: small daily give-back between a few big bonus hits, ending on the total
+function slotSeries(total) {
+  const r = rnd(33), hits = { 5: 9200, 12: 6400, 16: 13800, 24: 17600 }, v = []; let run = 0;
+  for (let i = 0; i < 30; i++) { run += (hits[i] || 0) - (220 + r() * 520) + (r() < 0.25 ? r() * 1400 : 0); v.push(run); }
+  const k = total / v[29]; return v.map((x) => x * k);
+}
+// ---------------------------------------------------------------- build
+const N = {};
+// ---- the site's CURRENT chart (web/src/components/FlatChart.tsx kind="area" + redesign-core.css .fc*),
+// dark theme: lime #b8f43a line (2.75 px), monotone cubic curve, a faint vertical tint (0.1 -> 0)
+// under a halftone dot grid (4 px cell, r 0.95, fill-opacity 0.55) masked top -> bottom (1 -> 0.08),
+// dashed vertical guides at first/middle/last, end dot r 4 (panel-coloured 2 px ring) + halo r 8
+// at 0.18 + the 2.2 s pulse (scale 1 -> 3.4, 0.5 -> 0). Everything x K: the card is drawn at ~2x site size.
+const K = 2;
+const DK = { panel: "#121213", panelSolid: "#161617", border: "rgba(255,255,255,0.065)", ink: "#f3f2ef", muted: "#9b9ba1",
+  line: "rgba(255,255,255,0.07)", line2: "rgba(255,255,255,0.12)", success: "#4ade80", danger: "#dc2626", fc: "#b8f43a" };
+function smoothPath(p) {   // FlatChart.tsx smoothPath (Fritsch-Carlson), verbatim
+  const n = p.length; if (!n) return ""; const f = (v) => v.toFixed(1);
+  if (n < 3) return "M" + p.map(([a, b]) => `${f(a)},${f(b)}`).join(" L");
+  const dx = [], s = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = p[i + 1][0] - p[i][0] || 1e-6; s[i] = (p[i + 1][1] - p[i][1]) / dx[i]; }
+  const t = [s[0]];
+  for (let i = 1; i < n - 1; i++) t[i] = s[i - 1] * s[i] <= 0 ? 0 : (3 * (dx[i - 1] + dx[i])) / ((2 * dx[i] + dx[i - 1]) / s[i - 1] + (dx[i] + 2 * dx[i - 1]) / s[i]);
+  t[n - 1] = s[n - 2];
+  let d = `M${f(p[0][0])},${f(p[0][1])}`;
+  for (let i = 0; i < n - 1; i++) { const h = dx[i] / 3;
+    d += ` C${f(p[i][0] + h)},${f(p[i][1] + t[i] * h)} ${f(p[i + 1][0] - h)},${f(p[i + 1][1] - t[i + 1] * h)} ${f(p[i + 1][0])},${f(p[i + 1][1])}`; }
+  return d;
+}
+function pnlFace(parent, o) {
+  const f = el("div", parent, { position: "absolute", inset: "0", borderRadius: "28px", background: DK.panel, border: `1.5px solid ${DK.border}`, overflow: "hidden",
+    backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", boxShadow: "0 2px 6px rgba(15,17,21,.10), 0 34px 80px rgba(15,17,21,.28)", color: DK.ink });
+  if (o.back) f.style.transform = "rotateY(180deg)";
+  const head = el("div", f, { position: "absolute", left: "48px", top: "40px", display: "flex", alignItems: "center", gap: "14px", fontSize: "34px", fontWeight: "600", letterSpacing: "-0.01em" });
+  tx("span", head, o.title);
+  const ico = el("span", head, { display: "inline-flex", width: "34px", height: "34px", color: DK.ink, opacity: "0.55" });
+  ico.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-4-4M20 15H7l4 4"/></svg>';
+  const tabs = el("div", f, { position: "absolute", right: "48px", top: "34px", display: "flex", gap: "4px", padding: "5px", borderRadius: "999px", background: "rgba(255,255,255,0.04)" });
+  ["7D", "30D", "All"].forEach((l) => tx("span", tabs, l, { padding: "8px 20px", borderRadius: "999px", fontSize: "22px", fontWeight: "600", color: l === "30D" ? DK.ink : DK.muted,
+    background: l === "30D" ? "rgba(255,255,255,0.10)" : "transparent" }));
+  const big = tx("div", f, money(o.total, true), { position: "absolute", left: "48px", top: "118px", fontSize: "88px", fontWeight: "700", letterSpacing: "-0.045em", color: o.total < 0 ? DK.danger : DK.success, lineHeight: "1" }, "num");
+  tx("div", f, o.sub, { position: "absolute", left: "50px", top: "222px", fontSize: "24px", fontWeight: "500", color: DK.muted }, "num");
+  tx("div", f, "Oct 4 – Nov 2", { position: "absolute", right: "50px", top: "150px", fontSize: "24px", fontWeight: "500", color: DK.muted }, "num");
+  // ---- FlatChart geometry (axis=false, fromZero=false), all lengths x K
+  const W = 1024, H = 170 * K, TOP = 8 * K, XL = 20 * K, base = H - XL, v = o.vals, n = v.length;
+  const fc = o.total < 0 ? DK.danger : DK.fc;
+  const max = Math.max(0, ...v), min = Math.min(...v);
+  const lo0 = min < 0 ? min - Math.max(max - min, Math.abs(min)) * 0.15 : max > min ? Math.max(0, min - (max - min) * 0.25) : 0;
+  const raw = (max - lo0) / 3, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((q) => q >= raw) || raw;
+  const top = Math.ceil(max / step) * step, lo = Math.floor(lo0 / step) * step, ticks = [];
+  for (let q = lo + step; q <= top + step * 1e-6; q += step) ticks.push(q);
+  const X = (i) => (i / (n - 1)) * W, Y = (q) => base - ((q - lo) / (top - lo || 1)) * (base - TOP);
+  const pts = v.map((q, i) => [X(i), Y(q)]);
+  const line = smoothPath(pts), fill = `${line} L${X(n - 1).toFixed(1)},${base} L${X(0).toFixed(1)},${base} Z`;
+  const xl = [0, Math.floor((n - 1) / 2), n - 1], labels = ["Oct 4", "Oct 18", "Nov 2"];
+  const id = "g" + o.seed;
+  const svg = el("div", f, { position: "absolute", left: "48px", top: "268px", width: W + "px", height: H + "px" });
+  svg.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible;display:block">
+    <defs>
+      <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fc}" stop-opacity="0.1"/><stop offset="1" stop-color="${fc}" stop-opacity="0"/></linearGradient>
+      <pattern id="${id}d" width="${4 * K}" height="${4 * K}" patternUnits="userSpaceOnUse"><circle cx="${2 * K}" cy="${2 * K}" r="${0.95 * K}" fill="${fc}" fill-opacity="0.55"/></pattern>
+      <linearGradient id="${id}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0.08"/></linearGradient>
+      <mask id="${id}k" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect x="0" y="${TOP}" width="${W}" height="${base - TOP}" fill="url(#${id}m)"/></mask>
+      <clipPath id="c${id}"><rect id="r${id}" x="-20" y="-40" width="0" height="${H + 80}"/></clipPath>
+    </defs>
+    ${ticks.map((q) => `<line x1="0" x2="${W}" y1="${Y(q).toFixed(1)}" y2="${Y(q).toFixed(1)}" stroke="${DK.line}" stroke-width="${K}" shape-rendering="crispEdges"/>`).join("")}
+    <line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="${DK.line2}" stroke-width="${K}" shape-rendering="crispEdges"/>
+    ${xl.map((i) => `<line x1="${X(i).toFixed(1)}" x2="${X(i).toFixed(1)}" y1="${TOP}" y2="${base}" stroke="${DK.line}" stroke-width="${K}" stroke-dasharray="${K} ${3 * K}" shape-rendering="crispEdges"/>`).join("")}
+    <g clip-path="url(#c${id})">
+      <path d="${fill}" fill="url(#${id})"/>
+      <path d="${fill}" fill="url(#${id}d)" mask="url(#${id}k)"/>
+      <path d="${line}" fill="none" stroke="${fc}" stroke-width="${2.75 * K}" stroke-linejoin="round" stroke-linecap="round"/>
+    </g>
+    <g id="e${id}">
+      <circle r="${8 * K}" fill="${fc}" fill-opacity="0.18"/>
+      <circle id="p${id}" r="${4 * K}" fill="${fc}"/>
+      <circle r="${4 * K}" fill="${fc}" stroke="${DK.panelSolid}" stroke-width="${2 * K}"/>
+    </g>
+    ${xl.map((i, k) => `<text x="${k === 0 ? 0 : i === n - 1 ? W : X(i).toFixed(1)}" y="${H - 5 * K}" fill="${DK.muted}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="${10.5 * K}" text-anchor="${k === 0 ? "start" : i === n - 1 ? "end" : "middle"}">${labels[k]}</text>`).join("")}
+  </svg>`;
+  f._clip = svg.querySelector("#r" + id); f._end = svg.querySelector("#e" + id); f._pulse = svg.querySelector("#p" + id);
+  f._pts = pts; f._big = big; f._ico = ico; f._total = o.total; f._W = W;
+  f._sheen = el("div", f, { position: "absolute", inset: "0", background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,.10) 50%, transparent 65%)", opacity: "0" });
+  return f;
+}
+// draw the chart in to fraction p: the clip follows, the end marker rides the tip, the pulse runs once settled
+function chartAt(f, p, t, tDone) {
+  f._clip.setAttribute("width", (p * (f._W + 40)).toFixed(1));
+  const pts = f._pts, xq = p * f._W, n = pts.length;
+  let i = Math.min(n - 2, Math.floor(xq / (f._W / (n - 1))));
+  const u = clamp((xq - pts[i][0]) / (pts[i + 1][0] - pts[i][0])), yq = lerp(pts[i][1], pts[i + 1][1], u);
+  f._end.setAttribute("transform", `translate(${xq.toFixed(1)} ${yq.toFixed(1)})`);
+  f._end.style.opacity = p > 0.02 ? "1" : "0";
+  // .fc-pulse: 2.2 s cubic-bezier(0.2,0.7,0.3,1) infinite, 0% scale 1 / 0.5 -> 80% scale 3.4 / 0
+  const ph = t > tDone ? ((t - tDone) % 2.2) / 2.2 : -1, pe = PULSE(clamp(ph / 0.8));
+  f._pulse.setAttribute("transform", `scale(${ph < 0 ? 1 : lerp(1, 3.4, pe).toFixed(3)})`);
+  f._pulse.setAttribute("opacity", ph < 0 ? "0" : (0.5 * (1 - pe)).toFixed(3));
+}
+const PULSE = bez(0.2, 0.7, 0.3, 1);
+function build() {
+  const cam = document.getElementById("cam");
+  N.gLight = document.getElementById("gLight");
+  N.gLight.style.background = `linear-gradient(180deg, #f8f9f5 0%, ${C.bg} 55%, #eef3e2 100%)`;
+  N.dots = document.getElementById("dots");
+  N.dots.style.backgroundImage = "radial-gradient(rgba(15,17,21,.085) 1.6px, transparent 1.9px)";
+  N.dots.style.backgroundSize = "40px 40px";
+  N.dots.style.maskImage = "radial-gradient(80% 75% at 50% 50%, black 30%, transparent 100%)";
+  N.gWhite = document.getElementById("gWhite"); N.gWhite.style.background = "#ffffff";
+
+  // ===== S0 hook: thrown screenshots of wins + the command
+  N.s0 = el("div", cam, {}, "full");
+  N.ph = [["bulldog-mansion", 12940, 1294], ["razor-short", 48250, 4825], ["bonanza-megablocks", 21600, 2160]].map(([g, usd, x], i) => {
+    const d = box(N.s0, 340, 640, "card", 40);
+    // solid black device bezel + a thin metallic rim so it separates from the light ground
+    Object.assign(d.style, { background: "#060607", padding: "10px", border: "0",
+      boxShadow: "inset 0 0 0 2px #34373e, inset 0 2px 0 rgba(255,255,255,.22), 0 0 0 1.5px rgba(15,17,21,.55), 0 2px 6px rgba(15,17,21,.12), 0 40px 80px rgba(15,17,21,.24)" });
+    const scr = el("div", d, { position: "absolute", inset: "10px", borderRadius: "32px", overflow: "hidden", background: "#0b0b0d", boxShadow: "0 0 0 1.5px rgba(255,255,255,.07)" });
+    const bar = el("div", scr, { position: "absolute", left: "0", right: "0", top: "0", height: "44px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 26px", color: "#fff", fontSize: "17px", fontWeight: "600", zIndex: "2" });
+    tx("span", bar, "9:41"); el("span", bar, { width: "34px", height: "15px", border: "2px solid rgba(255,255,255,.8)", borderRadius: "5px", boxShadow: "inset 0 0 0 2px #0b0b0d", background: "#fff" });
+    const artBox = el("div", scr, { position: "absolute", left: "0", top: "40px", width: "320px", height: "386px", overflow: "hidden" });   // hide the capture's rounded page-colour corners
+    const im = el("img", artBox, { position: "absolute", left: "-8px", top: "-6px", width: "336px", height: "421px" }); im.src = `img/card-${g}.png`;
+    tx("div", scr, "BIG WIN", { position: "absolute", left: "0", right: "0", top: "462px", textAlign: "center", fontSize: "20px", fontWeight: "800", letterSpacing: "0.18em", color: C.lime });
+    tx("div", scr, money(usd), { position: "absolute", left: "0", right: "0", top: "494px", textAlign: "center", fontSize: "48px", fontWeight: "800", letterSpacing: "-0.03em", color: "#fff" }, "num");
+    tx("div", scr, xOf(x), { position: "absolute", left: "0", right: "0", top: "556px", textAlign: "center", fontSize: "20px", fontWeight: "600", color: "rgba(255,255,255,.65)" }, "num");
+    return d;
+  });
+  N.p0a = phrase(N.s0, { words: ["Stop", "screenshotting"], y: 96, size: 150, weight: 700 });
+  N.p0b = phrase(N.s0, { words: ["your", "wins."], y: 262, size: 150, weight: 700, colors: ["", C.limeInk] });
+  N.strike = el("div", N.s0, { position: "absolute", height: "14px", borderRadius: "7px", background: C.ink, transformOrigin: "0 50%", zIndex: "60" });
+
+  // ===== S1 profile header (rebuilt from PublicProfile.tsx, light theme)
+  N.s1 = el("div", cam, {}, "full");
+  N.p1a = phrase(N.s1, { words: ["Your", "profile."], y: 120, size: 112 });
+  N.p1b = phrase(N.s1, { words: ["Shows", "everything."], y: 120, size: 112, colors: [C.limeInk, C.limeInk] });
+  N.prof = box(N.s1, 1240, 450);
+  const av = el("div", N.prof, { position: "absolute", left: "56px", top: "56px", width: "188px", height: "188px", borderRadius: "50%", overflow: "hidden", boxShadow: `0 0 0 6px #fff, 0 0 0 8px ${C.line2}` });
+  el("img", av, { width: "188px", height: "188px" }).src = "img/pfp.jpg";
+  tx("div", N.prof, "Podaz", { position: "absolute", left: "292px", top: "48px", fontSize: "76px", fontWeight: "700", letterSpacing: "-0.045em" });
+  const addr = el("div", N.prof, { position: "absolute", left: "294px", top: "146px", fontSize: "24px", color: C.mute, display: "flex", gap: "14px" }, "mono");
+  tx("span", addr, "0x7c4e…a91d"); tx("span", addr, "⧉ copy", { opacity: ".8" });
+  const soc = el("div", N.prof, { position: "absolute", left: "294px", top: "196px", fontSize: "27px", color: C.mute, display: "flex", gap: "30px" });
+  const f1 = el("span", soc); N.fol = tx("b", f1, "12,480", { color: C.ink, fontWeight: "700" }, "num"); f1.append(" followers");
+  const f2 = el("span", soc); tx("b", f2, "312", { color: C.ink, fontWeight: "700" }, "num"); f2.append(" following");
+  N.follow = el("div", N.prof, { left: "294px", top: "270px", width: "220px", height: "68px", background: C.ink, color: "#fff" }, "btn");
+  N.followTxt = tx("span", N.follow, "Follow");
+  const tip = el("div", N.prof, { left: "530px", top: "270px", width: "120px", height: "68px", background: "#fff", color: C.ink, border: `1.5px solid ${C.line2}` }, "btn"); tx("span", tip, "Tip");
+  const g = el("div", N.prof, { left: "666px", top: "270px", width: "232px", height: "68px", background: C.surf, color: C.ink, gap: "12px", fontWeight: "700" }, "btn");
+  el("img", g, { width: "32px", height: "32px" }).src = "img/gusd-coin-black.png"; tx("span", g, "$2,450.00", {}, "num");
+  tx("div", N.prof, "Predict degen, slot enjoyer, fund rotator.", { position: "absolute", left: "294px", top: "370px", fontSize: "25px", color: C.mute });
+  N.tap1 = el("div", N.prof, { left: "404px", top: "304px" }, "tap");
+
+  // ===== S2 Predict P&L -> flip -> StockSlot P&L (PnlFlipCard)
+  N.s2 = el("div", cam, {}, "full");
+  N.p2a = phrase(N.s2, { words: ["Predict", "P&L"], y: 64, size: 104 });
+  N.p2b = phrase(N.s2, { words: ["Flip", "it."], y: 64, size: 104, colors: [C.limeInk, C.limeInk] });
+  N.p2c = phrase(N.s2, { words: ["StockSlot", "P&L"], y: 64, size: 104 });
+  N.flipBox = el("div", N.s2, { position: "absolute", width: "1120px", height: "640px", perspective: "2400px" }); N.flipBox._w = 1120; N.flipBox._h = 640;
+  N.flip = el("div", N.flipBox, { position: "absolute", inset: "0", transformStyle: "preserve-3d" });
+  N.front = pnlFace(N.flip, { title: "Predict P&L", total: 18426.40, sub: "Realized +$14,210.00 · Unrealized +$4,216.40", vals: series(7, 18426.40, false), seed: 7 });
+  N.back = pnlFace(N.flip, { title: "StockSlot P&L", total: 42883.10, sub: "Staked $186,400.00 · 41 days played", vals: slotSeries(42883.10), seed: 21, back: true });
+  N.tap2 = el("div", N.s2, {}, "tap");
+
+  // ===== S3 GambleFi stats in one place (pf-stats pfx-kpis)
+  N.s3 = el("div", cam, {}, "full");
+  N.p3a = phrase(N.s3, { words: ["All", "your", "GambleFi", "stats."], y: 150, size: 112 });
+  N.p3b = phrase(N.s3, { words: ["In", "one", "place."], y: 150, size: 112, colors: [C.limeInk, C.limeInk, C.limeInk] });
+  N.strip = box(N.s3, 1600, 250);
+  N.stats = STATS.map(([k, v, f, sub], i) => {
+    const d = box(N.s3, 400, 250, "card", 28);
+    const val = tx("div", d, f(v), { position: "absolute", left: "44px", top: "50px", fontSize: "70px", fontWeight: "600", letterSpacing: "-0.045em", lineHeight: "1" }, "num");
+    tx("div", d, k, { position: "absolute", left: "46px", top: "142px", fontSize: "27px", fontWeight: "500", color: C.mute });
+    if (sub) tx("div", d, sub, { position: "absolute", left: "46px", top: "182px", fontSize: "23px", color: C.mute });
+    const div = el("div", d, { position: "absolute", left: "0", top: "40px", bottom: "40px", width: "1.5px", background: C.line2 });
+    d._val = val; d._f = f; d._v = v; d._div = div; return d;
+  });
+
+  // ===== S4 biggest StockSlot wins (ProfileWins.tsx: real lobby cards)
+  N.s4 = el("div", cam, {}, "full");
+  N.p4a = phrase(N.s4, { words: ["Show", "your", "followers"], y: 60, size: 104 });
+  N.p4b = phrase(N.s4, { words: ["your", "biggest", "wins."], y: 60, size: 104, colors: ["", C.limeInk, C.limeInk] });
+  N.winCard = box(N.s4, 1740, 590);
+  tx("div", N.winCard, "Biggest StockSlot wins", { position: "absolute", left: "46px", top: "36px", fontSize: "32px", fontWeight: "600", letterSpacing: "-0.01em" });
+  tx("div", N.winCard, "All time", { position: "absolute", right: "48px", top: "40px", fontSize: "25px", color: C.mute });
+  N.tiles = WINS.map(([gid, usd, x], i) => {
+    const d = el("div", N.winCard, { position: "absolute", left: px(46 + i * 280), top: "104px", width: "256px", height: "440px" });
+    const art = el("div", d, { position: "absolute", left: "0", top: "0", width: "256px", height: "320px", borderRadius: "18px", overflow: "hidden", border: `1.5px solid ${C.line}` });
+    el("img", art, { width: "256px", height: "320px" }).src = `img/card-${gid}.png`;
+    const m = tx("div", d, money(usd), { position: "absolute", left: "2px", top: "338px", fontSize: "30px", fontWeight: "600", letterSpacing: "-0.03em", color: C.success }, "num");
+    const pl = tx("div", d, xOf(x), { left: "2px", top: "384px", padding: "5px 14px", fontSize: "19px", fontWeight: "700", color: C.ink, background: C.surf }, "pill mono");
+    d._m = m; d._usd = usd; d._art = art; return d;
+  });
+  N.heroRing = el("div", N.winCard, { position: "absolute", left: "40px", top: "98px", width: "268px", height: "332px", borderRadius: "23px", border: `5px solid ${C.lime}` });
+
+  // ===== S5 theses (pfx-theses + ThesisReadOverlay)
+  N.s5 = el("div", cam, {}, "full");
+  N.p5a = phrase(N.s5, { words: ["Post", "your", "thesis."], y: 64, size: 104 });
+  N.p5b = phrase(N.s5, { words: ["Anyone", "can", "read", "it."], y: 64, size: 104, colors: ["", "", C.limeInk, C.limeInk] });
+  N.thCard = box(N.s5, 1700, 500);
+  tx("div", N.thCard, "Theses", { position: "absolute", left: "46px", top: "36px", fontSize: "32px", fontWeight: "600" });
+  tx("div", N.thCard, "3", { position: "absolute", right: "48px", top: "40px", fontSize: "25px", color: C.mute }, "num");
+  N.ths = THESES.map(([cat, col, title, body, date], i) => {
+    const d = el("div", N.thCard, { position: "absolute", left: px(46 + i * 546), top: "104px", width: "516px", height: "350px", borderRadius: "20px",
+      border: `1.5px solid ${C.line2}`, background: "rgba(15,17,21,.018)" });
+    tx("span", d, cat, { left: "26px", top: "26px", padding: "5px 14px", fontSize: "17px", fontWeight: "700", letterSpacing: "0.02em", color: col, border: `1.5px solid ${col}` }, "pill");
+    tx("div", d, title, { position: "absolute", left: "26px", right: "26px", top: "76px", fontSize: "30px", fontWeight: "800", letterSpacing: "-0.02em", lineHeight: "1.22" });
+    tx("div", d, body, { position: "absolute", left: "26px", right: "26px", top: "164px", fontSize: "21px", lineHeight: "1.5", color: C.ink2, display: "-webkit-box", WebkitLineClamp: "3", WebkitBoxOrient: "vertical", overflow: "hidden" });
+    tx("div", d, date, { position: "absolute", left: "26px", top: "306px", fontSize: "17px", color: C.mute }, "mono");
+    return d;
+  });
+  N.tap5 = el("div", N.thCard, { left: "300px", top: "300px" }, "tap");
+  N.scrim = el("div", N.s5, { background: "rgba(15,17,21,.32)" }, "full");
+  N.reader = box(N.s5, 1080, 760);
+  tx("span", N.reader, THESES[0][0], { left: "56px", top: "56px", padding: "7px 18px", fontSize: "21px", fontWeight: "700", letterSpacing: "0.02em", color: C.info, border: `1.5px solid ${C.info}` }, "pill");
+  tx("div", N.reader, "×", { position: "absolute", right: "52px", top: "40px", fontSize: "56px", fontWeight: "400", color: C.mute });
+  tx("div", N.reader, THESES[0][2], { position: "absolute", left: "56px", right: "56px", top: "126px", fontSize: "54px", fontWeight: "800", letterSpacing: "-0.035em", lineHeight: "1.1" });
+  tx("div", N.reader, "Podaz · 10/28/2026", { position: "absolute", left: "58px", top: "202px", fontSize: "21px", color: C.mute }, "mono");
+  const rb = el("div", N.reader, { position: "absolute", left: "56px", right: "70px", top: "262px", fontSize: "28px", lineHeight: "1.55", color: C.ink2 });
+  READER.forEach((p) => tx("p", rb, p, { margin: "0 0 20px" }));
+
+  // ===== S6 end card (white): owner's slogan
+  N.s6 = el("div", cam, {}, "full");
+  N.logo = el("img", N.s6, { position: "absolute", width: "150px", height: "150px", left: px(960 - 75), top: "150px", borderRadius: "34px" });
+  N.logo.src = "img/logo.png";
+  N.word = phrase(N.s6, { words: ["gazz.fun"], y: 320, size: 120, weight: 700 });
+  N.tag1 = phrase(N.s6, { words: ["Not", "just", "social", "trading,"], y: 540, size: 96, weight: 600, color: C.ink2 });
+  N.tag2 = phrase(N.s6, { words: ["but", "fun!"], y: 680, size: 190, weight: 800 });
+  N.hl = el("div", N.s6, { position: "absolute", background: C.lime, borderRadius: "10px", transformOrigin: "0 50%", zIndex: "40" });
+
+  // demo label (scenes with profile data)
+  N.demo = document.getElementById("demo");
+  Object.assign(N.demo.style, { position: "absolute", right: "44px", top: "38px", padding: "9px 18px", borderRadius: "999px", background: "#fff", border: `1.5px solid ${C.line2}`,
+    fontSize: "21px", fontWeight: "600", color: C.mute, display: "flex", alignItems: "center", gap: "10px", zIndex: "90" });
+  el("span", N.demo, { width: "10px", height: "10px", borderRadius: "50%", background: C.limeInk });
+  N.demo.append("Demo profile");
+
+  // ---- SOUND: plain ui-* palette, max one effect per ~1.5 s, soft chord on the hero win,
+  // warm sting under the slogan's last word, clean silent tail
+  cue(0.02, "ui-thud", 0.9);              // frame 1: the command lands with the thrown screenshots
+  cue(1.92, "ui-whoosh-low", 1);          // screenshots swept away
+  cue(4.12, "ui-tap-1", 1);               // Follow
+  cue(5.98, "ui-whoosh-1", 0.85);         // into the P&L card
+  cue(W_FLIP + 0.02, "ui-toggle", 1);     // the flip
+  cue(T3 - 0.04, "ui-whoosh-low", 0.9);   // stats
+  cue(W_ONE - 0.04, "ui-snap", 1);        // tiles lock into one strip
+  cue(T4 + 0.08, "ui-slide", 1);          // win tiles glide in
+  cue(16.0, "chord-win", 0.8);            // the biggest win
+  cue(T5 + 0.04, "ui-whoosh-1", 0.85);    // theses
+  cue(19.28, "ui-drawer", 1);             // the reader opens
+  cue(W_GAZZ + 0.02, "ui-sub", 1);        // logo lands (felt, not heard)
+  cue(24.0, "sting-logo", 2.0);           // "fun!" (music stops on the beat)
+  cue(T2 - 0.25, "@lowpass", 1, { to: 800, d: 0.25, hold: 0.08, back: 0.4 });
+  cue(T4 - 0.25, "@lowpass", 1, { to: 800, d: 0.25, hold: 0.08, back: 0.4 });
+  cue(T6 - 0.25, "@lowpass", 1, { to: 700, d: 0.25, hold: 0.1, back: 0.45 });
+  cue(23.98, "@stop", 1, { d: 0.06 });
+}
+
+// ---------------------------------------------------------------- seek
+function seek(t) {
+  const white = t >= T6 - 0.05;
+  show(N.gWhite, white); N.gWhite.style.opacity = white ? clamp((t - T6 + 0.05) / 0.3).toFixed(3) : "0";
+  N.dots.style.backgroundPosition = `${(t * 6).toFixed(2)}px ${(t * 14).toFixed(2)}px`;
+  N.dots.style.opacity = white ? "0" : "1";
+  const dm = clamp(prog(t, T1 + 0.2, 0.4)) * (1 - prog(t, T6 - 0.3, 0.3));
+  N.demo.style.opacity = dm.toFixed(3); show(N.demo, SHOW_DEMO_BADGE && dm > 0);
+
+  // ===== S0 hook (0 - T1): screenshots are mid-throw on frame 1, the command is already on screen
+  if (focus(N.s0, t, null, T1 - 0.02, 0.4, 0.3)) {
+    const lay = [[530, 860, -12], [960, 815, 0], [1390, 860, 12]], starts = [-0.3, -0.2, -0.1];
+    N.ph.forEach((d, i) => {
+      const a = sp(t, starts[i], 0.85, 0.7);
+      const out = EI(prog(t, 1.9 + i * 0.05, 0.5));
+      const [x, y, r] = lay[i];
+      const ox = (x - 960) * 1.3 * out, oy = 520 * out;
+      put(d, x + ox + (1 - a) * (x - 960) * 0.6, y + (1 - a) * 420 + oy, lerp(1.5, 1.12, a) * (1 - 0.1 * out) * (1 + 0.03 * t),
+        `rotate(${(r * a + (1 - a) * r * 2.2 + out * r * 1.4).toFixed(2)}deg)`, out * 10, clamp(a * 4));
+      d.style.zIndex = i === 1 ? "3" : "2";
+    });
+    phraseAt(N.p0a, t, -0.32, 1.95, 0.24);
+    phraseAt(N.p0b, t, W_WINS - 0.2, 1.98, 0.12);
+    // the strike through the habit
+    const w0 = N.p0a._w[1];
+    const s = EIO(prog(t, 0.92, 0.32)), so = 1 - EI(prog(t, 1.95, 0.25));
+    N.strike.style.left = px(w0.offsetLeft - 10); N.strike.style.top = px(96 + w0.offsetTop + w0.offsetHeight * 0.55);
+    N.strike.style.width = px(w0.offsetWidth + 20); N.strike.style.transform = `scaleX(${s.toFixed(4)})`;
+    N.strike.style.opacity = so.toFixed(3); show(N.strike, s > 0 && so > 0);
+  }
+
+  // ===== S1 profile header
+  if (focus(N.s1, t, T1, T2 - 0.06, 0.35, 0.3)) {
+    const a = sp(t, T1 + 0.02, 1.0, 0.74), push = 1 + (t - T1) * 0.012;
+    put(N.prof, 960, 640 + (1 - a) * 360, lerp(0.88, 1, a) * push, `perspective(2400px) rotateX(${((1 - a) * 18).toFixed(2)}deg)`, (1 - a) * 10, clamp(a * 3));
+    phraseAt(N.p1a, t, T1 + 0.3, W_SHOWS - 0.12, 0.12);
+    phraseAt(N.p1b, t, W_SHOWS, null, 0.12);
+    // Follow -> Following, followers tick up
+    const tapT = 4.1, on = t >= tapT + 0.08;
+    const press = Math.sin(Math.PI * prog(t, tapT, 0.2)) * 0.06;
+    N.follow.style.transform = `scale(${(1 - press).toFixed(4)})`;
+    N.follow.style.background = on ? "#fff" : C.ink; N.follow.style.color = on ? C.ink : "#fff";
+    N.follow.style.border = on ? `1.5px solid ${C.line2}` : "0";
+    N.followTxt.textContent = on ? "Following ✓" : "Follow";
+    N.fol.textContent = on ? "12,481" : "12,480";
+    tapAt(N.tap1, t, tapT);
+  }
+
+  // ===== S2 P&L flip card
+  if (focus(N.s2, t, T2, T3 - 0.06, 0.35, 0.3)) {
+    const a = sp(t, T2 + 0.02, 0.95, 0.76), push = 1 + (t - T2) * 0.008;
+    const fl = FLIP(prog(t, W_FLIP + 0.12, 0.68));
+    const lift = Math.sin(Math.PI * fl) * 0.06;
+    put(N.flipBox, 960, 625 + (1 - a) * 300, (lerp(0.9, 1, a) + lift) * push, `perspective(2400px) rotateX(${((1 - a) * 14).toFixed(2)}deg)`, (1 - a) * 10, clamp(a * 3));
+    N.flip.style.transform = `rotateY(${(fl * 180).toFixed(3)}deg)`;
+    // chart draw-ins + number count
+    const dr = EO(prog(t, T2 + 0.45, 1.1)), db = EO(prog(t, W_SS - 0.1, 1.1));
+    chartAt(N.front, dr, t, T2 + 1.55); chartAt(N.back, db, t, W_SS + 1.0);
+    N.front._big.textContent = money(N.front._total * EO(prog(t, T2 + 0.4, 1.1)), true);
+    N.back._big.textContent = money(N.back._total * EO(prog(t, W_SS - 0.1, 1.1)), true);
+    const sh = prog(t, W_FLIP + 0.12, 0.68);
+    [N.front, N.back].forEach((f) => { f._sheen.style.opacity = (Math.sin(Math.PI * sh) * 0.9).toFixed(3); f._sheen.style.transform = `translateX(${lerp(-60, 60, sh).toFixed(1)}%)`; });
+    // tap on the flip arrows of the title (front face, before it turns)
+    const ir = N.front._ico; const ix = 960 - 560 + 48 + ir.offsetLeft + 17, iy = 625 - 320 + 40 + ir.offsetTop + 17;
+    N.tap2.style.left = px(ix); N.tap2.style.top = px(iy); tapAt(N.tap2, t, W_FLIP - 0.04);
+    phraseAt(N.p2a, t, 6.3, W_FLIP - 0.16, 0.12);
+    phraseAt(N.p2b, t, W_FLIP - 0.02, W_SS - 0.1, 0.12);
+    phraseAt(N.p2c, t, W_SS + 0.05, null, 0.12);
+  }
+
+  // ===== S3 stats: four floating tiles snap into ONE strip on "in one place"
+  if (focus(N.s3, t, T3, T4 - 0.06, 0.35, 0.3)) {
+    const sn = EIO(prog(t, W_ONE - 0.1, 0.42));
+    const stripOn = EO(prog(t, W_ONE + 0.18, 0.3));
+    put(N.strip, 960, 640, 1, "", 0, stripOn);
+    N.stats.forEach((d, i) => {
+      const a = sp(t, T3 + 0.12 + i * 0.12, 0.9, 0.74);
+      const fx = 960 + (i - 1.5) * 470, fy = 640 + [-26, 22, -14, 26][i], fr = [-3, 2, -2, 3][i];
+      const jx = 960 + (i - 1.5) * 400;
+      const x = lerp(fx, jx, sn), y = lerp(fy, 640, sn), r = lerp(fr, 0, sn);
+      put(d, x, y + (1 - a) * 240, lerp(0.85, 1, a) * lerp(0.92, 1, sn), `rotate(${(r * a).toFixed(2)}deg)`, (1 - a) * 12, clamp(a * 3));
+      d.style.background = `rgba(255,255,255,${(1 - stripOn).toFixed(3)})`;
+      d.style.borderColor = `rgba(15,17,21,${(0.08 * (1 - stripOn)).toFixed(3)})`;
+      d.style.boxShadow = stripOn < 0.99 ? `0 2px 4px rgba(15,17,21,${(0.04 * (1 - stripOn)).toFixed(3)}), 0 30px 70px rgba(15,17,21,${(0.10 * (1 - stripOn)).toFixed(3)})` : "none";
+      d._div.style.opacity = i ? stripOn.toFixed(3) : "0";
+      const c = EO(prog(t, T3 + 0.25 + i * 0.12, 1.1));
+      d._val.textContent = d._f(d._v * c);
+    });
+    phraseAt(N.p3a, t, 10.98, W_ONE - 0.16, 0.1);
+    phraseAt(N.p3b, t, W_ONE, null, 0.12);
+  }
+
+  // ===== S4 biggest wins: tiles glide in, the camera leans into the biggest one
+  if (focus(N.s4, t, T4, T5 - 0.06, 0.35, 0.3)) {
+    const a = sp(t, T4 + 0.02, 0.9, 0.78);
+    const z = EIO(prog(t, 15.85, 0.7));
+    // lean toward tile 0 (stage x ~ 960-870+46+128 = 264)
+    const zx = lerp(960, 640 + (960 - 264) * 1.32, z), zy = lerp(650, 610, z);
+    put(N.winCard, zx, zy + (1 - a) * 260, lerp(0.9, 1, a) * lerp(1, 1.32, z), "", (1 - a) * 8, clamp(a * 3));
+    N.tiles.forEach((d, i) => {
+      const b = sp(t, T4 + 0.2 + i * 0.09, 0.85, 0.74);
+      d.style.transform = `translateX(${((1 - b) * 260).toFixed(2)}px) scale(${lerp(0.86, 1, b).toFixed(4)})`;
+      d.style.opacity = clamp(b * 3).toFixed(3);
+      const soft = i ? z : 0;
+      d.style.filter = soft > 0.02 ? `blur(${(soft * 3.2).toFixed(2)}px)` : "";
+      d.style.opacity = (clamp(b * 3) * (1 - 0.35 * soft)).toFixed(3);
+      const c = EO(prog(t, T4 + 0.4 + i * 0.09, 1.0));
+      d._m.textContent = money(d._usd * c);
+    });
+    const hr = EO(prog(t, 15.95, 0.35));
+    N.heroRing.style.opacity = hr.toFixed(3); N.heroRing.style.transform = `scale(${lerp(1.08, 1, hr).toFixed(4)})`; show(N.heroRing, hr > 0);
+    phraseAt(N.p4a, t, 14.48, W_BIG - 0.16, 0.1);
+    phraseAt(N.p4b, t, W_BIG, null, 0.12);
+  }
+
+  // ===== S5 theses + the reader opening
+  if (focus(N.s5, t, T5, T6 - 0.06, 0.35, 0.3)) {
+    const a = sp(t, T5 + 0.02, 0.9, 0.78);
+    put(N.thCard, 960, 650 + (1 - a) * 260, lerp(0.9, 1, a), `perspective(2400px) rotateX(${((1 - a) * 14).toFixed(2)}deg)`, (1 - a) * 8, clamp(a * 3));
+    N.ths.forEach((d, i) => {
+      const b = sp(t, T5 + 0.15 + i * 0.1, 0.85, 0.76);
+      const press = i === 0 ? Math.sin(Math.PI * prog(t, 19.1, 0.2)) * 0.03 : 0;
+      d.style.transform = `translateY(${((1 - b) * 120).toFixed(2)}px) scale(${(lerp(0.9, 1, b) - press).toFixed(4)})`;
+      d.style.opacity = clamp(b * 3).toFixed(3);
+      d.style.borderColor = i === 0 && t > 19.1 ? "rgba(77,124,15,.55)" : C.line2;
+    });
+    tapAt(N.tap5, t, 19.1);
+    const r = sp(t, 19.3, 0.85, 0.8);
+    N.scrim.style.opacity = (0.9 * EO(prog(t, 19.25, 0.35))).toFixed(3); show(N.scrim, t > 19.25);
+    put(N.reader, 960, 560 + (1 - r) * 520, lerp(0.92, 1, r), "", (1 - r) * 6, clamp(r * 3)); show(N.reader, t > 19.3);
+    phraseAt(N.p5a, t, 17.98, W_READ - 0.16, 0.12);
+    phraseAt(N.p5b, t, W_READ, null, 0.1);
+    N.p5a.style.zIndex = N.p5b.style.zIndex = "70";
+  }
+
+  // ===== S6 end card: "Gazz dot fun. Not just social trading, but fun!"
+  if (focus(N.s6, t, T6, null, 0.4)) {
+    const m = sp(t, W_GAZZ - 0.12, 0.9, 0.68);
+    N.logo.style.transform = `translateY(${((1 - m) * 110).toFixed(2)}px) scale(${lerp(0.6, 1, m).toFixed(4)})`;
+    N.logo.style.opacity = clamp(m * 3).toFixed(3);
+    N.logo.style.filter = m < 0.98 ? `blur(${((1 - m) * 10).toFixed(2)}px)` : "";
+    phraseAt(N.word, t, W_GAZZ, null);
+    phraseAt(N.tag1, t, W_NOT - 0.04, null, 0.1);
+    phraseAt(N.tag2, t, W_FUN - 0.3, null, 0.24);
+    // lime highlighter sweeps behind "fun!" as it is said, then a small bounce
+    const fw = N.tag2._w[1];
+    const h = EO(prog(t, W_FUN - 0.04, 0.32)), bo = sp(t, W_FUN - 0.04, 0.8, 0.45);
+    N.hl.style.left = px(N.tag2.offsetLeft + fw.offsetLeft - 22); N.hl.style.top = px(680 + fw.offsetTop + fw.offsetHeight * 0.16);
+    N.hl.style.width = px(fw.offsetWidth + 44); N.hl.style.height = px(fw.offsetHeight * 0.78);
+    N.hl.style.transform = `scaleX(${h.toFixed(4)})`; show(N.hl, h > 0);
+    N.tag2.style.zIndex = "50";
+    fw.style.transform += ` scale(${lerp(0.9, 1, bo).toFixed(4)})`;
+  }
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  await Promise.all(["800 100px Geist", "700 100px Geist", "600 40px Geist", "500 40px Geist"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+  build();
+  await Promise.all([...document.images].map((im) => im.decode().catch(() => { throw new Error("img " + im.src); })));
+  const q = new URLSearchParams(location.search).get("t");
+  seek(q ? +q : 0);
+  window.seek = seek; window.READY = true;
+}
+boot().catch((e) => { window.BOOT_ERR = String((e && e.stack) || e); });
+</script>
+</body>
+</html>

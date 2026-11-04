@@ -247,7 +247,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   refuses every call (internal `status` op, fail closed), Profile → AI agents shows an "MCP Paused" badge.
 
 ## API (server/) — closed by default
-- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`.
+- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`. One deliberate exception: the public read of BackX Proposals (`GET /api/proposals/latest|:id`, text + percentages only, see "BackX Proposals").
 - CORS + Origin/Referer guard: exact allowlist from `ALLOWED_ORIGINS` (https only, no wildcards, no preview domains). Fail closed.
 - The origin guard only stops other websites. Every route that reads or writes user data MUST require a verified session; there are no public write routes, ever.
 - Sessions: HttpOnly + Secure + SameSite=Lax cookie, only the SHA-256 hash stored in Postgres. Never tokens in query or body.
@@ -301,6 +301,19 @@ The owner is not a developer: explain briefly, in Norwegian.
   for Gmail/Outlook/Apple Mail, also Copy HTML / Download .htm. Logo = PNG at https://www.backx.trade/email/backx-mark-v1.png
   (Cache-Control immutable): NEVER edit or delete it, a new logo gets a new name (-v2) so sent mail keeps working.
   img-src in the CSP includes https://www.backx.trade for the admin preview.
+- BackX Proposals (owner 2026-11-04, `server/src/proposals.js`, tables `proposals` + `proposal_signals`): community
+  questions, always Yes / No, called "BackX Proposal BXP-<id>" and "signal" (never "vote"; "validator" means settlers).
+  Admin → Proposals (`/admin/proposals`, `pages/AdminProposals.tsx`): title, question, text, rolling banner text;
+  Draft / Open / Close, audited, admins see the counts. Public: www.backx.trade/proposal (`pages/ProposalSite.tsx`,
+  `?bxp=<id>` for an older one): clean page, colourful Yes/No split bar in percent, NEVER totals; Yes/No buttons
+  log in first (one signal per account, changeable while open; a signal also records the participation).
+  Front page: rolling yellow banner on top while one is open (`components/ProposalBanner.tsx`, pauses on hover,
+  still with reduced motion; the continuous roll is an owner-requested exception to the 300 ms motion rule).
+  `GET /api/proposals/latest|:id` is the ONE deliberate public read under /api: no user data, only text + percent
+  (Redis cache 10 s, own rate limit 60/min per IP); `POST /api/proposals/:id/signal` needs a session (10/min).
+- Marketing (owner 2026-11-04): follow `.claude/skills/backx-marketing/SKILL.md` for every post, image and video
+  (hooks, X rules, truth check, 4K pipeline, OpenArt, video + sound); the long gazz.fun originals are in
+  `docs/marketing/reference-gazz/`. Campaign folders: `docs/marketing/<date>-<campaign>/`.
 - SEO / AI search (reviewed 2026-10-23): canonical host is https://www.backx.trade (apex redirects there); every public page's title, description and preview image live in `web/src/lib/seoPages.ts`, and the build (vite.config.ts) writes `dist/whitepaper.html` with its own head. Admin → Branding (`/admin/branding`) shows all brand images, icons, chain and login logos and each page's link preview; brand images are no longer under Profile → Documents. index.html carries full meta, Open Graph, JSON-LD (Organization, WebSite, WebApplication, FAQPage;
   a data block, not executed) and a no-JS text version inside #root. `robots.txt` allows search and AI crawlers
   (blocks /profile, /admin), plus `sitemap.xml`, `llms.txt`, `site.webmanifest`. Keep FAQ/llms.txt in sync with the

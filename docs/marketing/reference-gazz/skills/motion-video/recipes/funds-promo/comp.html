@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gazz.fun Funds promo</title>
+<!-- FUNDS PROMO (owner 2026-11-03): the viral-promo look (1-5 word blur-in
+     phrases, one lime hue family, depth, focus pulls) built from REAL site
+     captures (img/*.png = element crops of https://gazz.fun at DPR 3, img/fl-*
+     real fund logos, img/sl-* real stock logos), MUSIC ONLY (no voice), plain
+     ui-* sounds at most one per ~1.5 s, a warm logo sting and a silent tail.
+     Every on-screen number is verified (see the TRUTH block below). -->
+<style>
+  @font-face { font-family: "Geist"; font-weight: 500; font-display: block; src: url(fonts/Geist-500.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; font-display: block; src: url(fonts/Geist-600.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 700; font-display: block; src: url(fonts/Geist-700.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 800; font-display: block; src: url(fonts/Geist-800.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0d1106; }
+  * { box-sizing: border-box; }
+  #stage { position: absolute; inset: 0; overflow: hidden; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-family: "Geist", system-ui, sans-serif; color: #f4f7ee; }
+  .full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .phrase { position: absolute; left: 0; width: 1920px; text-align: center; white-space: nowrap; font-weight: 600; letter-spacing: -0.04em; line-height: 1.04; }
+  .phrase > span { display: inline-block; will-change: transform, filter, opacity; }
+  .num { font-variant-numeric: tabular-nums; }
+  .shot { position: absolute; border-radius: 22px; overflow: hidden; background: #0b0b0b; box-shadow: 0 0 0 2px rgba(184,244,58,.10), 0 40px 90px rgba(0,0,0,.55); transform-origin: 50% 50%; }
+  .shot img { display: block; width: 100%; height: 100%; }
+  .logo3d { position: absolute; border-radius: 28%; overflow: hidden; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .logo3d img { width: 100%; height: 100%; display: block; }
+  .tap { position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; border: 4px solid #b8f43a; }
+  .ring { position: absolute; border: 4px solid #b8f43a; border-radius: 14px; }
+  .seg { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 40px; letter-spacing: -0.03em; overflow: hidden; white-space: nowrap; }
+  .lbl { position: absolute; font-weight: 600; font-size: 30px; letter-spacing: -0.01em; white-space: nowrap; text-align: center; }
+  img { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="gDark" class="full"></div>
+  <div id="grid" class="full"></div>
+  <div id="gPale" class="full"></div>
+  <div id="gWhite" class="full"></div>
+  <div id="cam" class="full"></div>
+</div>
+<script>
+// ---------------------------------------------------------------- TRUTH (2026-11-03)
+// 45 live funds, 3 classes (Standard 24 / High-Yield 11 / Fixed Income 10): api.gazz.fun/api/fund/v2-market
+// 0.2% fee each way (mint + redeem): Docs.tsx "Buy at NAV" + the live buy panel ("fee 0.2%")
+// split 20% fund creator / 60% holders (30 $GAZZ + 30 GAZZ TANKS) / 10% SPR buyback & burn / 10% platform:
+//   Docs.tsx fee map + the live /fund/raffle page (img/rf-split.png)
+// 7-day creator seat won in the raffle, one free entry per wallet per round, owner earns 20% of
+//   every fee the fund generates: Docs.tsx "Enter the raffle" + "Creator earnings"
+// AEEV holdings TSLA 33.7 / RIVN / F / CVNA / AUR / MOD: live fund page capture (img/fd-hold.png)
+
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, t0, d) => clamp((t - t0) / d);
+function bez(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(clamp(t)); };
+}
+const EO = bez(0.16, 1, 0.3, 1), EIO = bez(0.76, 0, 0.24, 1), EI = bez(0.7, 0, 0.84, 0);
+function spring(p, zeta = 0.72) { if (p <= 0) return 0; if (p >= 1) return 1; const w = 5.3 / zeta, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * p) * (Math.cos(wd * p) + (zeta * w / wd) * Math.sin(wd * p)); }
+const sp = (t, t0, d, z) => spring(prog(t, t0, d), z);
+const el = (tag, parent, style = {}, cls = "") => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, style); parent.appendChild(e); return e; };
+const px = (v) => v.toFixed(2) + "px";
+const show = (e, on) => { if (e._disp == null) e._disp = e.style.display && e.style.display !== "none" ? e.style.display : ""; e.style.display = on ? e._disp : "none"; };
+const C = { deep: "#0d1106", dark: "#1b2610", mid: "#4f7a1c", lime: "#b8f43a", pale: "#ecfccb", white: "#fbfdf7", ink: "#0b0f06", mute: "#8e9a80" };
+
+function phrase(parent, o) {
+  const l = el("div", parent, { zIndex: "50", top: px(o.y), fontSize: px(o.size), fontWeight: String(o.weight || 600), color: o.color || C.white, letterSpacing: o.track || "" }, "phrase" + (o.num ? " num" : ""));
+  if (o.x != null) { l.style.left = px(o.x); l.style.width = px(o.w); l.style.textAlign = o.align || "left"; }
+  l._w = o.words.map((wd, k) => { const s = el("span", l, { color: (o.colors && o.colors[k]) || "", marginRight: k < o.words.length - 1 ? "0.24em" : "0" }); s.textContent = wd; return s; });
+  return l;
+}
+function phraseAt(l, t, tin, tout, st = 0.1, dIn = 0.42, dOut = 0.26) {
+  let vis = false;
+  l._w.forEach((s, k) => {
+    const p = EO(prog(t, tin + k * st, dIn));
+    const q = tout == null ? 0 : EI(prog(t, tout + k * 0.04, dOut));
+    const b = (1 - p) * 16 + q * 14;
+    s.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+    s.style.opacity = (p * (1 - q)).toFixed(3);
+    s.style.transform = `translate3d(${((1 - p) * 30 - q * 18).toFixed(2)}px,0,0) scale(${(1 + (1 - p) * 0.05).toFixed(4)})`;
+    if (p > 0 && q < 1) vis = true;
+  });
+  show(l, vis);
+}
+function focus(e, t, tin, tout, dIn = 0.4, dOut = 0.3) {
+  const p = tin == null ? 1 : EO(prog(t, tin, dIn)), q = tout == null ? 0 : EI(prog(t, tout, dOut));
+  const b = (1 - p) * 22 + q * 22;
+  e.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+  e.style.opacity = (Math.min(1, p * 1.6) * (1 - q)).toFixed(3);
+  e.style.transform = `scale(${(1 + (1 - p) * 0.04 + q * 0.05).toFixed(4)})`;
+  show(e, p > 0 && q < 1);
+  return p > 0 && q < 1;
+}
+// real-site captures (natively 3x CSS px): [w, h]
+const IMG = { "fm-list": [3312, 1674], "fd-head": [1147, 207], "fd-chart": [2064, 768], "fd-buy": [1236, 1305],
+  "fd-hold": [2052, 711], "rf-split": [2124, 331], "rf-chips": [2100, 351] };
+function shot(parent, name, w, r = 22) {
+  const [iw, ih] = IMG[name], h = w * ih / iw;
+  const d = el("div", parent, { width: px(w), height: px(h), borderRadius: px(r) }, "shot");
+  el("img", d).src = `img/${name}.png`;
+  d._w = w; d._h = h; return d;
+}
+function logo(parent, src, size) {
+  const d = el("div", parent, { width: px(size), height: px(size) }, "logo3d");
+  el("img", d).src = src; d._w = size; d._h = size; return d;
+}
+function put(d, cx, cy, s = 1, extra = "", blur = 0, op = 1) {
+  d.style.left = px(cx - d._w / 2); d.style.top = px(cy - d._h / 2);
+  d.style.transform = `scale(${s.toFixed(4)}) ${extra}`;
+  d.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "";
+  d.style.opacity = clamp(op).toFixed(3);
+}
+
+// ---------------------------------------------------------------- timeline
+// Music: "Close Up" (Mixkit, 105 BPM) from bar 5 (11.481 s) — its lift (track 16.05 s)
+// lands at 4.57 s, right on the first real UI. One scene per 2 bars.
+const B = 60 / 105, BAR = 4 * B, bt = (n) => n * B;
+const S = [0, 1, 2, 3, 4, 5, 6].map((i) => i * 2 * BAR);   // 0, 4.57, 9.14, 13.71, 18.29, 22.86, 27.43
+const DUR = S[6] + 3.6;
+const CUES = []; function cue(t, f, g = 1, extra) { CUES.push({ t: +t.toFixed(3), f, g, ...(extra || {}) }); }
+window.DUR = DUR; window.CUES = CUES;
+
+// ---------------------------------------------------------------- build
+const N = {};
+const FUNDS = ["AEEV", "FEFT", "PEGD", "THTR", "AMCS", "MMMS", "CECR", "RSTR", "THPB", "EEGE"];
+function build() {
+  const cam = document.getElementById("cam");
+  N.gDark = document.getElementById("gDark");
+  N.gDark.style.background = `radial-gradient(62% 72% at 50% 46%, #31491a 0%, #1b2610 44%, ${C.deep} 100%)`;
+  N.grid = document.getElementById("grid");
+  N.grid.style.perspective = "900px"; N.grid.style.overflow = "hidden";
+  N.plane = el("div", N.grid, { position: "absolute", left: "-1200px", width: "4320px", height: "2200px", top: "640px",
+    transformOrigin: "50% 0", transform: "rotateX(78deg)",
+    backgroundImage: "linear-gradient(rgba(184,244,58,.16) 2px, transparent 2px), linear-gradient(90deg, rgba(184,244,58,.16) 2px, transparent 2px)",
+    backgroundSize: "120px 120px",
+    maskImage: "linear-gradient(180deg, transparent 0%, black 22%, black 60%, transparent 100%)" });
+  N.gPale = document.getElementById("gPale");
+  N.gPale.style.background = `radial-gradient(70% 80% at 50% 45%, ${C.pale} 0%, #d9f7a4 60%, #c3ee6f 100%)`;
+  N.gWhite = document.getElementById("gWhite");
+  N.gWhite.style.background = `linear-gradient(180deg, ${C.white} 0%, ${C.white} 60%, #e8f9c9 100%)`;
+
+  // S0 hook: real fund logos in depth + "Don't just buy the fund. Own it."
+  N.s0 = el("div", cam, {}, "full");
+  const spots = [[300, 250, 0.7], [1620, 230, 0.62], [180, 760, 0.85], [1730, 800, 0.78], [620, 900, 0.55], [1320, 930, 0.6], [520, 130, 0.45], [1420, 120, 0.5], [960, 1000, 0.42], [90, 470, 0.5]];
+  N.f0 = FUNDS.map((s, i) => ({ d: logo(N.s0, `img/fl-${s}.png`, 230), x: spots[i][0], y: spots[i][1], z: spots[i][2] }));
+  N.p0a = phrase(N.s0, { words: ["Don't", "just", "buy", "the", "fund."], y: 370, size: 132 });
+  N.p0b = phrase(N.s0, { words: ["Own", "it."], y: 540, size: 200, weight: 700, colors: [C.lime, C.lime] });
+
+  // S1 the real fund list
+  N.s1 = el("div", cam, {}, "full");
+  N.list = shot(N.s1, "fm-list", 1560, 22);
+  N.p1 = phrase(N.s1, { words: ["45", "live", "funds."], x: 110, w: 1000, y: 110, size: 112, num: true, colors: [C.lime, "", ""] });
+  N.p1b = phrase(N.s1, { words: ["Stocks.", "Gold.", "Treasuries."], x: 110, w: 1400, y: 110, size: 112 });
+
+  // S2 one fund: real header, chart and the basket of real stocks
+  N.s2 = el("div", cam, {}, "full");
+  N.head = shot(N.s2, "fd-head", 560, 14);
+  N.chart = shot(N.s2, "fd-chart", 1150, 22);
+  N.hold = shot(N.s2, "fd-hold", 1300, 24);
+  N.p2 = phrase(N.s2, { words: ["One", "token."], y: 80, size: 112 });
+  N.p2b = phrase(N.s2, { words: ["A", "whole", "basket."], y: 80, size: 112, colors: ["", C.lime, C.lime] });
+
+  // S3 trade at 0.2%
+  N.s3 = el("div", cam, {}, "full");
+  N.buy = shot(N.s3, "fd-buy", 470, 22);
+  N.tap = el("div", N.s3, {}, "tap");
+  N.ring = el("div", N.s3, {}, "ring");
+  N.p3 = phrase(N.s3, { words: ["Trade", "at"], x: 150, w: 900, y: 250, size: 96, weight: 600, color: "#c9d1bb" });
+  N.n02 = el("div", N.s3, { position: "absolute", left: "130px", width: "1000px", top: "350px", fontSize: "330px", fontWeight: "800", letterSpacing: "-0.06em", lineHeight: "1", color: C.lime }, "num");
+  N.n02.textContent = "0.2%";
+  N.p3b = phrase(N.s3, { words: ["fee.", "Buy", "or", "sell."], x: 150, w: 1000, y: 720, size: 76, weight: 600 });
+
+  // S4 where the fee goes (pale ground): 80% to holders & owners + the bar + real proof
+  N.s4 = el("div", cam, {}, "full");
+  N.n80 = el("div", N.s4, { position: "absolute", left: "0", width: "1920px", top: "95px", textAlign: "center", fontSize: "300px", fontWeight: "800", letterSpacing: "-0.06em", lineHeight: "1", color: C.ink }, "num");
+  N.p4 = phrase(N.s4, { words: ["back", "to", "holders", "&", "owners."], y: 410, size: 88, weight: 700, color: C.ink, colors: ["", "", C.mid, "", C.mid] });
+  N.bar = el("div", N.s4, { position: "absolute", left: "260px", top: "560px", width: "1400px", height: "108px", borderRadius: "22px", overflow: "hidden", background: "rgba(11,15,6,.08)" });
+  const SEG = [{ k: "Holders", p: 60, bg: C.ink, fg: C.lime, sub: "$GAZZ + GAZZ TANKS" }, { k: "Fund owner", p: 20, bg: C.mid, fg: C.white, sub: "the 7-day owner" },
+               { k: "Burn", p: 10, bg: "#7fb52c", fg: C.ink, sub: "buyback & burn" }, { k: "Platform", p: 10, bg: "#c6e88a", fg: C.ink, sub: "treasury" }];
+  let acc = 0;
+  N.segs = SEG.map((g) => {
+    const x0 = acc; acc += g.p;
+    const s = el("div", N.bar, { left: px(14 * x0), width: px(14 * g.p), background: g.bg, color: g.fg }, "seg");
+    s.textContent = g.p + "%";
+    const l = el("div", N.s4, { left: px(260 + 14 * x0), width: px(14 * g.p), top: "684px", color: C.ink }, "lbl"); l.textContent = g.k;
+    const u = el("div", N.s4, { left: px(260 + 14 * x0), width: px(14 * g.p), top: "724px", color: "#4a5640", fontSize: "22px", fontWeight: "500" }, "lbl"); u.textContent = g.sub;
+    return { s, l, u, x0, p: g.p };
+  });
+  N.proof = shot(N.s4, "rf-split", 1120, 18);
+  N.fine = el("div", N.s4, { position: "absolute", left: "0", width: "1920px", top: "1018px", textAlign: "center", fontSize: "24px", fontWeight: "500", color: "#3a4630" });
+  N.fine.textContent = "Split of every 0.2% fund fee, as shown on gazz.fun.";
+
+  // S5 own a fund for 7 days
+  N.s5 = el("div", cam, {}, "full");
+  N.chips = shot(N.s5, "rf-chips", 1640, 22);
+  N.p5 = phrase(N.s5, { words: ["Own", "a", "fund"], y: 150, size: 124 });
+  N.p5c = phrase(N.s5, { words: ["for", "7", "days."], y: 300, size: 124, num: true, colors: ["", C.lime, C.lime] });
+  N.p5d = phrase(N.s5, { words: ["Earn", "20%"], y: 150, size: 150, weight: 700, num: true, colors: ["", C.lime] });
+  N.p5e = phrase(N.s5, { words: ["of", "its", "fees."], y: 330, size: 124 });
+  N.p5f = phrase(N.s5, { words: ["Free", "raffle", "entry."], y: 880, size: 54, weight: 500, color: "#c9d1bb" });
+
+  // S6 end card (white ground)
+  N.s6 = el("div", cam, {}, "full");
+  N.logo = el("img", N.s6, { position: "absolute", width: "250px", height: "250px", left: px(960 - 125), top: "210px", borderRadius: "56px" });
+  N.logo.src = "img/logo.png";
+  N.word = phrase(N.s6, { words: ["gazz.fun"], y: 500, size: 150, weight: 700, color: C.ink, track: "-0.05em" });
+  N.tag = phrase(N.s6, { words: ["Own", "the", "fund."], y: 700, size: 70, weight: 500, color: "#3a4630", colors: ["", "", C.mid] });
+
+  // ---- SOUND: plain ui-* palette, at most one per ~1.5 s, one success tone, warm sting, silent tail
+  cue(0.30, "ui-pop-1", 0.9);
+  cue(2.34, "ui-thud", 0.9);              // "Own it." lands
+  cue(S[1] + 0.05, "ui-whoosh-low", 1);   // the real list rises
+  cue(S[1] + 2.33, "ui-key-1", 0.9);      // Stocks. Gold. Treasuries.
+  cue(S[2] + 0.05, "ui-iris", 0.9);       // focus into one fund
+  cue(S[2] + 2.3, "ui-snap", 0.9);        // holdings lock in
+  cue(S[3] + 0.05, "ui-slide", 1);
+  cue(S[3] + 1.75, "ui-tap-1", 1);        // tap on the buy panel
+  cue(S[4] + 0.05, "ui-whoosh-low", 1);
+  cue(S[4] + 1.45, "ui-success", 1);      // 80% lands (the one success tone)
+  cue(S[4] + 3.1, "ui-pop-2", 0.9);       // real proof card
+  cue(S[5] + 0.05, "ui-drawer", 1);       // raffle chips
+  cue(S[5] + 2.31, "ui-snap", 0.9);       // Earn 20%
+  cue(S[6] - 0.5, "ui-pad", 0.9);         // warm swell into the logo
+  cue(S[6] + 0.32, "sting-logo", 1);      // warm low sting, no bell
+  cue(S[2] - 0.25, "@lowpass", 1, { to: 700, d: 0.25, hold: 0.1, back: 0.4 });
+  cue(S[4] - 0.25, "@lowpass", 1, { to: 600, d: 0.25, hold: 0.1, back: 0.35 });
+  cue(S[6] - 0.02, "@stop", 1, { d: 0.35 });
+}
+
+// ---------------------------------------------------------------- seek
+function seek(t) {
+  const pale = t >= S[4] - 0.05 && t < S[5] - 0.05, white = t >= S[6] - 0.05;
+  N.gPale.style.opacity = pale ? "1" : "0"; N.gWhite.style.opacity = white ? "1" : "0";
+  show(N.gPale, pale); show(N.gWhite, white);
+  N.gDark.style.opacity = !pale && !white ? "1" : "0";
+  N.grid.style.opacity = !pale && !white ? "1" : "0";
+  N.plane.style.backgroundPosition = `0 ${((t * 160) % 120).toFixed(2)}px`;
+
+  // ===== S0 hook
+  if (focus(N.s0, t, null, S[1] - 0.05, 0.4, 0.3)) {
+    N.f0.forEach((f, i) => {
+      const a = EO(prog(t, 0.05 + i * 0.06, 1.2));
+      const z = f.z * (1 + t * 0.05);
+      const dx = (f.x - 960) * (z - f.z) * 0.6, dy = (f.y - 540) * (z - f.z) * 0.6;
+      const far = 1 - f.z;
+      put(f.d, f.x + dx, f.y + dy + (1 - a) * 90, z, `rotate(${(Math.sin(i * 1.9) * 9).toFixed(2)}deg)`, 3 + far * 14 + (1 - a) * 12, a * (0.35 + f.z * 0.45));
+    });
+    phraseAt(N.p0a, t, 0.32, null, 0.08);
+    phraseAt(N.p0b, t, 2.29, null, 0.12);
+  }
+
+  // ===== S1 the real list
+  if (focus(N.s1, t, S[1], S[2] - 0.1, 0.35, 0.3)) {
+    const a = EO(prog(t, S[1] + 0.05, 0.9));
+    const push = 1 + (t - S[1]) * 0.012;
+    put(N.list, 1100, 735 + (1 - a) * 420, 0.94 * push, `perspective(2400px) rotateX(${lerp(20, 7, a).toFixed(2)}deg) rotateY(${(-9).toFixed(2)}deg)`, 0, clamp(a * 2));
+    phraseAt(N.p1, t, S[1] + 0.3, S[1] + 2.15);
+    phraseAt(N.p1b, t, S[1] + 2.33, null, 0.16);
+  }
+
+  // ===== S2 one fund: header + chart, then the basket rises in front
+  if (focus(N.s2, t, S[2], S[3] - 0.1, 0.35, 0.3)) {
+    const a = EO(prog(t, S[2] + 0.05, 0.8));
+    put(N.head, 520, 280 + (1 - a) * 40, 1.0, "", (1 - a) * 10, clamp(a * 2));
+    put(N.chart, 760, 620, lerp(0.9, 1.0, a), `perspective(2400px) rotateY(${lerp(12, 6, a).toFixed(2)}deg)`, (1 - a) * 12, clamp(a * 2));
+    const k = EO(prog(t, S[2] + 2.2, 0.5));
+    N.chart.style.filter = k > 0.02 ? `blur(${(k * 5).toFixed(2)}px)` : N.chart.style.filter;
+    N.head.style.opacity = (clamp(a * 2) * (1 - 0.5 * k)).toFixed(3);
+    N.chart.style.opacity = (clamp(a * 2) * (1 - 0.5 * k)).toFixed(3);
+    const h = sp(t, S[2] + 2.2, 0.8, 0.75);
+    put(N.hold, 1180 + (1 - h) * 160, 690 + (1 - h) * 120, lerp(0.85, 1.05, h), `perspective(2400px) rotateY(${lerp(-12, -6, h).toFixed(2)}deg)`, (1 - h) * 12, clamp(h * 3));
+    phraseAt(N.p2, t, S[2] + 0.3, S[2] + 2.05);
+    phraseAt(N.p2b, t, S[2] + 2.3, null, 0.12);
+  }
+
+  // ===== S3 trade at 0.2%: real buy panel, a tap, the fee line ringed
+  if (focus(N.s3, t, S[3], S[4] - 0.1, 0.35, 0.3)) {
+    const b = sp(t, S[3] + 0.15, 0.8, 0.75);
+    const tT = S[3] + 1.7;
+    const press = Math.sin(Math.PI * prog(t, tT, 0.22)) * 0.025;
+    const sc = lerp(0.9, 1.25, b) - press, cx = 1430 + (1 - b) * 170, cy = 560;
+    put(N.buy, cx, cy, sc, `perspective(2400px) rotateY(${lerp(-14, -6, b).toFixed(2)}deg)`, (1 - b) * 12, clamp(b * 3));
+    // the "$10" chip sits at (90, 208) of the 412 x 435 css panel → our 470-wide copy
+    const k = 470 / 412, ox = cx - (470 / 2) * sc, oy = cy - (N.buy._h / 2) * sc;
+    const tp = prog(t, tT, 0.5);
+    N.tap.style.left = px(ox + 90 * k * sc); N.tap.style.top = px(oy + 208 * k * sc);
+    N.tap.style.transform = `scale(${lerp(0.5, 1.5, EO(tp)).toFixed(3)})`;
+    N.tap.style.opacity = (tp > 0 ? 1 - tp : 0).toFixed(3); show(N.tap, tp > 0 && tp < 1);
+    // ring around "$140.55 / share · fee 0.2%" (y ≈ 298, x 40..200)
+    const rOn = EO(prog(t, S[3] + 2.4, 0.3));
+    N.ring.style.left = px(ox + 32 * k * sc); N.ring.style.top = px(oy + 292 * k * sc);
+    N.ring.style.width = px(184 * k * sc); N.ring.style.height = px(21 * k * sc); N.ring.style.opacity = rOn.toFixed(3); show(N.ring, rOn > 0);
+    phraseAt(N.p3, t, S[3] + 0.3, null);
+    const n = EO(prog(t, S[3] + 0.5, 0.45));
+    N.n02.style.opacity = clamp(n * 1.6).toFixed(3);
+    N.n02.style.filter = n < 0.98 ? `blur(${((1 - n) * 20).toFixed(2)}px)` : "";
+    N.n02.style.transform = `scale(${(lerp(0.92, 1, n) * (1 + 0.05 * Math.sin(Math.PI * prog(t, S[3] + 2.4, 0.25)))).toFixed(4)})`;
+    N.n02.style.transformOrigin = "0 50%";
+    phraseAt(N.p3b, t, S[3] + 1.1, null, 0.1);
+  }
+
+  // ===== S4 where the fee goes
+  if (focus(N.s4, t, S[4], S[5] - 0.08, 0.35, 0.28)) {
+    const c = EO(prog(t, S[4] + 0.35, 1.1));
+    const v = Math.floor(80 * c);
+    N.n80.textContent = v + "%";
+    const ina = EO(prog(t, S[4] + 0.25, 0.4));
+    N.n80.style.transform = `scale(${(lerp(0.9, 1, ina) * (1 + 0.06 * Math.sin(Math.PI * prog(t, S[4] + 1.42, 0.25)))).toFixed(4)})`;
+    N.n80.style.filter = ina < 0.98 ? `blur(${((1 - ina) * 18).toFixed(2)}px)` : "";
+    N.n80.style.opacity = clamp(ina * 2).toFixed(3);
+    N.n80.style.color = v >= 80 ? C.ink : C.mid;
+    phraseAt(N.p4, t, S[4] + 0.9, null, 0.08);
+    // the bar fills left → right, segment by segment
+    N.segs.forEach((g, i) => {
+      const f = EO(prog(t, S[4] + 1.1 + i * 0.22, 0.5));
+      g.s.style.clipPath = `inset(0 ${((1 - f) * 100).toFixed(2)}% 0 0)`;
+      const lo = EO(prog(t, S[4] + 1.45 + i * 0.22, 0.4));
+      g.l.style.opacity = lo.toFixed(3); g.u.style.opacity = (lo * 0.95).toFixed(3);
+      g.l.style.transform = `translateY(${((1 - lo) * 14).toFixed(2)}px)`; g.u.style.transform = g.l.style.transform;
+    });
+    const r = sp(t, S[4] + 3.05, 0.8, 0.75);
+    put(N.proof, 960, 870 + (1 - r) * 90, lerp(0.92, 1.0, r), "", (1 - r) * 10, clamp(r * 3));
+    N.fine.style.opacity = (0.95 * EO(prog(t, S[4] + 3.3, 0.5))).toFixed(3);
+  }
+
+  // ===== S5 own a fund for 7 days
+  if (focus(N.s5, t, S[5], S[6] - 0.08, 0.35, 0.28)) {
+    const a = EO(prog(t, S[5] + 0.05, 0.9));
+    put(N.chips, 960, 690 + (1 - a) * 200, lerp(0.95, 1.12, a) * (1 + (t - S[5]) * 0.01), `perspective(2400px) rotateX(${lerp(24, 10, a).toFixed(2)}deg)`, (1 - a) * 12, clamp(a * 2));
+    phraseAt(N.p5, t, S[5] + 0.3, S[5] + 2.08);
+    phraseAt(N.p5c, t, S[5] + 0.62, S[5] + 2.08);
+    phraseAt(N.p5d, t, S[5] + 2.29, null, 0.12);
+    phraseAt(N.p5e, t, S[5] + 2.55, null);
+    phraseAt(N.p5f, t, S[5] + 3.2, null, 0.08);
+  }
+
+  // ===== S6 end card
+  if (focus(N.s6, t, S[6], null, 0.4)) {
+    const m = sp(t, S[6] + 0.05, 0.9, 0.7);
+    N.logo.style.transform = `translateY(${((1 - m) * 120).toFixed(2)}px) scale(${lerp(0.6, 1, m).toFixed(4)})`;
+    N.logo.style.opacity = clamp(m * 3).toFixed(3);
+    N.logo.style.filter = m < 0.98 ? `blur(${((1 - m) * 10).toFixed(2)}px)` : "";
+    phraseAt(N.word, t, S[6] + 0.35, null);
+    phraseAt(N.tag, t, S[6] + 1.05, null, 0.1);
+  }
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  await Promise.all(["800 100px Geist", "700 100px Geist", "600 40px Geist", "500 40px Geist"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+  build();
+  await Promise.all([...document.images].map((im) => im.decode().catch(() => { throw new Error("img " + im.src); })));
+  const q = new URLSearchParams(location.search).get("t");
+  seek(q ? +q : 0);
+  window.seek = seek; window.READY = true;
+}
+boot().catch((e) => { window.BOOT_ERR = String((e && e.stack) || e); });
+</script>
+</body>
+</html>

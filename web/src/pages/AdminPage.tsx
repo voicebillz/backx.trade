@@ -3,6 +3,7 @@ import { AdminKeepers } from './AdminKeepers';
 import { AdminPitch } from './AdminPitch';
 import { AdminMemo } from './AdminMemo';
 import { AdminInvestors } from './AdminInvestors';
+import { AdminProposals } from './AdminProposals';
 import { AdminBestChain } from './AdminBestChain';
 import { AdminKeeperRecipe } from './AdminKeeperRecipe';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
@@ -98,7 +99,7 @@ export default function AdminPage({ route }: { route: Route }) {
       <header className="page-head">
         <div>
           <p className="eyebrow gold">Admin portal</p>
-          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : route === 'adminKeepers' ? 'Validators' : route === 'adminPitch' ? 'Pitch deck' : route === 'adminMemo' ? 'Pitch whitepaper' : route === 'adminInvestors' ? 'Investors' : 'Listed assets'}</h1>
+          <h1>{route === 'adminUsers' ? 'Users' : route === 'adminParticipants' ? 'Participants' : route === 'adminContracts' ? 'Contracts' : route === 'adminBranding' ? 'Branding' : route === 'adminKeepers' ? 'Validators' : route === 'adminPitch' ? 'Pitch deck' : route === 'adminMemo' ? 'Pitch whitepaper' : route === 'adminInvestors' ? 'Investors' : route === 'adminProposals' ? 'Proposals' : 'Listed assets'}</h1>
         </div>
       </header>
       <div className="admin-grid">
@@ -107,6 +108,7 @@ export default function AdminPage({ route }: { route: Route }) {
           <a href={href('adminUsers')} onClick={go('adminUsers')} className={route === 'adminUsers' ? 'active' : ''} aria-current={route === 'adminUsers' ? 'page' : undefined}>Users</a>
           <a href={href('adminContracts')} onClick={go('adminContracts')} className={route === 'adminContracts' ? 'active' : ''} aria-current={route === 'adminContracts' ? 'page' : undefined}>Contracts</a>
           <a href={href('adminKeepers')} onClick={go('adminKeepers')} className={route === 'adminKeepers' ? 'active' : ''} aria-current={route === 'adminKeepers' ? 'page' : undefined}>Validators</a>
+          <a href={href('adminProposals')} onClick={go('adminProposals')} className={route === 'adminProposals' ? 'active' : ''} aria-current={route === 'adminProposals' ? 'page' : undefined}>Proposals</a>
           <a href={href('adminParticipants')} onClick={go('adminParticipants')} className={route === 'adminParticipants' ? 'active' : ''} aria-current={route === 'adminParticipants' ? 'page' : undefined}>Participants</a>
           <a href={href('adminBranding')} onClick={go('adminBranding')} className={route === 'adminBranding' ? 'active' : ''} aria-current={route === 'adminBranding' ? 'page' : undefined}>Branding</a>
           <a href={href('adminPitch')} onClick={go('adminPitch')} className={route === 'adminPitch' ? 'active' : ''} aria-current={route === 'adminPitch' ? 'page' : undefined}>Pitch deck</a>
@@ -114,7 +116,7 @@ export default function AdminPage({ route }: { route: Route }) {
           <a href={href('adminInvestors')} onClick={go('adminInvestors')} className={route === 'adminInvestors' ? 'active' : ''} aria-current={route === 'adminInvestors' ? 'page' : undefined}>Investors</a>
           <a href={href('profile')} onClick={go('profile')}>← Back to profile</a>
         </nav>
-        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : route === 'adminContracts' ? <Contracts /> : route === 'adminBranding' ? <AdminBranding /> : route === 'adminKeepers' ? <AdminKeepers /> : route === 'adminPitch' ? <AdminPitch /> : route === 'adminMemo' ? <AdminMemo /> : route === 'adminInvestors' ? <AdminInvestors /> : <Assets />}</div>
+        <div className="admin-body">{route === 'adminUsers' ? <Users /> : route === 'adminParticipants' ? <Participants /> : route === 'adminContracts' ? <Contracts /> : route === 'adminBranding' ? <AdminBranding /> : route === 'adminKeepers' ? <AdminKeepers /> : route === 'adminPitch' ? <AdminPitch /> : route === 'adminMemo' ? <AdminMemo /> : route === 'adminInvestors' ? <AdminInvestors /> : route === 'adminProposals' ? <AdminProposals /> : <Assets />}</div>
       </div>
     </main>
   );

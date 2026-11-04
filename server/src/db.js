@@ -90,6 +90,28 @@ export async function migrate() {
     );
     create index if not exists venture_joined on venture_participants(joined_at desc);
 
+    -- BackX Proposals (owner 2026-11-04): Yes/No questions the community signals on (BXP-<id>). Admin writes them;
+    -- one signal per account per proposal, changeable while open. The public page shows only percentages.
+    create table if not exists proposals (
+      id         serial primary key,
+      title      text not null,
+      question   text not null,
+      body       text not null default '',
+      banner     text not null default '',
+      status     text not null default 'draft' check (status in ('draft', 'open', 'closed')),
+      created_at timestamptz not null default now(),
+      opened_at  timestamptz,
+      closed_at  timestamptz
+    );
+    create table if not exists proposal_signals (
+      proposal_id    integer not null references proposals(id) on delete cascade,
+      privy_did      text not null references users(privy_did) on delete cascade,
+      wallet_address text not null,
+      choice         text not null check (choice in ('yes', 'no')),
+      at             timestamptz not null default now(),
+      primary key (proposal_id, privy_did)
+    );
+
     -- Core contracts per chain (admin portal "Contracts", owner 2026-10-22). Bookkeeping only: the chain is the
     -- source of truth. 'proposed' = Safe file prepared, 'deployed' = code seen at the address.
     create table if not exists core_contracts (

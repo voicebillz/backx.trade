@@ -1,0 +1,21 @@
+{
+  "_note": "Mixkit free licenses (music: https://mixkit.co/license/#musicFree, SFX: Sound Effects Free License). Use in videos is allowed; do not commit the audio files themselves to the repo. fetch-audio.py downloads + converts these into <work>/audio/<name>.wav and writes LICENSES.txt.",
+  "music": {
+    "music-120-corporate": { "title": "Your Breath", "artist": "Eugenio Mininni", "page": "https://mixkit.co/free-stock-music/discover/your-breath-634/", "url": "https://assets.mixkit.co/music/634/634.mp3", "bpm": 120, "first_beat_s": 13.471 },
+    "music-105-closeup": { "title": "Close Up", "artist": "Michael Ramir C.", "page": "https://mixkit.co/free-stock-music/discover/close-up-1167/", "url": "https://assets.mixkit.co/music/1167/1167.mp3", "bpm": 105, "first_beat_s": 0.052 },
+    "music-129-clouds": { "title": "Digital Clouds", "artist": "Alejandro Magana (A. M.)", "page": "https://mixkit.co/free-stock-music/discover/digital-clouds-175/", "url": "https://assets.mixkit.co/music/175/175.mp3", "bpm": 129.01, "first_beat_s": 0.139 }
+  },
+  "sfx": {
+    "whoosh-soft": { "title": "Air woosh", "page": "https://mixkit.co/free-sound-effects/discover/air-woosh-1489/", "url": "https://assets.mixkit.co/active_storage/sfx/1489/1489-preview.mp3" },
+    "whoosh-fast": { "title": "Fast air sweep transition", "page": "https://mixkit.co/free-sound-effects/discover/fast-air-sweep-transition-168/", "url": "https://assets.mixkit.co/active_storage/sfx/168/168-preview.mp3" },
+    "click-ui": { "title": "Modern click box check", "page": "https://mixkit.co/free-sound-effects/discover/modern-click-box-check-1120/", "url": "https://assets.mixkit.co/active_storage/sfx/1120/1120-preview.mp3" },
+    "click-ui-2": { "title": "Cool interface click tone", "page": "https://mixkit.co/free-sound-effects/discover/cool-interface-click-tone-2568/", "url": "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" },
+    "pop-soft": { "title": "Explainer video pops whoosh light pop", "page": "https://mixkit.co/free-sound-effects/discover/explainer-video-pops-whoosh-light-pop-3005/", "url": "https://assets.mixkit.co/active_storage/sfx/3005/3005-preview.mp3" },
+    "notify-chime": { "title": "Relaxing bell chime", "page": "https://mixkit.co/free-sound-effects/discover/relaxing-bell-chime-3109/", "url": "https://assets.mixkit.co/active_storage/sfx/3109/3109-preview.mp3" },
+    "notify-pop": { "title": "Message pop alert", "page": "https://mixkit.co/free-sound-effects/discover/message-pop-alert-2354/", "url": "https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" },
+    "typing-keys": { "title": "Smartphone typing", "page": "https://mixkit.co/free-sound-effects/discover/smartphone-typing-1393/", "url": "https://assets.mixkit.co/active_storage/sfx/1393/1393-preview.mp3" },
+    "success-chime": { "title": "Success software tone", "page": "https://mixkit.co/free-sound-effects/discover/success-software-tone-2865/", "url": "https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" },
+    "riser-short": { "title": "Cinematic trailer riser", "page": "https://mixkit.co/free-sound-effects/discover/cinematic-trailer-riser-790/", "url": "https://assets.mixkit.co/active_storage/sfx/790/790-preview.mp3" },
+    "impact-soft": { "title": "Short bass hit", "page": "https://mixkit.co/free-sound-effects/discover/short-bass-hit-2299/", "url": "https://assets.mixkit.co/active_storage/sfx/2299/2299-preview.mp3" }
+  }
+}

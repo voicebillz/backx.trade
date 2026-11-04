@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>StockSlot Battles v2</title>
+<style>
+  @font-face { font-family: "Geist"; font-weight: 500; font-display: block; src: url(fonts/Geist-500.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; font-display: block; src: url(fonts/Geist-600.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 700; font-display: block; src: url(fonts/Geist-700.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 800; font-display: block; src: url(fonts/Geist-800.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fbfdf7; }
+  * { box-sizing: border-box; }
+  #stage { position: absolute; inset: 0; overflow: hidden; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-family: "Geist", system-ui, sans-serif; color: #0b0f06; }
+  .full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .phrase { position: absolute; left: 0; width: 1920px; text-align: center; white-space: nowrap; font-weight: 500; letter-spacing: -0.035em; line-height: 1.05; }
+  .phrase > span { display: inline-block; will-change: transform, filter, opacity; }
+  .num { font-variant-numeric: tabular-nums; }
+  .ph { position: absolute; border-radius: 50%; overflow: hidden; background: #ddd; }
+  .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .chip { position: absolute; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .card { position: absolute; background: #12170b; border: 2px solid #232c15; border-radius: 26px; overflow: hidden; }
+  img { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="gLight" class="full"></div>
+  <div id="gDark" class="full"></div>
+  <div id="grid" class="full"></div>
+  <div id="dots" class="full"></div>
+  <div id="cam" class="full"></div>
+  <div id="hud" class="full"></div>
+</div>
+<script>
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, t0, d) => clamp((t - t0) / d);
+function bez(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(clamp(t)); };
+}
+const EO = bez(0.16, 1, 0.3, 1), EIO = bez(0.76, 0, 0.24, 1), EI = bez(0.7, 0, 0.84, 0), DEC = bez(0.12, 0.8, 0.22, 1);
+function spring(p, zeta = 0.72) { if (p <= 0) return 0; if (p >= 1) return 1; const w = 5.3 / zeta, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * p) * (Math.cos(wd * p) + (zeta * w / wd) * Math.sin(wd * p)); }
+const sp = (t, t0, d, z) => spring(prog(t, t0, d), z);
+const el = (tag, parent, style = {}, cls = "") => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, style); parent.appendChild(e); return e; };
+const px = (v) => v.toFixed(2) + "px";
+const show = (e, on) => { if (e._disp == null) e._disp = e.style.display && e.style.display !== "none" ? e.style.display : ""; e.style.display = on ? e._disp : "none"; };
+function setRect(e, x, y, w, h, r) { e.style.left = px(x); e.style.top = px(y); e.style.width = px(w); e.style.height = px(h); if (r != null) e.style.borderRadius = px(r); }
+const money = (v, dp = 0) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
+// ---- palette: ONE hue family (lime) on two grounds + ink; violet only as a single-word accent
+const C = { deep: "#0f1407", dark: "#1b2610", mid: "#4f7a1c", lime: "#b8f43a", pale: "#ecfccb", white: "#fbfdf7", ink: "#0b0f06", mute: "#6b7560" };
+
+// ---- phrases: words arrive with a blur-in (focus), leave with a blur-out
+function phrase(parent, o) {
+  const l = el("div", parent, { zIndex: "50", top: px(o.y), fontSize: px(o.size), fontWeight: String(o.weight || 500), color: o.color || C.ink, letterSpacing: o.track || "" }, "phrase" + (o.num ? " num" : ""));
+  l._w = o.words.map((wd, k) => { const s = el("span", l, { color: (o.colors && o.colors[k]) || "", marginRight: k < o.words.length - 1 ? "0.26em" : "0" }); s.textContent = wd; return s; });
+  return l;
+}
+function phraseAt(l, t, tin, tout, st = 0.11, dIn = 0.42, dOut = 0.26) {
+  let vis = false;
+  l._w.forEach((s, k) => {
+    const p = EO(prog(t, tin + k * st, dIn));
+    const q = tout == null ? 0 : EI(prog(t, tout + k * 0.05, dOut));
+    const b = (1 - p) * 16 + q * 14;
+    s.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+    s.style.opacity = (p * (1 - q)).toFixed(3);
+    s.style.transform = `translate3d(${((1 - p) * 30 - q * 18).toFixed(2)}px,0,0) scale(${(1 + (1 - p) * 0.05).toFixed(4)})`;
+    if (p > 0 && q < 1) vis = true;
+  });
+  show(l, vis);
+}
+// whole-layer focus pull: blur + slight scale
+function focus(e, t, tin, tout, dIn = 0.4, dOut = 0.32) {
+  const p = tin == null ? 1 : EO(prog(t, tin, dIn)), q = tout == null ? 0 : EI(prog(t, tout, dOut));
+  const b = (1 - p) * 22 + q * 22;
+  e.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+  e.style.opacity = (Math.min(1, p * 1.6) * (1 - q)).toFixed(3);
+  e.style.transform = `scale(${(1 + (1 - p) * 0.04 + q * 0.05).toFixed(4)})`;
+  show(e, p > 0 && q < 1);
+  return p > 0 && q < 1;
+}
+
+// ---------------------------------------------------------------- grid
+const BPM = 129.01, B = 60 / BPM, BAR = 4 * B, bt = (n) => n * B;
+const DUR = 15 * BAR;
+const CUES = []; function cue(t, f, g = 1) { CUES.push({ t: +t.toFixed(3), f, g }); }
+window.DUR = DUR; window.CUES = CUES;
+
+const T_DROP = bt(16), T_COVER = bt(19.5), T_BOX = bt(20.5);
+const R_T = [bt(22), bt(26), bt(30)], SPIN = 1.3;
+const T_SLOT = bt(36), T_SLOT_IN = bt(37), T_FOLD = bt(40), T_RANK = bt(44), T_RECAP = bt(47.5), T_END = bt(52);
+
+const PLAYERS = [
+  { n: "mara", img: "img/faces/p1.jpg" }, { n: "kenji", img: "img/faces/p2.jpg" }, { n: "0xriley", img: "img/faces/p3.jpg" },
+  { n: "dex", img: "img/faces/p6.jpg" }, { n: "luna", img: "img/faces/p5.jpg" }, { n: "tuna", img: "img/faces/p8.jpg" },
+];
+const W = 2; // the winner of the hook: 0xriley
+
+// ---- box battle data (real catalog items + values)
+const BOXES = [{ img: "img/box/b9.png" }, { img: "img/box/b7.png" }, { img: "img/box/b9.png" }];
+const POOL = [
+  ["apple-airtag", "apple-magsafe-charger", "apple-siri-remote", "apple-magic-mouse", "raspberry-pi-5", "apple-airpods", "airpods-pro", "apple-watch", "playstation-5", "iphone-17-pro", "apple-vision-pro", "macbook-pro-14", "hasselblad-h6d-100c"],
+  ["adidas-crew-socks", "nike-everyday-socks", "havaianas-flip-flops", "nike-victori-one-slides", "nike-kids-revolution", "nike-air-force-1", "nike-dunk-low", "yeezy-boost-350-v2", "travis-scott-aj1-low", "off-white-af1-mca", "mf-doom-sb-dunk-high", "nike-mag"],
+];
+POOL[2] = POOL[0];
+const WON = [
+  [["apple-airtag", 29], ["playstation-5", 550], ["apple-magic-mouse", 79], ["apple-watch", 399]],
+  [["nike-air-force-1", 115], ["nike-dunk-low", 120], ["travis-scott-aj1-low", 550], ["yeezy-boost-350-v2", 240]],
+  [["airpods-pro", 249], ["apple-airtag", 29], ["macbook-pro-14", 6899], ["apple-magic-mouse", 79]],
+];
+const TOTALS = [0, 1, 2, 3].map((c) => WON.reduce((s, r) => s + r[c][1], 0));
+const POT_BOX = TOTALS.reduce((a, b) => a + b, 0); // 9,338
+const STRIP_N = 15, FINAL = 12, STEP = 176;
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const COL_X = (i) => 204 + i * 384, COL_Y = 400, COL_W = 360, COL_H = 610;
+// the box UI sits on a dark product card, scaled + tilted on the light ground
+const BOX_S = 0.74, BOX_O = { x: 960, y: 1010 };
+const boxToScreen = (x, y) => ({ x: BOX_O.x + (x - BOX_O.x) * BOX_S, y: BOX_O.y + (y - BOX_O.y) * BOX_S });
+
+// ---- slot battle data
+const SLOT_ROWS = [{ p: PLAYERS[0], x: 42.6 }, { p: PLAYERS[1], x: 318.4 }, { p: PLAYERS[2], x: 19.2 }];
+const SLOT_BET = 2, SLOT_POT = SLOT_ROWS.reduce((s, r) => s + r.x * SLOT_BET, 0);
+const RANK = [1, 0, 2];
+function slotEnd(i) { return T_FOLD + [0.95, 1.65, 1.3][i]; }
+
+// ---------------------------------------------------------------- build
+const N = {};
+function photo(parent, p, size, ring) {
+  const d = el("div", parent, { width: px(size), height: px(size), boxShadow: `0 0 0 ${ring || 0}px ${C.white}` }, "ph");
+  const im = el("img", d); im.src = p.img;
+  return d;
+}
+function crownSvg(w, stroke) {
+  return `<svg width="${w}" height="${w * 0.7}" viewBox="0 0 120 84"><path d="M8 26 L34 48 L60 8 L86 48 L112 26 L102 78 L18 78 Z" fill="${C.lime}" stroke="${stroke}" stroke-width="6" stroke-linejoin="round"/></svg>`;
+}
+function build() {
+  const cam = document.getElementById("cam"), hud = document.getElementById("hud");
+  N.cam = cam;
+  // grounds
+  N.gLight = document.getElementById("gLight");
+  N.gLight.style.background = `linear-gradient(180deg, ${C.white} 0%, ${C.white} 56%, #e3f8c0 82%, #c9f07f 100%)`;
+  N.gDark = document.getElementById("gDark");
+  N.gDark.style.background = `radial-gradient(60% 70% at 50% 52%, #3b5a16 0%, #1b2610 46%, ${C.deep} 100%)`;
+  // perspective grid tunnel (dark scenes): floor + ceiling planes
+  N.grid = document.getElementById("grid");
+  N.grid.style.perspective = "900px"; N.grid.style.overflow = "hidden";
+  N.planes = [1, -1].map((s) => el("div", N.grid, {
+    position: "absolute", left: "-1600px", width: "5120px", height: "2400px", top: s > 0 ? "560px" : "-1880px",
+    backgroundImage: `linear-gradient(rgba(184,244,58,.22) 2px, transparent 2px), linear-gradient(90deg, rgba(184,244,58,.22) 2px, transparent 2px)`,
+    backgroundSize: "160px 160px", transformOrigin: s > 0 ? "50% 0" : "50% 100%", transform: `rotateX(${s > 0 ? 72 : -72}deg)`,
+    maskImage: `linear-gradient(${s > 0 ? "180deg" : "0deg"}, transparent 0%, black 30%, black 100%)`,
+  }));
+  // halftone dots (light scenes): a dot matrix that dissolves from the centre out
+  N.dots = document.getElementById("dots");
+  N.dots.style.backgroundImage = "radial-gradient(circle, rgba(79,122,28,.42) 2.2px, transparent 2.8px)";
+  N.dots.style.backgroundSize = "26px 26px";
+
+  // ===== S1/S2 hook: real faces orbit the phrase in depth
+  N.hook = el("div", cam, {}, "full");
+  N.pA = phrase(N.hook, { y: 462, size: 140, words: ["6", "players"] });
+  N.pB = phrase(N.hook, { y: 462, size: 140, words: ["Same", "entry"], colors: ["", C.mid] });
+  N.pC = phrase(N.hook, { y: 300, size: 120, words: ["Only", "one", "wins"], colors: ["", C.mid, ""] });
+  N.faces = PLAYERS.map((p) => photo(N.hook, p, 200));
+  N.hero = phrase(N.hook, { y: 300, size: 400, weight: 500, num: true, words: ["$1,500"], color: C.deep, track: "-0.05em" });
+  N.heroSub = phrase(N.hook, { y: 760, size: 52, words: ["in", "the", "pot"], color: C.mute });
+  N.coin = el("img", N.hook, { position: "absolute", width: "300px", height: "300px", filter: "drop-shadow(0 30px 40px rgba(15,20,7,.25))" }); N.coin.src = "img/gusd-coin.png";
+
+  // ===== drop (dark): WINNER TAKES ALL
+  N.drop = el("div", cam, {}, "full");
+  N.win = phrase(N.drop, { y: 120, size: 168, weight: 800, words: ["WINNER", "TAKES", "ALL"], color: C.white, colors: ["", "", C.lime], track: "-0.045em" });
+  N.winPh = photo(N.drop, PLAYERS[W], 300);
+  N.winPh.style.boxShadow = `0 0 0 8px ${C.lime}, 0 40px 80px -20px rgba(0,0,0,.6)`;
+  N.winCrown = el("div", N.drop, { position: "absolute" }); N.winCrown.innerHTML = crownSvg(130, C.deep);
+  N.winAmt = phrase(N.drop, { y: 860, size: 64, weight: 600, num: true, words: ["+$1,500"], color: C.lime });
+
+  // ===== S3 box battle on a dark product card
+  N.boxWrap = el("div", cam, {}, "full");
+  N.p3 = phrase(N.boxWrap, { y: 110, size: 84, words: ["Mystery", "Box", "Battles"], colors: ["", "", C.mid] });
+  N.p3b = phrase(N.boxWrap, { y: 110, size: 84, num: true, words: ["Winner", "takes", money(POT_BOX)], colors: ["", "", C.mid] });
+  N.floats3 = [["img/box/b15.png", 150, 300, 260, 0.9], ["img/box/b19.png", 1700, 260, 300, 0.85], ["img/box/b12.png", 120, 900, 220, 0.4], ["img/box/b18.png", 1790, 880, 240, 0.5]].map(([src, x, y, w, z]) => {
+    const im = el("img", N.boxWrap, { position: "absolute", width: px(w), height: px(w * 0.958) }); im.src = src; return { im, x, y, w, z };
+  });
+  N.boxScene = el("div", N.boxWrap, { transformOrigin: `${BOX_O.x}px ${BOX_O.y}px` }, "full");
+  const bs = N.boxScene;
+  N.devCard = el("div", bs, { position: "absolute", left: "160px", top: "96px", width: "1600px", height: "950px", background: "#11160a", borderRadius: "40px", boxShadow: "0 60px 120px -30px rgba(15,20,7,.45), 0 0 0 2px #222b14" });
+  N.boxes = BOXES.map((b, i) => {
+    const w = el("div", bs, { position: "absolute", width: "190px", height: "226px" });
+    const im = el("img", w, { position: "absolute", left: "0", top: "0", width: "190px", height: "182px", objectFit: "contain" }); im.src = b.img;
+    const nb = el("div", w, { left: "75px", top: "188px", width: "40px", height: "40px", fontSize: "22px", background: "#232c15", color: "#c9d1bb" }, "chip num"); nb.textContent = String(i + 1);
+    return { w, im, nb };
+  });
+  N.cols = [0, 1, 2, 3].map((i) => {
+    const p = PLAYERS[i];
+    const card = el("div", bs, {}, "card");
+    const av = photo(card, p, 60); av.style.left = "22px"; av.style.top = "20px";
+    const nm = el("div", card, { position: "absolute", left: "96px", top: "34px", fontSize: "28px", fontWeight: "600", color: C.white }); nm.textContent = p.n;
+    const tot = el("div", card, { position: "absolute", right: "24px", top: "30px", fontSize: "34px", fontWeight: "700", letterSpacing: "-0.03em", transformOrigin: "100% 50%" }, "num");
+    const win = el("div", card, { position: "absolute", left: "20px", top: "100px", width: "316px", height: "250px", background: "#0b0f06", borderRadius: "18px", overflow: "hidden" });
+    const strip = el("div", win, { position: "absolute", left: "0", top: "0", width: "316px" });
+    el("div", win, { position: "absolute", left: "0", top: "117px", width: "16px", height: "16px", background: C.lime, clipPath: "polygon(0 0,100% 50%,0 100%)" });
+    el("div", win, { position: "absolute", right: "0", top: "117px", width: "16px", height: "16px", background: C.lime, clipPath: "polygon(100% 0,0 50%,100% 100%)" });
+    el("div", win, { position: "absolute", left: "0", top: "0", width: "100%", height: "70px", background: "linear-gradient(#0b0f06,rgba(11,15,6,0))" });
+    el("div", win, { position: "absolute", left: "0", bottom: "0", width: "100%", height: "70px", background: "linear-gradient(rgba(11,15,6,0),#0b0f06)" });
+    const price = el("div", card, { left: "108px", top: "364px", width: "140px", height: "50px", fontSize: "28px", background: "#232c15", color: C.white }, "chip num");
+    const strips = WON.map((r, ri) => {
+      const g = rng(97 + i * 31 + ri * 7), pool = POOL[ri];
+      const ids = Array.from({ length: STRIP_N }, (_, k) => k === FINAL ? r[i][0] : pool[Math.floor(g() * pool.length)]);
+      const s = el("div", strip, { position: "absolute", left: "0", top: "0", width: "316px" });
+      ids.forEach((id, k) => { const im = el("img", s, { position: "absolute", left: "78px", top: px(k * STEP + 45), width: "160px", height: "160px", objectFit: "contain" }); im.src = `img/items/${id}.webp`; });
+      return s;
+    });
+    const tiles = WON.map((r) => {
+      const tl = el("div", card, { position: "absolute", width: "96px", height: "128px" });
+      const bg = el("div", tl, { position: "absolute", left: "0", top: "0", width: "96px", height: "96px", background: "#1b2610", borderRadius: "16px" });
+      const im = el("img", tl, { position: "absolute", left: "8px", top: "8px", width: "80px", height: "80px", objectFit: "contain" }); im.src = `img/items/${r[i][0]}.webp`;
+      const pr = el("div", tl, { position: "absolute", left: "-10px", top: "100px", width: "116px", textAlign: "center", fontSize: "20px", fontWeight: "600", color: "#c9d1bb" }, "num"); pr.textContent = money(r[i][1]);
+      return { tl, bg, pr };
+    });
+    const crown = el("div", card, { position: "absolute", left: "30px", top: "2px" }); crown.innerHTML = crownSvg(44, C.deep);
+    return { card, tot, strips, price, tiles, crown };
+  });
+
+  // ===== S4 slot battle (dark)
+  N.slot = el("div", cam, {}, "full");
+  N.p4 = phrase(N.slot, { y: 90, size: 84, words: ["Slot", "Battles"], color: C.white, colors: ["", C.lime] });
+  N.hand = [["img/slot/s0.png", -13, -205], ["img/slot/s1.png", 13, 205], ["img/slot/s2.png", 0, 0]].map(([src, rot, dx]) => {
+    const im = el("img", N.slot, { position: "absolute", width: "320px", height: "403px", borderRadius: "22px", boxShadow: "0 40px 70px -24px rgba(0,0,0,.75)" }); im.src = src;
+    return { im, rot, dx };
+  });
+  N.rows = SLOT_ROWS.map((r, i) => {
+    const row = el("div", N.slot, { width: "880px", height: "140px", background: "rgba(17,22,10,.86)", borderColor: "#2c3a18" }, "card");
+    const rk = el("div", row, { left: "26px", top: "46px", width: "48px", height: "48px", fontSize: "24px", background: "#232c15", color: "#c9d1bb" }, "chip num"); rk.textContent = String(RANK[i] + 1);
+    const av = photo(row, r.p, 80); av.style.left = "92px"; av.style.top = "30px";
+    const nm = el("div", row, { position: "absolute", left: "196px", top: "48px", fontSize: "36px", fontWeight: "600", color: C.white }); nm.textContent = r.p.n;
+    const mx = el("div", row, { position: "absolute", right: "34px", top: "22px", fontSize: "64px", fontWeight: "600", letterSpacing: "-0.04em", transformOrigin: "100% 50%" }, "num");
+    const usd = el("div", row, { position: "absolute", right: "36px", top: "92px", fontSize: "24px", fontWeight: "600", color: "#8e9a80" }, "num");
+    return { row, rk, mx, usd, r };
+  });
+
+  // ===== S5 recap (light): one phrase, real objects in depth
+  N.recap = el("div", cam, {}, "full");
+  N.p5 = phrase(N.recap, { y: 468, size: 120, words: ["Boxes", "or", "slots"], colors: [C.mid, "", C.mid] });
+  N.floats5 = [["img/box/b9.png", 380, 300, 300, 0.35, 0], ["img/slot/s3.png", 1540, 330, 250, 0.9, 1], ["img/box/b19.png", 1500, 840, 330, 0.6, 0], ["img/slot/s4.png", 330, 820, 230, 0.75, 1], ["img/box/b7.png", 960, 150, 200, 0.15, 0]].map(([src, x, y, w, z, card]) => {
+    const im = el("img", N.recap, { position: "absolute", width: px(w), height: px(card ? w * 1.26 : w * 0.958), borderRadius: card ? "18px" : "0", boxShadow: card ? "0 30px 60px -20px rgba(15,20,7,.35)" : "" }); im.src = src; return { im, x, y, w, z, card };
+  });
+
+  // ===== transitions: iris (dark circle from the winning column)
+  N.iris = el("div", hud, { position: "absolute", borderRadius: "50%", background: `radial-gradient(circle, #3b5a16 0%, #1b2610 45%, ${C.deep} 75%)` });
+
+  // ===== end card (light)
+  N.end = el("div", hud, {}, "full");
+  N.mascot = el("img", N.end, { position: "absolute", width: "520px", height: "520px" }); N.mascot.src = "img/mascot.png";
+  N.e1 = phrase(N.end, { y: 760, size: 92, words: ["StockSlot", "Battles"], colors: ["", C.mid] });
+  N.url = el("div", N.end, { left: "870px", top: "900px", width: "180px", height: "60px", fontSize: "30px", background: C.ink, color: C.white, letterSpacing: "-0.01em" }, "chip");
+  N.url.textContent = "gazz.fun";
+
+  // ---------------- sound: SPARSE, like the Pump.fun films. The music carries the
+  // motion; a sound only marks a hero reveal, a real UI action, a win or the logo.
+  // Visual focus pulls get an AUDIO focus pull (@lowpass on the bed).
+  cue(0.0, "blip-1", 0.8);                                   // first phrase
+  cue(bt(8) - 0.04, "swish-up", 0.5);                        // hero number arrives
+  cue(bt(8) + 0.55, "bloop-1", 0.9);                         // GUSD coin lands
+  cue(bt(12) - 0.04, "blip-2", 0.8);                         // "Only one wins"
+  cue(T_DROP - 2.575, "riser-short", 0.8);
+  cue(T_DROP, "impact-soft", 1.0);                           // the drop
+  cue(T_DROP + 0.2, "chord-win", 0.8);
+  cue(T_COVER - 0.1, "@lowpass"); CUES[CUES.length - 1].to = 650; CUES[CUES.length - 1].d = 0.3; CUES[CUES.length - 1].hold = 0.15; CUES[CUES.length - 1].back = 0.35;
+  R_T.forEach((rt) => { cue(rt, "tap-1", 0.6); cue(rt + SPIN, "tick-1", 0.7); });   // spin + land, once per round
+  cue(R_T[2] + SPIN + 0.05, "chord-win", 1.0);               // the MacBook hit
+  cue(T_SLOT - 0.1, "@lowpass"); Object.assign(CUES[CUES.length - 1], { to: 600, d: 0.3, hold: 0.2, back: 0.4 });
+  cue(T_SLOT_IN + 0.3, "tap-2", 0.6);                        // cards dealt
+  cue(slotEnd(1), "chord-win", 0.85);                        // x318.4
+  cue(T_RANK, "bloop-2", 0.8);                               // ranking settles
+  cue(T_RECAP - 0.1, "@lowpass"); Object.assign(CUES[CUES.length - 1], { to: 650, d: 0.3, hold: 0.15, back: 0.35 });
+  cue(T_RECAP + 0.35 - 0.04, "blip-3", 0.8);                 // "Boxes or slots"
+  cue(T_END, "@stop"); Object.assign(CUES[CUES.length - 1], { d: 0.06 });   // music cuts on the downbeat
+  cue(T_END - 0.45, "swell-in", 0.8);                        // soft suck into the hit
+  cue(T_END, "sting-logo", 2.2);                             // warm low boom + pad, no bell
+  CUES.forEach((c) => { if (c.t < T_DROP - 0.1 && c.f !== "riser-short" && c.f[0] !== "@") c.g *= 2; });
+  CUES.sort((a, b) => a.t - b.t);
+}
+
+// ---------------------------------------------------------------- seek
+// depth helper: z 0 (far, small, soft) .. 1 (near, big, blurred)
+function depth(e, x, y, size, z, extraBlur = 0, op = 1) {
+  const s = lerp(0.55, 1.35, z), b = Math.max(0, (z - 0.72) * 30) + Math.max(0, (0.22 - z) * 12) + extraBlur;
+  e.style.left = px(x - size / 2); e.style.top = px(y - size / 2);
+  e.style.transform = `scale(${s.toFixed(4)})`;
+  e.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+  e.style.zIndex = String(Math.round(z * 100));
+  e.style.opacity = op.toFixed(3);
+}
+
+function seek(t) {
+  const isDark = (t >= T_DROP - 0.06 && t < T_COVER + 0.3) || (t >= T_SLOT + 0.25 && t < T_RECAP + 0.25);
+  // grounds: dark scenes appear under a focus pull, never as a flat flood
+  N.gDark.style.opacity = isDark ? "1" : "0";
+  N.grid.style.opacity = isDark ? "1" : "0";
+  N.planes.forEach((pl) => { pl.style.backgroundPosition = `0px ${((t * 120) % 160).toFixed(2)}px`; });
+  // halftone: dissolves from the centre at the start, closes from the edges at the end
+  {
+    const open = EO(prog(t, 0, 1.4)), close = EIO(prog(t, DUR - 2.4, 2.2));
+    const r = lerp(0, 1500, open) - close * 900;
+    N.dots.style.maskImage = `radial-gradient(circle at 50% 50%, transparent ${Math.max(0, r).toFixed(1)}px, black ${Math.max(0, r + 360).toFixed(1)}px)`;
+    show(N.dots, !isDark && (open < 1 || close > 0));
+  }
+
+  // ======================== S1 + S2 (light hook)
+  const hookOn = focus(N.hook, t, null, T_DROP - 0.22, 0.4, 0.22);
+  if (hookOn) {
+    phraseAt(N.pA, t, -0.3, bt(4) - 0.18);
+    phraseAt(N.pB, t, bt(4) + 0.02, bt(8) - 0.2);
+    // faces orbit around the centre in depth; tighten around the hero number
+    const tight = EIO(prog(t, bt(8), 0.7));
+    const order = [4, 0, 5, 1, 3];
+    N.faces.forEach((f, i) => {
+      const a = sp(t, bt(i + 1) - (i === 0 ? 0.2 : 0), 0.6, 0.7);
+      const ang = (i / 6) * Math.PI * 2 + t * 0.32;
+      const R = lerp(700, 790, tight), Ry = lerp(300, 380, tight);
+      let x = 960 + Math.cos(ang) * R, y = 540 + Math.sin(ang) * Ry;
+      let z = 0.5 + 0.5 * Math.sin(ang);
+      // out one by one: blur out + drop
+      const k = order.indexOf(i), te = k < 0 ? 1e9 : bt(11 + k);
+      const e = EI(prog(t, te, 0.35));
+      // winner glides to the front centre under "Only one wins"
+      const m = i === W ? EIO(prog(t, bt(12), 0.9)) : 0;
+      x = lerp(x, 960, m); y = lerp(y, 690, m); z = lerp(z, 0.62, m);
+      depth(f, x, y + e * 80, 200, z, e * 18 + (1 - a) * 18, clamp(a * 2) * (1 - e));
+      f.style.transform += ` scale(${lerp(0.4, 1, a).toFixed(3)})`;
+      show(f, a > 0 && e < 1);
+    });
+    // hero number + coin
+    phraseAt(N.hero, t, bt(8), bt(12) - 0.25, 0, 0.5, 0.3);
+    phraseAt(N.heroSub, t, bt(8) + 0.45, bt(12) - 0.3, 0.09);
+    {
+      const c = EO(prog(t, bt(8) + 0.1, 0.9)), out = EI(prog(t, bt(12) - 0.3, 0.3));
+      const x = lerp(1900, 1210, c), y = lerp(380, 470, c) + Math.sin(t * 2.2) * 8;
+      N.coin.style.left = px(x - 150); N.coin.style.top = px(y - 150);
+      N.coin.style.transform = `rotate(${lerp(-40, -8, c).toFixed(2)}deg) scale(${lerp(1.3, 1, c).toFixed(3)})`;
+      N.coin.style.filter = `blur(${((1 - c) * 10 + out * 16).toFixed(2)}px) drop-shadow(0 30px 40px rgba(15,20,7,.25))`;
+      N.coin.style.opacity = (1 - out).toFixed(3); N.coin.style.zIndex = "60";
+      show(N.coin, c > 0 && out < 1);
+    }
+    phraseAt(N.pC, t, bt(12) + 0.02, T_DROP - 0.3);
+  }
+
+  // ======================== DROP (dark)
+  const dropOn = focus(N.drop, t, T_DROP - 0.05, T_COVER, 0.3, 0.38);
+  if (dropOn) {
+    // the one heavy moment: words slam in sharp from a soft blur
+    N.win._w.forEach((s, k) => {
+      const p = sp(t, T_DROP + k * 0.06, 0.45, 0.6);
+      s.style.transform = `scale(${lerp(1.4, 1, p).toFixed(4)})`; s.style.opacity = clamp(p * 3).toFixed(3);
+      s.style.filter = p < 0.98 ? `blur(${((1 - p) * 14).toFixed(2)}px)` : "";
+    });
+    show(N.win, true);
+    const ph = sp(t, T_DROP + 0.05, 0.6, 0.7);
+    const push = 1 + 0.03 * EIO(prog(t, T_DROP + 0.4, 1.4));
+    N.winPh.style.left = px(960 - 150); N.winPh.style.top = px(540 - 150 + (1 - ph) * 60);
+    N.winPh.style.transform = `scale(${(lerp(0.7, 1, ph) * push).toFixed(4)})`;
+    const c = sp(t, T_DROP + 0.25, 0.5, 0.55);
+    N.winCrown.style.left = px(960 - 65); N.winCrown.style.top = px(540 - 150 - 74 - (1 - c) * 60);
+    N.winCrown.style.transform = `rotate(${lerp(-20, -6, c).toFixed(2)}deg)`; N.winCrown.style.opacity = clamp(c * 3).toFixed(3);
+    phraseAt(N.winAmt, t, T_DROP + 0.4, null, 0);
+    N.winAmt._w[0].textContent = "+" + money(Math.round(1500 * EO(prog(t, T_DROP + 0.4, 0.7))));
+  }
+
+  // ======================== S3 box battle (light, product card)
+  const boxOn = focus(N.boxWrap, t, T_BOX - 0.1, T_SLOT + 0.2, 0.45, 0.3);
+  // camera push on the big hit
+  const hitT = R_T[2] + SPIN;
+  const push = EIO(prog(t, hitT, 0.5)) * (1 - EIO(prog(t, hitT + 1.0, 0.5)));
+  N.cam.style.transform = "";
+  if (boxOn) {
+    const z = 1 + 0.05 * push, fx = boxToScreen(COL_X(2) + COL_W / 2, 700);
+    N.cam.style.transformOrigin = `${fx.x}px ${fx.y}px`; N.cam.style.transform = `scale(${z.toFixed(5)})`;
+    phraseAt(N.p3, t, T_BOX + 0.1, bt(34) - 0.3);
+    phraseAt(N.p3b, t, bt(34), null, 0.1);
+    // the card rises in with a slight tilt that settles
+    const a = sp(t, T_BOX, 0.8, 0.8);
+    N.boxScene.style.transform = `perspective(2200px) translateY(${((1 - a) * 160).toFixed(2)}px) rotateX(${lerp(14, 5, a).toFixed(2)}deg) scale(${BOX_S})`;
+    // real boxes float around in depth
+    N.floats3.forEach((f, i) => {
+      const fa = sp(t, T_BOX + 0.2 + i * 0.1, 0.8, 0.75);
+      depth(f.im, f.x + Math.sin(t * 0.7 + i) * 14, f.y + Math.cos(t * 0.6 + i * 2) * 12 + (1 - fa) * 120, f.w, f.z, (1 - fa) * 14, clamp(fa * 2));
+      f.im.style.transform += ` rotate(${(Math.sin(t * 0.5 + i) * 6).toFixed(2)}deg)`;
+    });
+    let cur = -1; R_T.forEach((rt, ri) => { if (t >= rt) cur = ri; });
+    N.boxes.forEach((b, i) => {
+      const a2 = sp(t, T_BOX + 0.3 + i * 0.09, 0.55, 0.65);
+      const active = i === cur && t < R_T[i] + SPIN + 0.6;
+      const lift = sp(t, R_T[i] - 0.05, 0.45, 0.6) * (1 - EO(prog(t, R_T[i] + SPIN + 0.4, 0.4)));
+      const done = cur > i || (cur === i && t > R_T[i] + SPIN + 0.6);
+      const x = 745 + i * 215;
+      b.w.style.left = px(x - 95); b.w.style.top = px(140 + (1 - a2) * 50 - lift * 16);
+      b.w.style.transform = `scale(${(lerp(0.6, 1, a2) * (1 + 0.08 * lift)).toFixed(4)})`;
+      b.w.style.opacity = ((done ? 0.42 : 1) * clamp(a2 * 4)).toFixed(3);
+      b.nb.style.background = active ? C.lime : "#232c15"; b.nb.style.color = active ? C.ink : "#c9d1bb";
+    });
+    N.cols.forEach((c, i) => {
+      const a3 = sp(t, T_BOX + 0.5 + i * 0.06, 0.6, 0.75), isC = i === 2;
+      setRect(c.card, COL_X(i), COL_Y + (1 - a3) * 100, COL_W, COL_H);
+      c.card.style.opacity = clamp(a3 * 3).toFixed(3);
+      const hit = isC && t >= hitT;
+      c.card.style.borderColor = hit ? C.lime : "#232c15";
+      let total = 0; R_T.forEach((rt, ri) => { total += WON[ri][i][1] * EO(prog(t, rt + SPIN + 0.1, 0.55)); });
+      c.tot.textContent = money(Math.round(total)); c.tot.style.color = hit ? C.lime : C.white;
+      if (isC) c.tot.style.transform = `scale(${(1 + 0.18 * Math.sin(Math.PI * prog(t, hitT + 0.1, 0.35))).toFixed(4)})`;
+      const cr = sp(t, hitT + 0.45, 0.5, 0.55);
+      c.crown.style.transform = `translateY(${((1 - cr) * -30).toFixed(2)}px) rotate(-14deg)`; show(c.crown, isC && cr > 0);
+      const ri = cur < 0 ? 0 : cur; c.strips.forEach((s, k) => show(s, k === ri));
+      const rt = R_T[ri], p = DEC(prog(t, rt, SPIN));
+      const settle = 1 + 0.035 * Math.sin(Math.PI * prog(t, rt + SPIN, 0.22));
+      c.strips[ri].style.transform = `translateY(${px(lerp(-2 * STEP, -FINAL * STEP, p))}) scale(${settle.toFixed(4)})`;
+      c.strips[ri].style.filter = p > 0 && p < 0.85 ? `blur(${(2.2 * (1 - p)).toFixed(2)}px)` : "";
+      const landed = t >= rt + SPIN;
+      c.strips[ri].style.opacity = (cur < 0 ? 0.5 : landed ? lerp(1, 0.3, EO(prog(t, rt + SPIN + 0.35, 0.3))) : 1).toFixed(3);
+      const pp = sp(t, rt + SPIN + 0.02, 0.4, 0.6) * (cur >= 0 ? 1 : 0);
+      c.price.textContent = money(WON[ri][i][1]);
+      c.price.style.transform = `scale(${lerp(0.6, 1, pp).toFixed(3)})`;
+      c.price.style.opacity = (clamp(pp * 3) * (1 - EI(prog(t, rt + SPIN + 0.5, 0.25)))).toFixed(3);
+      const big = isC && ri === 2 && landed;
+      c.price.style.background = big ? C.lime : "#232c15"; c.price.style.color = big ? C.ink : C.white;
+      c.tiles.forEach((tl, k) => {
+        const f = EIO(prog(t, R_T[k] + SPIN + 0.35, 0.45));
+        tl.tl.style.left = px(lerp(110, 26 + k * 108, f)); tl.tl.style.top = px(lerp(145, 452, f));
+        tl.tl.style.transform = `scale(${lerp(1.4, 1, f).toFixed(3)})`;
+        tl.bg.style.opacity = f.toFixed(3); tl.pr.style.opacity = clamp((f - 0.7) / 0.3).toFixed(3);
+        const bigT = isC && k === 2; tl.bg.style.background = bigT ? "#2c4410" : "#1b2610"; tl.pr.style.color = bigT ? C.lime : "#c9d1bb";
+        show(tl.tl, f > 0);
+      });
+    });
+  }
+
+  // ======================== iris: a deep circle grows out of the winning column
+  {
+    const g = EIO(prog(t, T_SLOT - 0.05, 0.5));
+    const o = boxToScreen(COL_X(2) + COL_W / 2, 700);
+    const d = lerp(40, 2600, g);
+    setRect(N.iris, o.x - d / 2 + (960 - o.x) * g, o.y - d / 2 + (540 - o.y) * g, d, d);
+    show(N.iris, g > 0 && t < T_SLOT + 0.6);
+  }
+
+  // ======================== S4 slot battle (dark)
+  const slotOn = focus(N.slot, t, T_SLOT + 0.3, T_RECAP, 0.4, 0.3);
+  if (slotOn) {
+    phraseAt(N.p4, t, T_SLOT_IN + 0.1, null);
+    const fold = EIO(prog(t, T_FOLD, 0.45));
+    N.hand.forEach((h, i) => {
+      const a = sp(t, T_SLOT_IN + 0.3 + i * 0.12, 0.6, 0.7), isC = i === 2;
+      const cx = isC ? lerp(560, 470, fold) : lerp(560 + h.dx, 560, fold);
+      const cy = 600 + (1 - a) * 520 + Math.abs(h.dx) * 0.12 * (1 - fold);
+      const rot = lerp(h.rot * 1.6, h.rot, a) * (1 - fold);
+      const sc = isC ? lerp(1, 1.16, fold) : lerp(0.92, 0.82, fold);
+      h.im.style.left = px(cx - 160); h.im.style.top = px(cy - 201);
+      h.im.style.transform = `rotate(${rot.toFixed(2)}deg) scale(${sc.toFixed(4)})`;
+      const gone = isC ? 0 : prog(t, T_FOLD + 0.25, 0.2);
+      h.im.style.opacity = (1 - gone).toFixed(3);
+      h.im.style.filter = (1 - a) > 0.02 ? `blur(${((1 - a) * 12).toFixed(2)}px)` : "";
+      h.im.style.zIndex = isC ? "3" : "1";
+      show(h.im, a > 0 && gone < 1);
+    });
+    const rk = EIO(prog(t, T_RANK, 0.5));
+    N.rows.forEach((r, i) => {
+      const a = sp(t, T_FOLD + 0.25 + i * 0.1, 0.55, 0.72);
+      setRect(r.row, 840 + (1 - a) * 200, lerp(300 + i * 170, 300 + RANK[i] * 170, rk), 880, 140);
+      r.row.style.opacity = clamp(a * 3).toFixed(3);
+      r.row.style.filter = (1 - a) > 0.02 ? `blur(${((1 - a) * 10).toFixed(2)}px)` : "";
+      show(r.row, a > 0);
+      const te = slotEnd(i), ts = T_FOLD + 0.5, p = prog(t, ts, te - ts);
+      const xv = r.r.x * Math.pow(p, 2.2);
+      r.mx.textContent = "×" + xv.toFixed(1);
+      const win = RANK[i] === 0 && t >= T_RANK;
+      r.usd.textContent = win ? "+" + money(SLOT_POT * EO(prog(t, T_RANK + 0.2, 0.6)), 2) : money(xv * SLOT_BET, 2);
+      r.usd.style.color = win ? C.lime : "#8e9a80";
+      r.mx.style.transform = `scale(${(1 + 0.08 * Math.sin(Math.PI * prog(t, te, 0.2))).toFixed(4)})`;
+      r.mx.style.color = win ? C.lime : t >= te ? C.white : "#6b7560";
+      r.row.style.borderColor = win ? C.lime : "#2c3a18";
+      r.rk.style.background = win ? C.lime : "#232c15"; r.rk.style.color = win ? C.ink : "#c9d1bb";
+      r.rk.style.opacity = rk.toFixed(3);
+    });
+  }
+
+  // ======================== S5 recap (light)
+  const recapOn = focus(N.recap, t, T_RECAP + 0.15, T_END - 0.25, 0.45, 0.3);
+  if (recapOn) {
+    phraseAt(N.p5, t, T_RECAP + 0.35, null);
+    N.floats5.forEach((f, i) => {
+      const fa = sp(t, T_RECAP + 0.2 + i * 0.08, 0.8, 0.75);
+      const dx = (f.x - 960) * (1 - fa) * -0.35, dy = (f.y - 540) * (1 - fa) * -0.35;
+      depth(f.im, f.x + dx + Math.sin(t * 0.8 + i) * 12, f.y + dy + Math.cos(t * 0.7 + i) * 10, f.w, f.z, (1 - fa) * 12, clamp(fa * 2));
+      f.im.style.transform += ` rotate(${(Math.sin(t * 0.6 + i * 1.7) * (f.card ? 9 : 5)).toFixed(2)}deg)`;
+    });
+  }
+
+  // ======================== end card (light)
+  const endOn = focus(N.end, t, T_END - 0.1, null, 0.5);
+  if (endOn) {
+    const m = sp(t, T_END - 0.05, 0.9, 0.65);
+    const bob = Math.sin((2 * Math.PI * (t - T_END)) / (2 * BAR)) * 10;
+    N.mascot.style.left = px(960 - 260); N.mascot.style.top = px(170 + (1 - m) * 160 + bob);
+    N.mascot.style.transform = `scale(${lerp(0.5, 1, m).toFixed(4)}) rotate(${lerp(-18, 0, m).toFixed(2)}deg)`;
+    N.mascot.style.opacity = clamp(m * 3).toFixed(3);
+    phraseAt(N.e1, t, T_END + 0.55, null);
+    const u = sp(t, T_END + 1.0, 0.5, 0.7);
+    N.url.style.transform = `scale(${lerp(0.7, 1, u).toFixed(3)})`; N.url.style.opacity = clamp(u * 3).toFixed(3);
+    N.url.style.filter = u < 0.98 ? `blur(${((1 - u) * 10).toFixed(2)}px)` : "";
+  }
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  await Promise.all(["800 100px Geist", "700 100px Geist", "600 40px Geist", "500 40px Geist"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+  build();
+  await Promise.all([...document.images].map((im) => im.decode().catch(() => { throw new Error("img " + im.src); })));
+  const q = new URLSearchParams(location.search).get("t");
+  seek(q ? +q : 0);
+  window.seek = seek; window.READY = true;
+}
+boot().catch((e) => { window.BOOT_ERR = String((e && e.stack) || e); });
+</script>
+</body>
+</html>

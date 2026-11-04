@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GazzPad v4</title>
+<style>
+  @font-face { font-family: "Geist"; font-weight: 500; font-display: block; src: url(fonts/Geist-500.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; font-display: block; src: url(fonts/Geist-600.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 700; font-display: block; src: url(fonts/Geist-700.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 800; font-display: block; src: url(fonts/Geist-800.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fff; }
+  * { box-sizing: border-box; }
+  #stage {
+    position: absolute; inset: 0; overflow: hidden;
+    background: radial-gradient(120% 95% at 50% 38%, #ffffff 0%, #f7f7f9 58%, #eeeef2 100%);
+    -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision;
+    font-family: "Geist", system-ui, sans-serif; color: #0b0b0f;
+  }
+  #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .abs { position: absolute; left: 0; top: 0; }
+  .scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 960px 540px; }
+  .line { position: absolute; overflow: hidden; white-space: nowrap; padding: 0.06em 0 0.16em; }
+  .line > span { display: inline-block; will-change: transform; }
+  .disp { font-weight: 700; letter-spacing: -0.045em; line-height: 1; }
+  .sub { font-weight: 500; letter-spacing: -0.015em; color: #6e6e73; line-height: 1.1; }
+  .dk .sub, .sub.dk { color: #9a9aa6; }
+  .grad { background: linear-gradient(90deg, #17b95c, #14b8a6 45%, #6366f1); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .circ { position: absolute; border-radius: 50%; overflow: hidden; background: #fff; box-shadow: 0 18px 40px -18px rgba(20,20,40,.35), 0 0 0 1px rgba(10,10,20,.06); }
+  .circ img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tick { position: absolute; font-weight: 600; font-size: 19px; color: #6e6e73; letter-spacing: -0.01em; text-align: center; width: 120px; }
+  .chip { position: absolute; height: 92px; border-radius: 46px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 44px; letter-spacing: -0.03em; color: #fff; background: #1a1b22; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14); font-variant-numeric: tabular-nums; }
+  .pool { position: absolute; width: 340px; height: 120px; border-radius: 30px; background: #16171e; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12); display: flex; align-items: center; gap: 20px; padding: 0 26px; color: #fff; }
+  .pool img { width: 64px; height: 64px; border-radius: 50%; }
+  .pool b { display: block; font-size: 30px; letter-spacing: -0.02em; font-weight: 700; }
+  .pool i { display: block; font-style: normal; font-size: 21px; color: #9a9aa6; font-weight: 500; margin-top: 4px; }
+  .badge { display: inline-block; font-size: 18px; font-weight: 700; padding: 5px 12px; border-radius: 99px; letter-spacing: 0; }
+  .card { position: absolute; width: 252px; height: 340px; border-radius: 34px; background: #13161e; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.09), 0 30px 60px -30px rgba(0,0,0,.6); overflow: hidden; }
+  .card img { position: absolute; left: 26px; top: 16px; width: 200px; height: 200px; }
+  .card b { position: absolute; left: 24px; top: 226px; font-size: 32px; letter-spacing: -0.03em; color: #fff; font-weight: 700; }
+  .card i { position: absolute; left: 24px; top: 272px; right: 18px; font-style: normal; font-size: 20px; line-height: 1.2; color: #9a9aa6; font-weight: 500; }
+  .card u { position: absolute; right: 20px; top: 20px; text-decoration: none; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .wl { position: absolute; width: 92px; height: 92px; border-radius: 50%; overflow: hidden; box-shadow: 0 10px 24px -14px rgba(20,20,40,.4), 0 0 0 1px rgba(10,10,20,.06); background: #fff; }
+  .wl img, .fly img, .slot img, .drop img { width: 100%; height: 100%; display: block; }
+  .fly, .drop { position: absolute; border-radius: 50%; overflow: hidden; background: #fff; }
+  .slot { position: absolute; display: flex; align-items: center; gap: 18px; color: #fff; }
+  .slot .o { width: 64px; height: 64px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.14); }
+  .slot b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .slot i { font-style: normal; font-size: 22px; color: #9a9aa6; font-weight: 500; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .av { position: absolute; width: 150px; height: 150px; border-radius: 50%; overflow: hidden; box-shadow: 0 18px 40px -20px rgba(20,20,40,.4); }
+  .av svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cam"></div>
+</div>
+<script>
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, t0, d) => clamp((t - t0) / d);
+function bez(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(clamp(t)); };
+}
+const EO = bez(0.16, 1, 0.3, 1);
+const EIO = bez(0.76, 0, 0.24, 1);
+const CAMC = bez(0.65, 0, 0.35, 1);
+const EI = bez(0.7, 0, 0.84, 0);
+function spring(p, zeta = 0.72) {
+  if (p <= 0) return 0; if (p >= 1) return 1;
+  const w = 5.3 / zeta, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * p) * (Math.cos(wd * p) + (zeta * w / wd) * Math.sin(wd * p));
+}
+const sp = (t, t0, d, z) => spring(prog(t, t0, d), z);
+const el = (tag, parent, style = {}, cls = "") => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, style); parent.appendChild(e); return e; };
+const px = (v) => v.toFixed(3) + "px";
+const vis = (e, on) => { e.style.display = on ? (e._d || "") : "none"; };
+function setRect(e, x, y, w, h, r) { e.style.left = px(x); e.style.top = px(y); e.style.width = px(w); e.style.height = px(h); if (r != null) e.style.borderRadius = px(r); }
+const rl = (A, B, p) => ({ x: lerp(A.x, B.x, p), y: lerp(A.y, B.y, p), w: lerp(A.w, B.w, p), h: lerp(A.h, B.h, p), r: lerp(A.r, B.r, p) });
+const circ = (cx, cy, d) => ({ x: cx - d / 2, y: cy - d / 2, w: d, h: d, r: d / 2 });
+function textLine(parent, o) {
+  const l = el("div", parent, { left: px(o.x - o.w / 2), top: px(o.y), fontSize: px(o.size), color: o.color || "", width: px(o.w), textAlign: "center" }, "line " + (o.cls || "disp"));
+  l._words = o.words.map((wd, k) => { const s = el("span", l, { color: (o.colors && o.colors[k]) || "" }); s.textContent = wd + (k < o.words.length - 1 ? " " : ""); return s; });
+  return l;
+}
+function lineAt(l, t, tin, tout, stagger = 0.07, dIn = 0.7, dOut = 0.4) {
+  let on = false;
+  l._words.forEach((s, k) => {
+    const pi = EO(prog(t, tin + k * stagger, dIn));
+    const po = tout == null ? 0 : EI(prog(t, tout + k * stagger * 0.4, dOut));
+    s.style.transform = `translate3d(0,${((1 - pi) * 115 - po * 115).toFixed(3)}%,0)`;
+    if (pi > 0 && po < 1) on = true;
+  });
+  vis(l, on);
+}
+const tf = (e, x, y, s = 1) => { e.style.transform = `translate(${px(x)},${px(y)}) scale(${s.toFixed(4)})`; };
+const pushZ = (e, t, t0, t1, z1) => { const z = lerp(1, z1, CAMC(prog(t, t0, t1 - t0))); e.style.transform = `scale(${z.toFixed(5)})`; };
+
+// ---------------------------------------------------------------- timeline
+// voiceover (take 1) starts at VO = 1.0 s; every scene is timed to its words
+const DUR = 43.0;
+const CUES = [];
+function cue(t, f, g = 1) { CUES.push({ t: +t.toFixed(3), f, g }); }
+const MODE_T = [19.09, 20.06, 20.96, 21.91, 23.44, 24.35];
+const MODES = [
+  { k: "holders", n: "Holders", c: "Airdrop to holders", col: "#14b8a6", pct: 30 },
+  { k: "creator", n: "Creator", c: "Paid to the dev", col: "#17b95c", pct: 20 },
+  { k: "liquidity", n: "Liquidity", c: "Deepens the pool", col: "#3b82f6", pct: 15 },
+  { k: "buyback", n: "Buyback", c: "Buys and burns the coin", col: "#d9a441", pct: 15 },
+  { k: "invest", n: "Funds", c: "Fund shares to holders", col: "#6366f1", pct: 10 },
+  { k: "lottery", n: "Lottery", c: "Random holder drops", col: "#ec4899", pct: 10 },
+];
+// live GazzPad pairings (api.gazz.fun/api/gazzpad, 2026-10-30)
+const RING_C = { sym: "ETH", img: "img/eth.svg" };
+const INNER = [["USDG", "img/USDG.png"], ["GAZZ", "img/gazz-logo-1024.png"], ["PONS", "img/pons-256.png"], ["Index", "img/Index.png"], ["NVDA", "img/logos/NVDA.png"], ["AAPL", "img/logos/AAPL.png"]];
+const OUTER = ["TSLA", "MSFT", "SPY", "QQQ", "AMZN", "GOOGL", "META", "COIN"].map((s) => [s, `img/logos/${s}.png`]);
+// basket wall (7 cols); picks fly into the basket in order
+const WALL_COLS = 7, WALL_ROWS = 9, CELL = 124, WX = 900, WY = 230, WW = 868, WH = 640;
+const PICKS = [["AAPL", 1, 1], ["NVDA", 3, 1], ["TSLA", 5, 2], ["MSFT", 0, 2], ["AMZN", 2, 3], ["GOOGL", 6, 1], ["META", 4, 3], ["SPY", 1, 4], ["COIN", 5, 4], ["GLD", 3, 5]];
+const PICK_T0 = 27.55, PICK_DT = 0.17, FLY_D = 0.62;
+const scrollAt = (t) => lerp(0, 230, prog(t, 25.2, 7.0));
+const AV_T0 = 29.55;
+const AVS = [[1060, 330], [1300, 330], [1540, 330], [1060, 590], [1300, 590], [1540, 590]];
+const AV_COL = [["#b8f43a", "#14b8a6"], ["#38e8d0", "#6366f1"], ["#8b5cf6", "#ec4899"], ["#f59e0b", "#ef4444"], ["#3b82f6", "#38e8d0"], ["#17b95c", "#b8f43a"]];
+const DROPS = Array.from({ length: 18 }, (_, i) => ({ s: i % 10, a: i % 6, t: 29.95 + i * 0.075 }));
+
+// sound cues, placed with the motion they belong to
+cue(0.25, "pop-soft", 0.7); cue(0.95, "whoosh-soft", 0.3);
+cue(4.4, "whoosh-soft", 0.35); cue(4.85, "whoosh-fast", 0.3);
+[0, 1, 2, 3].forEach((i) => cue(6.6 + i * 0.13, "pop-soft", 0.35 + i * 0.05)); cue(7.75, "click-ui", 0.6);
+[8.6, 8.85, 9.1].forEach((x, i) => cue(x, "pop-soft", 0.4 + i * 0.05)); cue(11.55, "notify-pop", 0.45);
+cue(12.95, "whoosh-soft", 0.35); cue(13.55, "pop-soft", 0.45);
+[0, 1, 2, 3, 4].forEach((i) => cue(13.75 + i * 0.22, "pop-soft", 0.2 + i * 0.03));
+cue(16.0, "whoosh-soft", 0.3); cue(16.42, "click-ui-2", 0.55); cue(16.95, "whoosh-fast", 0.3);
+MODE_T.forEach((x, i) => cue(x - 0.05, "pop-soft", 0.45 + (i % 2) * 0.08));
+cue(24.95, "whoosh-soft", 0.35);
+PICKS.forEach((_, i) => cue(PICK_T0 + i * PICK_DT, i % 2 ? "click-ui-2" : "click-ui", 0.32));
+cue(29.3, "whoosh-soft", 0.3); [0, 2, 4].forEach((i) => cue(AV_T0 + i * 0.06, "pop-soft", 0.3));
+cue(31.45, "whoosh-soft", 0.35); cue(34.95, "success-chime", 0.35);
+cue(36.45, "whoosh-soft", 0.35); cue(36.9, "impact-soft", 0.7);
+window.CUES = CUES; window.DUR = DUR;
+
+// ---------------------------------------------------------------- build
+const N = {};
+function build() {
+  const cam = document.getElementById("cam");
+  // soft haze behind the light scenes (static gradient, never behind text edges)
+  N.haze = el("div", cam, { position: "absolute", left: "260px", top: "120px", width: "1400px", height: "900px", borderRadius: "50%", background: "radial-gradient(closest-side, rgba(99,102,241,.13), rgba(56,232,208,.06) 55%, rgba(255,255,255,0) 100%)" });
+
+  // ---- S1: Uniswap v4 hook
+  N.s1 = el("div", cam, {}, "scene");
+  N.uni = el("div", cam, { position: "absolute", background: "#fff", boxShadow: "0 30px 60px -28px rgba(255,0,122,.45), 0 0 0 1px rgba(10,10,20,.06)", overflow: "hidden" });
+  N.uniLogo = el("img", N.uni, { position: "absolute", width: "96px", height: "96px", borderRadius: "50%" }); N.uniLogo.src = "img/uniswap.png";
+  N.uniTxt = el("div", N.uni, { position: "absolute", left: "128px", top: "0", height: "100%", display: "flex", alignItems: "center", fontWeight: "700", fontSize: "50px", letterSpacing: "-0.035em", whiteSpace: "nowrap" });
+  N.uniTxt.innerHTML = 'Uniswap v4 hook';
+  N.s1a = textLine(N.s1, { x: 960, y: 640, w: 1600, size: 76, words: ["Now", "live", "on", "GazzPad."] });
+  N.s1a._words[3].classList.add("grad");
+
+  // ---- dark plate: morphs between every scene
+  N.plate = el("div", cam, { position: "absolute", background: "#0c0d12", overflow: "hidden" });
+
+  // ---- S2: transfer tax
+  N.s2 = el("div", cam, {}, "scene dk");
+  N.s2a = textLine(N.s2, { x: 960, y: 300, w: 1700, size: 96, color: "#fff", words: ["Then", "we", "doubled", "down."] });
+  N.s2b = textLine(N.s2, { x: 960, y: 470, w: 1200, size: 34, cls: "sub dk", words: ["Transfer", "tax,", "locked", "in", "the", "token"] });
+  N.chips = [1, 2, 3, 5].map((v, i) => { const c = el("div", N.s2, { left: px(960 - 2 * 210 + i * 210 + 10), top: "560px", width: "190px" }, "chip"); c.textContent = v + "%"; c._d = "flex"; return c; });
+  N.ring = el("div", N.s2, { position: "absolute", top: "552px", width: "206px", height: "108px", borderRadius: "54px", boxShadow: "inset 0 0 0 4px #b8f43a" });
+  N.s2c = textLine(N.s2, { x: 960, y: 170, w: 1700, size: 72, color: "#fff", words: ["Protected", "across", "every", "pool."] });
+  N.s2d = textLine(N.s2, { x: 960, y: 870, w: 1500, size: 40, cls: "sub dk", words: ["Even", "without", "our", "native", "hook."] });
+  N.coin = el("div", N.s2, { position: "absolute", left: "880px", top: "330px", width: "160px", height: "160px", borderRadius: "50%", background: "linear-gradient(135deg,#b8f43a,#38e8d0 50%,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "34px", letterSpacing: "-0.03em", color: "#0a0b10" });
+  N.coin.textContent = "$COIN"; N.coin._d = "flex";
+  N.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  Object.assign(N.svg.style, { position: "absolute", left: "0", top: "0", width: "1920px", height: "1080px" });
+  N.svg.setAttribute("viewBox", "0 0 1920 1080"); N.s2.insertBefore(N.svg, N.s2.firstChild);
+  const POOLS = [
+    { x: 330, img: "img/uniswap.png", n: "Uniswap v4", b: "Hook fee", bc: "#ff007a" },
+    { x: 790, img: "img/pancakeswap.png", n: "PancakeSwap", b: "Hook fee", bc: "#1fc7d4" },
+    { x: 1250, img: null, n: "Any new pool", b: "Transfer tax", bc: "#b8f43a" },
+  ];
+  N.pools = POOLS.map((p, i) => {
+    const d = el("div", N.s2, { left: px(p.x), top: "640px" }, "pool"); d._d = "flex";
+    if (p.img) { const im = el("img", d); im.src = p.img; }
+    else { const g = el("div", d, { width: "64px", height: "64px", borderRadius: "50%", background: "#24252e", display: "flex", alignItems: "center", justifyContent: "center", color: "#b8f43a", fontSize: "40px", fontWeight: "700" }); g.textContent = "+"; }
+    const tx = el("div", d); tx.innerHTML = `<b>${p.n}</b><i><span class="badge" style="background:${p.bc}22;color:${p.bc}">${p.b}</span></i>`;
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const x2 = p.x + 170, y2 = 640;
+    path.setAttribute("d", `M960 490 C 960 570, ${x2} 560, ${x2} ${y2}`);
+    path.setAttribute("fill", "none"); path.setAttribute("stroke", i === 2 ? "#b8f43a" : "rgba(255,255,255,.35)"); path.setAttribute("stroke-width", "3");
+    N.svg.appendChild(path); d._path = path; d._len = path.getTotalLength();
+    return d;
+  });
+
+  // ---- S3: pairings
+  N.s3 = el("div", cam, {}, "scene");
+  N.s3a = textLine(N.s3, { x: 960, y: 92, w: 1800, size: 80, words: ["Pair", "to", "stocks,", "natives", "and", "memes."], colors: ["", "", "#2563eb", "#6366f1", "", "#17b95c"] });
+  N.ethC = el("div", cam, {}, "circ"); el("img", N.ethC).src = RING_C.img;
+  N.ethT = el("div", cam, {}, "tick"); N.ethT.textContent = "ETH";
+  const mk = (arr, d, rx, ry, a0) => arr.map(([s, src], i) => {
+    const a = a0 + (i / arr.length) * Math.PI * 2;
+    const c = el("div", N.s3, {}, "circ"); el("img", c).src = src;
+    const tk = el("div", N.s3, {}, "tick"); tk.textContent = s;
+    return { c, tk, d, a, rx, ry };
+  });
+  N.inner = mk(INNER, 116, 270, 190, -Math.PI / 2);
+  N.outer = mk(OUTER, 100, 590, 300, -Math.PI / 2 + Math.PI / 8);
+
+  // creator fee label (rides the plate while it is a pill)
+  N.fee = el("div", cam, { position: "absolute", left: "0", top: "0", display: "flex", alignItems: "center", gap: "22px", whiteSpace: "nowrap", color: "#fff", fontWeight: "700", fontSize: "50px", letterSpacing: "-0.035em", transformOrigin: "0 0" });
+  N.fee.innerHTML = 'Creator fee <span class="badge" style="font-size:28px;padding:8px 18px;background:#b8f43a;color:#0a0b10">up to 2%</span>';
+  N.fee._d = "flex";
+
+  // ---- S4: fee modes
+  N.s4 = el("div", cam, {}, "scene dk");
+  N.s4a = textLine(N.s4, { x: 960, y: 196, w: 1400, size: 40, cls: "sub dk", words: ["Split", "it", "your", "way."] });
+  N.cards = MODES.map((m, i) => {
+    const c = el("div", N.s4, { left: px(139 + i * 278), top: "300px" }, "card");
+    const im = el("img", c); im.src = `img/split/${m.k}.png`;
+    el("b", c).textContent = m.n; el("i", c).textContent = m.c;
+    const u = el("u", c, { color: m.col }); u.textContent = m.pct + "%";
+    return c;
+  });
+  N.bar = el("div", N.s4, { position: "absolute", left: "139px", top: "700px", width: "1642px", height: "16px", borderRadius: "8px", background: "#1d1f28", overflow: "hidden" });
+  N.segs = MODES.map((m) => el("div", N.bar, { position: "absolute", top: "0", height: "100%", background: m.col }));
+  N.tally = el("div", N.s4, { position: "absolute", left: "139px", top: "740px", width: "1642px", textAlign: "center", fontSize: "30px", fontWeight: "600", color: "#9a9aa6", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" });
+
+  // ---- S5: reward basket
+  N.s5 = el("div", cam, {}, "scene");
+  N.s5a = textLine(N.s5, { x: 960, y: 72, w: 1800, size: 72, words: ["Pick", "your", "own", "reward", "basket."] });
+  N.s5b = textLine(N.s5, { x: 1330, y: 170, w: 900, size: 36, cls: "sub", words: ["Choose", "from", "200+", "assets."], colors: ["", "", "#0b0b0f", ""] });
+  N.s5c = textLine(N.s5, { x: 1330, y: 170, w: 900, size: 36, cls: "sub", words: ["Airdropped", "to", "your", "holders."] });
+  N.wallBox = el("div", N.s5, { position: "absolute", left: px(WX), top: px(WY), width: px(WW), height: px(WH), overflow: "hidden", WebkitMaskImage: "linear-gradient(180deg, transparent 0, #000 70px, #000 570px, transparent 640px)", maskImage: "linear-gradient(180deg, transparent 0, #000 70px, #000 570px, transparent 640px)" });
+  N.wall = el("div", N.wallBox, { position: "absolute", left: "0", top: "0", width: px(WW), height: px(WALL_ROWS * CELL) });
+  const all = ["AAPL","NVDA","TSLA","MSFT","AMZN","GOOGL","META","SPY","COIN","GLD","QQQ","AMD","NFLX","PLTR","HOOD","AVGO","ORCL","JPM","V","MA","KO","PEP","WMT","COST","DIS","UBER","SHOP","MSTR","CRCL","IBM","INTC","MU","TSM","ASML","LLY","UNH","XOM","CVX","BA","GE","CAT","NKE","SBUX","MCD","SOFI","RBLX","RKLB","IONQ","SMCI","DELL","CRM","ADBE","PYPL","SNAP","RDDT","NET","SLV","USO","GDX","BRK","JNJ","PG","T","VZ"].filter((s) => s !== "NKE");
+  const pickAt = {}; PICKS.forEach(([s, c, r], i) => { pickAt[r * WALL_COLS + c] = { s, i }; });
+  const rest = all.filter((s) => !PICKS.some((p) => p[0] === s));
+  N.wl = []; let ri = 0;
+  for (let r = 0; r < WALL_ROWS; r++) for (let c = 0; c < WALL_COLS; c++) {
+    const idx = r * WALL_COLS + c; const pk = pickAt[idx]; const s = pk ? pk.s : rest[ri++ % rest.length];
+    const d = el("div", N.wall, { left: px(c * CELL + 16), top: px(r * CELL + 16) }, "wl"); el("img", d).src = `img/logos/${s}.png`;
+    N.wl.push({ d, pk });
+  }
+  N.wallSel = PICKS.map(() => el("div", N.wall, { position: "absolute", width: "104px", height: "104px", borderRadius: "50%", boxShadow: "inset 0 0 0 4px #17b95c" }));
+  N.bHead = el("div", cam, { position: "absolute", display: "flex", justifyContent: "space-between", alignItems: "baseline", color: "#fff", width: "520px" });
+  N.bHead.innerHTML = '<b style="font-size:36px;letter-spacing:-0.03em">Reward basket</b><span id="bcount" style="font-size:28px;color:#9a9aa6;font-weight:600;font-variant-numeric:tabular-nums">0/10</span>';
+  N.bHead._d = "flex";
+  N.slots = PICKS.map(([s], i) => {
+    const sl = el("div", cam, {}, "slot"); sl._d = "flex";
+    const o = el("div", sl, {}, "o"); const tx = el("div", sl); tx.innerHTML = `<b>${s}</b><i>10%</i>`;
+    sl._o = o; sl._tx = tx; return sl;
+  });
+  N.flys = PICKS.map(([s]) => { const f = el("div", cam, {}, "fly"); el("img", f).src = `img/logos/${s}.png`; return f; });
+  N.avs = AVS.map(([x, y], i) => {
+    const a = el("div", N.s5, { left: px(x), top: px(y) }, "av");
+    a.innerHTML = `<svg viewBox="0 0 150 150"><defs><linearGradient id="g${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${AV_COL[i][0]}"/><stop offset="1" stop-color="${AV_COL[i][1]}"/></linearGradient></defs><rect width="150" height="150" fill="url(#g${i})"/><circle cx="75" cy="60" r="24" fill="rgba(10,11,16,.82)"/><path d="M31 128c4-26 22-40 44-40s40 14 44 40" fill="rgba(10,11,16,.82)"/></svg>`;
+    return a;
+  });
+  N.drops = DROPS.map((d) => { const f = el("div", cam, {}, "drop"); el("img", f).src = `img/logos/${PICKS[d.s][0]}.png`; return f; });
+
+  // ---- S6: vesting
+  N.s6 = el("div", cam, {}, "scene");
+  N.s6a = textLine(N.s6, { x: 960, y: 110, w: 1800, size: 76, words: ["Want", "to", "vest", "your", "supply?"] });
+  N.vL = el("div", cam, { position: "absolute", left: "0", top: "0", width: "580px", height: "560px", color: "#fff" });
+  N.vL.innerHTML = '<img src="img/split/vesting.png" style="position:absolute;right:24px;top:22px;width:170px;height:170px"><div style="position:absolute;left:52px;top:58px;font-size:30px;color:#9a9aa6;font-weight:600">Up to</div><div style="position:absolute;left:46px;top:110px;display:flex;align-items:baseline;gap:16px"><span id="vy" style="font-size:210px;font-weight:700;letter-spacing:-0.06em;line-height:1;font-variant-numeric:tabular-nums">1</span><span id="vyl" style="font-size:52px;font-weight:600;letter-spacing:-0.03em">year</span></div>';
+  N.vSegs = [0, 1, 2, 3, 4].map((i) => {
+    const s = el("div", N.vL, { position: "absolute", left: px(52 + i * 98), top: "420px", width: "86px", height: "20px", borderRadius: "10px", background: "#24262f", overflow: "hidden" });
+    const f = el("div", s, { position: "absolute", left: "0", top: "0", height: "100%", width: "0", background: "#b8f43a" });
+    const l = el("div", N.vL, { position: "absolute", left: px(52 + i * 98), top: "456px", width: "86px", fontSize: "22px", color: "#9a9aa6", fontWeight: "600" }); l.textContent = "Y" + (i + 1);
+    return f;
+  });
+  N.vR = el("div", N.s6, { position: "absolute", left: "1010px", top: "290px", width: "580px", height: "560px", borderRadius: "48px", background: "#fff", boxShadow: "0 40px 80px -40px rgba(20,20,40,.35), 0 0 0 1px rgba(10,10,20,.07)" });
+  N.vR.innerHTML = '<div style="position:absolute;left:52px;top:58px;font-size:30px;color:#6e6e73;font-weight:600">Up to</div><svg viewBox="0 0 580 560" style="position:absolute;left:0;top:0;width:580px;height:560px"><circle cx="290" cy="310" r="160" fill="none" stroke="#eeeef2" stroke-width="36"/><circle id="vring" cx="290" cy="310" r="160" fill="none" stroke="#6366f1" stroke-width="36" stroke-linecap="round" transform="rotate(-90 290 310)" stroke-dasharray="0 2000"/></svg><div style="position:absolute;left:0;width:580px;top:250px;text-align:center"><div id="vp" style="font-size:96px;font-weight:700;letter-spacing:-0.05em;line-height:1;font-variant-numeric:tabular-nums">0%</div><div style="font-size:26px;color:#6e6e73;font-weight:600;margin-top:10px">of supply</div></div>';
+
+  // ---- S7: end card
+  N.s7 = el("div", cam, {}, "scene");
+  N.mark = el("img", cam, { position: "absolute", width: "170px", height: "170px" }); N.mark.src = "img/gazz-mark.svg";
+  N.s7a = textLine(N.s7, { x: 960, y: 470, w: 1400, size: 140, words: ["GazzPad"] });
+  N.s7b = textLine(N.s7, { x: 960, y: 650, w: 1400, size: 46, cls: "sub", words: ["Launch", "on", "Robinhood", "Chain."] });
+  N.rh = el("img", N.s7, { position: "absolute", width: "52px", height: "52px", left: "618px", top: "656px" }); N.rh.src = "img/robinhood.svg";
+  { const w = N.s7b._words.reduce((a, s) => a + s.getBoundingClientRect().width, 0); N.rh._x = 960 - w / 2 - 70; N.s7b.style.transform = "translateX(32px)"; N.rh._x += 32; }
+  N.s7c = textLine(N.s7, { x: 960, y: 930, w: 600, size: 34, cls: "sub", words: ["gazz.fun"], colors: ["#0b0b0f"] });
+}
+
+// ---------------------------------------------------------------- seek
+function seek(t) {
+  // ===== S1 (0 - 4.9)
+  const uLand = sp(t, 0.2, 0.75, 0.75);
+  const uGrow = EIO(prog(t, 0.95, 0.75));
+  const uShrink = EIO(prog(t, 4.35, 0.5));
+  const PILL = { x: 960 - 290, y: 400, w: 580, h: 128, r: 64 };
+  const DOT = circ(960, 464, 128);
+  let R = rl(DOT, PILL, uGrow); R = rl(R, circ(960, 540, 120), uShrink);
+  setRect(N.uni, R.x, R.y, R.w, R.h, R.r);
+  N.uni.style.transform = `scale(${lerp(0.55, 1, uLand).toFixed(4)})`;
+  N.uni.style.background = uShrink > 0 ? `rgb(${Math.round(lerp(255, 12, uShrink))},${Math.round(lerp(255, 13, uShrink))},${Math.round(lerp(255, 18, uShrink))})` : "#fff";
+  N.uniLogo.style.left = px(lerp(16, 16, uGrow)); N.uniLogo.style.top = px((R.h - 96) / 2);
+  N.uniLogo.style.opacity = (1 - prog(t, 4.35, 0.2)).toFixed(3);
+  N.uniTxt.style.opacity = (prog(t, 1.2, 0.35) * (1 - prog(t, 4.3, 0.18))).toFixed(3);
+  N.uniTxt.style.transform = `translateX(${px((1 - EO(prog(t, 1.15, 0.6))) * 30)})`;
+  vis(N.uni, t >= 0.2 && t < 4.9);
+  lineAt(N.s1a, t, 1.75, 4.15, 0.09);
+  pushZ(N.s1, t, 1.6, 4.4, 1.03);
+  N.haze.style.opacity = (t < 4.9 || (t > 13.3 && t < 17.2) || t > 25.2) ? "1" : "0";
+
+  // ===== plate (dark morphing surface)
+  const FULL = { x: 0, y: 0, w: 1920, h: 1080, r: 0 };
+  const COVER = circ(960, 540, 2300);
+  const PILL2 = { x: 960 - 330, y: 600 - 64, w: 660, h: 128, r: 64 };
+  const BASKET = { x: 180, y: 230, w: 600, h: 640, r: 44 };
+  const VL = { x: 330, y: 290, w: 580, h: 560, r: 48 };
+  const MARK = { x: 960 - 85, y: 245, w: 170, h: 170, r: 46 };
+  let P = null;
+  if (t >= 4.85 && t < 13.62) {
+    const a = EIO(prog(t, 4.85, 0.7)), b = EIO(prog(t, 12.95, 0.62));
+    P = a < 1 ? rl(circ(960, 540, 120), COVER, a) : (b > 0 ? rl(COVER, circ(960, 610, 160), b) : FULL);
+  } else if (t >= 16.3 && t < 37.2) {
+    const a = spring(prog(t, 16.3, 0.55), 0.85), b = EIO(prog(t, 16.95, 0.6));
+    const c = EIO(prog(t, 24.95, 0.7)), d = EIO(prog(t, 31.45, 0.7)), e = EIO(prog(t, 36.45, 0.6));
+    if (b <= 0) P = rl(circ(960, 600, 128), PILL2, a);
+    else if (c <= 0) P = rl(PILL2, FULL, b);
+    else if (d <= 0) P = rl(FULL, BASKET, c);
+    else if (e <= 0) P = rl(BASKET, VL, d);
+    else P = rl(VL, MARK, e);
+  }
+  vis(N.plate, !!P); if (P) setRect(N.plate, P.x, P.y, P.w, P.h, P.r);
+
+  // ===== S2 (5 - 13.3)
+  vis(N.s2, t > 5.0 && t < 13.4);
+  lineAt(N.s2a, t, 5.45, 8.05, 0.09);
+  lineAt(N.s2b, t, 6.3, 8.1, 0.04);
+  N.chips.forEach((c, i) => {
+    const p = sp(t, 6.55 + i * 0.13, 0.7, 0.7), o = EI(prog(t, 8.05 + i * 0.03, 0.4));
+    vis(c, p > 0 && o < 1);
+    c.style.transform = `translateY(${px((1 - p) * 120 - o * 160)}) scale(${lerp(0.7, 1, p).toFixed(4)})`;
+  });
+  { // selection ring glides 1% -> 3%
+    const p = EIO(prog(t, 7.3, 0.5)), o = EI(prog(t, 8.1, 0.35));
+    const x0 = 960 - 420 + 10 - 8, x = lerp(x0, x0 + 420, p);
+    N.ring.style.left = px(x); vis(N.ring, t > 7.25 && o < 1);
+    N.ring.style.transform = `translateY(${px(-o * 160)}) scale(${lerp(1.15, 1, EO(prog(t, 7.25, 0.3))).toFixed(4)})`;
+  }
+  lineAt(N.s2c, t, 8.3, 12.85, 0.08);
+  { const p = sp(t, 8.35, 0.8, 0.75), o = EI(prog(t, 12.8, 0.35));
+    vis(N.coin, p > 0); N.coin.style.transform = `scale(${(lerp(0.4, 1, p) * (1 - o)).toFixed(4)})`; }
+  N.pools.forEach((d, i) => {
+    const t0 = 8.6 + i * 0.25;
+    const lp = EO(prog(t, t0 - 0.15, 0.6)), p = sp(t, t0, 0.7, 0.72), o = EI(prog(t, 12.75 + i * 0.04, 0.35));
+    d._path.setAttribute("stroke-dasharray", `${(d._len * lp * (1 - o)).toFixed(2)} 3000`);
+    vis(d, p > 0 && o < 1);
+    const hi = i === 2 ? EO(prog(t, 11.5, 0.5)) : 0;
+    d.style.transform = `translateY(${px((1 - p) * 90 + o * 60)}) scale(${(lerp(0.85, 1, p) * (1 + 0.06 * hi)).toFixed(4)})`;
+    d.style.boxShadow = i === 2 ? `inset 0 0 0 ${(1.5 + 2.5 * hi).toFixed(2)}px ${hi > 0 ? "#b8f43a" : "rgba(255,255,255,.12)"}` : "";
+    d.style.opacity = i < 2 ? (1 - 0.45 * EO(prog(t, 11.5, 0.5))).toFixed(3) : "1";
+  });
+  lineAt(N.s2d, t, 11.5, 12.8, 0.06);
+
+  // ===== S3 (13.4 - 16.6)
+  vis(N.s3, t > 13.3 && t < 16.8);
+  lineAt(N.s3a, t, 13.4, 15.95, 0.08);
+  const conv = EIO(prog(t, 15.95, 0.5));
+  { const show = t >= 13.45 && t < 16.45;
+    const s = 160 * (1 - conv) + 20 * conv;
+    vis(N.ethC, show); setRect(N.ethC, 960 - s / 2, 610 - s / 2, s, s);
+    N.ethC.style.opacity = prog(t, 13.45, 0.15).toFixed(3);
+    vis(N.ethT, show && conv < 0.3); N.ethT.style.left = "900px"; N.ethT.style.top = "702px";
+    N.ethT.style.opacity = (prog(t, 13.7, 0.3) * (1 - prog(t, 15.95, 0.15))).toFixed(3); }
+  const rot = lerp(0, 0.07, prog(t, 13.6, 2.6));
+  [...N.inner.map((o, i) => ({ ...o, t0: 13.62 + i * 0.07, dir: 1 })), ...N.outer.map((o, i) => ({ ...o, t0: 13.95 + i * 0.07, dir: -1 }))].forEach((o) => {
+    const p = sp(o.t0 === undefined ? 0 : t, o.t0, 0.85, 0.7);
+    const a = o.a + rot * o.dir;
+    const tx = 960 + Math.cos(a) * o.rx, ty = 610 + Math.sin(a) * o.ry;
+    const x = lerp(lerp(960, tx, p), 960, conv), y = lerp(lerp(610, ty, p), 610, conv);
+    const d = o.d * lerp(0.35, 1, clamp(p, 0, 1.2)) * (1 - 0.8 * conv);
+    vis(o.c, p > 0 && conv < 1); setRect(o.c, x - d / 2, y - d / 2, d, d);
+    vis(o.tk, p > 0.2 && conv < 0.3);
+    o.tk.style.left = px(x - 60); o.tk.style.top = px(y + d / 2 + 10);
+    o.tk.style.opacity = (prog(p, 0.5, 0.5) * (1 - prog(t, 15.95, 0.15))).toFixed(3);
+  });
+
+  // fee pill label
+  { const a = prog(t, 16.35, 0.3), b = EIO(prog(t, 16.95, 0.6)), o = EI(prog(t, 24.85, 0.35));
+    vis(N.fee, t > 16.35 && o < 1);
+    const w = 560;
+    const x = lerp(960 - w / 2, 960 - w * 1.15 / 2, b), y = lerp(600 - 30, 92, b);
+    N.fee.style.transform = `translate(${px(x)},${px(y - o * 80)}) scale(${lerp(1, 1.15, b).toFixed(4)})`;
+    N.fee.style.opacity = (EO(a) * (1 - o)).toFixed(3); }
+
+  // ===== S4 (17 - 25.4)
+  vis(N.s4, t > 17.2 && t < 25.6);
+  lineAt(N.s4a, t, 17.55, 24.8, 0.07);
+  let tot = 0;
+  N.cards.forEach((c, i) => {
+    const p = sp(t, MODE_T[i] - 0.12, 0.8, 0.74);
+    const o = EIO(prog(t, 24.85 + i * 0.03, 0.55));
+    vis(c, p > 0 && o < 1);
+    const tx = (180 + 300 - (139 + i * 278 + 126)) * o, ty = (550 - 470) * o;
+    c.style.transform = `translate(${px(tx)},${px((1 - p) * 140 + ty)}) scale(${(lerp(0.88, 1, p) * (1 - 0.7 * o)).toFixed(4)})`;
+    const g = EO(prog(t, MODE_T[i], 0.6));
+    const seg = N.segs[i]; seg.style.left = px(16.42 * tot); seg.style.width = px(16.42 * MODES[i].pct * g);
+    tot += MODES[i].pct * g;
+  });
+  N.bar.style.transform = `scaleX(${EO(prog(t, 18.6, 0.6)).toFixed(4)}) translateY(${px(-EI(prog(t, 24.85, 0.4)) * 60)})`;
+  N.bar.style.opacity = (1 - prog(t, 24.85, 0.3)).toFixed(3);
+  N.tally.textContent = `Split ${Math.round(tot)}%`;
+  N.tally.style.color = tot > 99.5 ? "#b8f43a" : "#9a9aa6";
+  N.tally.style.opacity = (prog(t, 18.9, 0.3) * (1 - prog(t, 24.85, 0.25))).toFixed(3);
+
+  // ===== S5 (25 - 31.8)
+  vis(N.s5, t > 25.1 && t < 31.9);
+  lineAt(N.s5a, t, 25.3, 31.4, 0.08);
+  lineAt(N.s5b, t, 27.1, 29.1, 0.06);
+  lineAt(N.s5c, t, 29.3, 31.4, 0.06);
+  const sc = scrollAt(t);
+  const wallIn = EO(prog(t, 25.6, 0.8)), wallOut = EIO(prog(t, 29.15, 0.55));
+  N.wallBox.style.clipPath = `inset(0 0 ${(100 * (1 - wallIn) + 100 * wallOut).toFixed(2)}% 0)`;
+  N.wall.style.transform = `translateY(${px(-sc)})`;
+  vis(N.wallBox, wallIn > 0 && wallOut < 1);
+  const bIn = EO(prog(t, 25.55, 0.5)), bOut = EI(prog(t, 31.4, 0.3));
+  vis(N.bHead, t > 25.55 && bOut < 1); tf(N.bHead, 220, 268 - bOut * 40); N.bHead.style.opacity = (bIn * (1 - bOut)).toFixed(3);
+  let filled = 0;
+  PICKS.forEach(([s, c, r], i) => {
+    const tp = PICK_T0 + i * PICK_DT;
+    const sx = 220 + (i % 2) * 280, sy = 340 + Math.floor(i / 2) * 100;
+    const sl = N.slots[i];
+    const sIn = EO(prog(t, 25.7 + i * 0.04, 0.5));
+    vis(sl, sIn > 0 && bOut < 1); tf(sl, sx, sy + (1 - sIn) * 30 - bOut * 40); sl.style.opacity = (sIn * (1 - bOut)).toFixed(3);
+    const fp = EIO(prog(t, tp, FLY_D));
+    sl._tx.style.opacity = (0.28 + 0.72 * prog(t, tp + FLY_D - 0.1, 0.15)).toFixed(3);
+    if (t >= tp + FLY_D) filled++;
+    // start = wall cell position at pick time
+    const cx0 = WX + c * CELL + 16 + 46, cy0 = WY + r * CELL + 16 + 46 - scrollAt(tp);
+    const cx1 = sx + 32, cy1 = sy + 32;
+    const d = lerp(92, 64, fp);
+    const arc = Math.sin(Math.PI * fp) * -70;
+    const f = N.flys[i];
+    vis(f, t >= tp && bOut < 1);
+    setRect(f, lerp(cx0, cx1, fp) - d / 2, lerp(cy0, cy1, fp) + arc - d / 2, d, d);
+    f.style.transform = `scale(${(1 + 0.12 * Math.sin(Math.PI * prog(t, tp, 0.25)) * (1 - fp)).toFixed(4)})`;
+    f.style.opacity = (1 - bOut).toFixed(3);
+    const ring = N.wallSel[i];
+    vis(ring, t > tp - 0.12 && t < tp + 0.35);
+    ring.style.left = px(c * CELL + 10); ring.style.top = px(r * CELL + 10);
+    ring.style.transform = `scale(${lerp(1.25, 1, EO(prog(t, tp - 0.12, 0.2))).toFixed(4)})`;
+    N.wl.forEach((w) => { if (w.pk && w.pk.i === i) w.d.style.opacity = t >= tp ? "0.18" : "1"; });
+  });
+  const bc = document.getElementById("bcount"); if (bc) { bc.textContent = `${filled}/10`; bc.style.color = filled === 10 ? "#b8f43a" : "#9a9aa6"; }
+  const hits = AVS.map(() => 0);
+  DROPS.forEach((d, k) => {
+    const f = N.drops[k]; const p = EIO(prog(t, d.t, 0.7));
+    const sx = 220 + (d.s % 2) * 280 + 32, sy = 340 + Math.floor(d.s / 2) * 100 + 32;
+    const [ax, ay] = AVS[d.a]; const ex = ax + 75 + ((k % 3) - 1) * 22, ey = ay + 75;
+    vis(f, t >= d.t && p < 1);
+    const s = lerp(64, 44, p);
+    setRect(f, lerp(sx, ex, p) - s / 2, lerp(sy, ey, p) - Math.sin(Math.PI * p) * 120 - s / 2, s, s);
+    if (p >= 1) hits[d.a] = Math.max(hits[d.a], 1 - prog(t, d.t + 0.7, 0.3));
+  });
+  N.avs.forEach((a, i) => {
+    const p = sp(t, AV_T0 + i * 0.06, 0.75, 0.72), o = EI(prog(t, 31.35 + i * 0.02, 0.3));
+    vis(a, p > 0 && o < 1);
+    a.style.transform = `translateY(${px((1 - p) * 90 - o * 60)}) scale(${(lerp(0.6, 1, p) * (1 + 0.07 * hits[i]) * (1 - 0.3 * o)).toFixed(4)})`;
+    a.style.opacity = (1 - o).toFixed(3);
+  });
+
+  // ===== S6 (31.5 - 36.9)
+  vis(N.s6, t > 31.5 && t < 37.0);
+  lineAt(N.s6a, t, 31.75, 36.3, 0.08);
+  { const a = EO(prog(t, 32.0, 0.5)), o = EI(prog(t, 36.4, 0.25));
+    vis(N.vL, a > 0 && o < 1); tf(N.vL, VL.x, VL.y); N.vL.style.opacity = (a * (1 - o)).toFixed(3);
+    const yrs = 1 + 4 * EIO(prog(t, 33.9, 1.1)); const yi = Math.min(5, Math.floor(yrs + 0.0001));
+    document.getElementById("vy").textContent = yi; document.getElementById("vyl").textContent = yi === 1 ? "year" : "years";
+    N.vSegs.forEach((f, i) => { f.style.width = px(86 * clamp(yrs - i)); });
+    const r = sp(t, 31.95, 0.8, 0.75), ro = EIO(prog(t, 36.45, 0.55));
+    vis(N.vR, r > 0 && ro < 1);
+    N.vR.style.transform = `translate(${px(-ro * 340)},${px((1 - r) * 120 - ro * 180)}) scale(${(lerp(0.9, 1, r) * (1 - 0.7 * ro)).toFixed(4)})`;
+    N.vR.style.opacity = (1 - prog(t, 36.6, 0.3)).toFixed(3);
+    const pc = 10 * EIO(prog(t, 35.1, 1.0)); const ph = Math.round(pc * 2) / 2;
+    document.getElementById("vp").textContent = (ph % 1 ? ph.toFixed(1) : ph.toFixed(0)) + "%";
+    document.getElementById("vring").setAttribute("stroke-dasharray", `${(2 * Math.PI * 160 * pc / 100).toFixed(2)} 2000`); }
+
+  // ===== S7 (36.6 - 43)
+  vis(N.s7, t > 36.7);
+  { const m = prog(t, 36.95, 0.25);
+    vis(N.mark, t > 36.95); setRect(N.mark, MARK.x, MARK.y, 170, 170);
+    N.mark.style.opacity = m.toFixed(3); }
+  lineAt(N.s7a, t, 36.85, null, 0.1);
+  lineAt(N.s7b, t, 37.85, null, 0.08);
+  { const p = EO(prog(t, 38.05, 0.6)); vis(N.rh, p > 0);
+    N.rh.style.left = px(N.rh._x); N.rh.style.opacity = p.toFixed(3); N.rh.style.transform = `translateY(${px((1 - p) * 20)})`; }
+  lineAt(N.s7c, t, 39.4, null, 0.1);
+  const zEnd = lerp(1, 1.035, CAMC(prog(t, 37.2, 5.8)));
+  document.getElementById("cam").style.transform = t > 36.95 ? `translate(${px(960 * (1 - zEnd))},${px(540 * (1 - zEnd))}) scale(${zEnd.toFixed(5)})` : "";
+  pushZ(N.s4, t, 17.5, 24.8, 1.025);
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  await Promise.all(["800 100px Geist", "700 100px Geist", "600 40px Geist", "500 40px Geist"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+  build();
+  await Promise.all([...document.images].map((im) => im.decode().catch(() => { throw new Error("img " + im.src); })));
+  seek(0);
+  window.seek = seek;
+  const q = new URLSearchParams(location.search).get("t"); if (q) seek(+q);
+  window.READY = true;
+}
+boot().catch((e) => { window.BOOT_ERR = String((e && e.stack) || e); });
+</script>
+</body>
+</html>

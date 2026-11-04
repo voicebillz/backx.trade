@@ -7,6 +7,7 @@ import { SpeedCompare } from '../components/home/SpeedCompare';
 import { WalletVisual, IssueVisual } from '../components/home/HowVisuals';
 import { MultiplierBar, BuyGazz } from '../components/Showcase';
 import { useParticipate } from '../lib/useParticipate';
+import { ProposalBanner } from '../components/ProposalBanner';
 import { useTheme } from '../lib/theme';
 import { APP_URL } from '../lib/host';
 
@@ -51,6 +52,7 @@ export function HomePage() {
   return (
     <div className="home">
       <a className="skip" href="#main">Skip to content</a>
+      <ProposalBanner />
       <header className="h-header">
         <span className="h-logo"><Logo /></span>
         <div className="h-header-cta">

@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gazz.fun Market promo</title>
+<!-- TRADING PROMO (owner 2026-11-01): the viral-promo look (1-5 word blur-in
+     phrases, one lime hue family, depth, focus pulls) built from REAL site
+     captures (img/*.png = element crops of https://gazz.fun at DPR 3), with a
+     voice-over (cues "vo-N", mix.py ducks the music under it) and the plain
+     standard UI sound palette (make-sfx.py ui-*). -->
+<style>
+  @font-face { font-family: "Geist"; font-weight: 500; font-display: block; src: url(fonts/Geist-500.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 600; font-display: block; src: url(fonts/Geist-600.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 700; font-display: block; src: url(fonts/Geist-700.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 800; font-display: block; src: url(fonts/Geist-800.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0d1106; }
+  * { box-sizing: border-box; }
+  #stage { position: absolute; inset: 0; overflow: hidden; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-family: "Geist", system-ui, sans-serif; color: #f4f7ee; }
+  .full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .phrase { position: absolute; left: 0; width: 1920px; text-align: center; white-space: nowrap; font-weight: 600; letter-spacing: -0.04em; line-height: 1.04; }
+  .phrase > span { display: inline-block; will-change: transform, filter, opacity; }
+  .num { font-variant-numeric: tabular-nums; }
+  .shot { position: absolute; border-radius: 22px; overflow: hidden; background: #0b0b0b; box-shadow: 0 0 0 2px rgba(184,244,58,.10), 0 40px 90px rgba(0,0,0,.55); transform-origin: 50% 50%; }
+  .shot img { display: block; width: 100%; height: 100%; }
+  .tap { position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; border: 4px solid #b8f43a; }
+  .ring { position: absolute; border: 4px solid #b8f43a; border-radius: 14px; }
+  img { display: block; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="gDark" class="full"></div>
+  <div id="grid" class="full"></div>
+  <div id="gPale" class="full"></div>
+  <div id="gWhite" class="full"></div>
+  <div id="cam" class="full"></div>
+</div>
+<script>
+// ---------------------------------------------------------------- helpers
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, t0, d) => clamp((t - t0) / d);
+function bez(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = (t) => ((ax * t + bx) * t + cx) * t, sy = (t) => ((ay * t + by) * t + cy) * t;
+  const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x, d = dx(t); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; t -= e / d; }
+    return sy(clamp(t)); };
+}
+const EO = bez(0.16, 1, 0.3, 1), EIO = bez(0.76, 0, 0.24, 1), EI = bez(0.7, 0, 0.84, 0);
+function spring(p, zeta = 0.72) { if (p <= 0) return 0; if (p >= 1) return 1; const w = 5.3 / zeta, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * p) * (Math.cos(wd * p) + (zeta * w / wd) * Math.sin(wd * p)); }
+const sp = (t, t0, d, z) => spring(prog(t, t0, d), z);
+const el = (tag, parent, style = {}, cls = "") => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, style); parent.appendChild(e); return e; };
+const px = (v) => v.toFixed(2) + "px";
+const show = (e, on) => { if (e._disp == null) e._disp = e.style.display && e.style.display !== "none" ? e.style.display : ""; e.style.display = on ? e._disp : "none"; };
+const C = { deep: "#0d1106", dark: "#1b2610", mid: "#4f7a1c", lime: "#b8f43a", pale: "#ecfccb", white: "#fbfdf7", ink: "#0b0f06", mute: "#8e9a80" };
+
+function phrase(parent, o) {
+  const l = el("div", parent, { zIndex: "50", top: px(o.y), fontSize: px(o.size), fontWeight: String(o.weight || 600), color: o.color || C.white, letterSpacing: o.track || "" }, "phrase" + (o.num ? " num" : ""));
+  if (o.x != null) { l.style.left = px(o.x); l.style.width = px(o.w); l.style.textAlign = o.align || "left"; }
+  l._w = o.words.map((wd, k) => { const s = el("span", l, { color: (o.colors && o.colors[k]) || "", marginRight: k < o.words.length - 1 ? "0.24em" : "0" }); s.textContent = wd; return s; });
+  return l;
+}
+function phraseAt(l, t, tin, tout, st = 0.1, dIn = 0.42, dOut = 0.26) {
+  let vis = false;
+  l._w.forEach((s, k) => {
+    const p = EO(prog(t, tin + k * st, dIn));
+    const q = tout == null ? 0 : EI(prog(t, tout + k * 0.04, dOut));
+    const b = (1 - p) * 16 + q * 14;
+    s.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+    s.style.opacity = (p * (1 - q)).toFixed(3);
+    s.style.transform = `translate3d(${((1 - p) * 30 - q * 18).toFixed(2)}px,0,0) scale(${(1 + (1 - p) * 0.05).toFixed(4)})`;
+    if (p > 0 && q < 1) vis = true;
+  });
+  show(l, vis);
+}
+// whole-layer focus pull
+function focus(e, t, tin, tout, dIn = 0.4, dOut = 0.3) {
+  const p = tin == null ? 1 : EO(prog(t, tin, dIn)), q = tout == null ? 0 : EI(prog(t, tout, dOut));
+  const b = (1 - p) * 22 + q * 22;
+  e.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : "";
+  e.style.opacity = (Math.min(1, p * 1.6) * (1 - q)).toFixed(3);
+  e.style.transform = `scale(${(1 + (1 - p) * 0.04 + q * 0.05).toFixed(4)})`;
+  show(e, p > 0 && q < 1);
+  return p > 0 && q < 1;
+}
+// a real-site capture (natively 3x CSS px): w = on-screen width
+const IMG = { "gz-chart": [2265, 1665], "gz-trade": [996, 1257], "gz-rewards": [1014, 450], "fd-chart": [2055, 1125], "fd-buy": [1206, 1278],
+  "ff-list": [3300, 1560], "sw-card": [1590, 1146], "mk-head": [3300, 330], "ml-rows": [3264, 1539] };
+function shot(parent, name, w, r = 22) {
+  const [iw, ih] = IMG[name], h = w * ih / iw;
+  const d = el("div", parent, { width: px(w), height: px(h), borderRadius: px(r) }, "shot");
+  el("img", d).src = `img/${name}.png`;
+  d._w = w; d._h = h; return d;
+}
+// place a shot by its centre; z < 1 = further away (smaller, softer)
+function put(d, cx, cy, s = 1, extra = "", blur = 0, op = 1) {
+  d.style.left = px(cx - d._w / 2); d.style.top = px(cy - d._h / 2);
+  d.style.transform = `scale(${s.toFixed(4)}) ${extra}`;
+  d.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "";
+  d.style.opacity = clamp(op).toFixed(3);
+}
+
+// ---------------------------------------------------------------- timeline
+// Music: "Digital Clouds" 129.01 BPM from bar 6 (11.30 s), so its lift lands at 18.6 s,
+// under "ninety percent". Voice lines (ElevenLabs, Everett) are placed with air between.
+const B = 60 / 129.01, DUR = 27.6;
+const CUES = []; function cue(t, f, g = 1, extra) { CUES.push({ t: +t.toFixed(3), f, g, ...(extra || {}) }); }
+window.DUR = DUR; window.CUES = CUES;
+const VO = [0.30, 3.00, 5.90, 8.60, 11.70, 14.90, 17.80, 22.40];
+VO.forEach((t, i) => cue(t, `vo-${i + 1}`, 1));
+const T1 = 2.75, T2 = 5.55, T3 = 8.30, T4 = 11.35, T5 = 14.55, T6 = 17.45, T7 = 22.05;
+// word moments inside vo-5 / vo-8
+const W_HY = 11.75, W_FI = 12.64, W_YC = 13.61, W_TAG = 23.76;
+
+// ---------------------------------------------------------------- build
+const N = {};
+function build() {
+  const cam = document.getElementById("cam");
+  N.gDark = document.getElementById("gDark");
+  N.gDark.style.background = `radial-gradient(62% 72% at 50% 46%, #31491a 0%, #1b2610 44%, ${C.deep} 100%)`;
+  N.grid = document.getElementById("grid");
+  N.grid.style.perspective = "900px"; N.grid.style.overflow = "hidden";
+  N.plane = el("div", N.grid, { position: "absolute", left: "-1200px", width: "4320px", height: "2200px", top: "640px",
+    transformOrigin: "50% 0", transform: "rotateX(78deg)",
+    backgroundImage: "linear-gradient(rgba(184,244,58,.16) 2px, transparent 2px), linear-gradient(90deg, rgba(184,244,58,.16) 2px, transparent 2px)",
+    backgroundSize: "120px 120px",
+    maskImage: "linear-gradient(180deg, transparent 0%, black 22%, black 60%, transparent 100%)" });
+  N.gPale = document.getElementById("gPale");
+  N.gPale.style.background = `radial-gradient(70% 80% at 50% 45%, ${C.pale} 0%, #d9f7a4 60%, #c3ee6f 100%)`;
+  N.gWhite = document.getElementById("gWhite");
+  N.gWhite.style.background = `linear-gradient(180deg, ${C.white} 0%, ${C.white} 60%, #e8f9c9 100%)`;
+
+  // S0 hook: real UI drifting in depth + the line
+  N.s0 = el("div", cam, {}, "full");
+  N.f0 = [["gz-chart", 620, 420, 330, 0.55], ["fd-chart", 640, 1560, 360, 0.6], ["ml-rows", 900, 960, 900, 0.5],
+          ["sw-card", 520, 300, 820, 0.62], ["gz-trade", 360, 1640, 760, 0.7], ["fd-buy", 400, 120, 520, 0.58]]
+    .map(([n, w, x, y, z]) => ({ d: shot(N.s0, n, w), x, y, z }));
+  N.p0a = phrase(N.s0, { words: ["Your", "trades"], y: 360, size: 150 });
+  N.p0b = phrase(N.s0, { words: ["should", "pay", "you", "back."], y: 540, size: 150, colors: ["", C.lime, C.lime, C.lime] });
+
+  // S1 the market
+  N.s1 = el("div", cam, {}, "full");
+  N.head = shot(N.s1, "mk-head", 1100, 18);
+  N.p1 = phrase(N.s1, { words: ["The", "new", "Market"], y: 250, size: 128, colors: ["", "", C.lime] });
+  N.p1s = phrase(N.s1, { words: ["Memes.", "Funds.", "Swap."], y: 780, size: 64, weight: 500, color: "#c9d1bb" });
+
+  // S2 memecoins
+  N.s2 = el("div", cam, {}, "full");
+  N.rows = shot(N.s2, "ml-rows", 1088, 20);
+  N.chart = shot(N.s2, "gz-chart", 755, 22);
+  N.trade = shot(N.s2, "gz-trade", 332, 20);
+  N.p2 = phrase(N.s2, { words: ["Memecoins."], x: 120, w: 900, y: 120, size: 112, colors: [C.lime] });
+  N.p2b = phrase(N.s2, { words: ["Live", "charts."], x: 120, w: 900, y: 120, size: 112 });
+
+  // S3 funds
+  N.s3 = el("div", cam, {}, "full");
+  N.fchart = shot(N.s3, "fd-chart", 685, 22);
+  N.fbuy = shot(N.s3, "fd-buy", 402, 20);
+  N.tap = el("div", N.s3, {}, "tap");
+  N.p3 = phrase(N.s3, { words: ["Whole", "funds."], y: 92, size: 112 });
+  N.p3b = phrase(N.s3, { words: ["One", "tap."], y: 92, size: 112, colors: [C.lime, C.lime] });
+
+  // S4 every class (the real class menu)
+  N.s4 = el("div", cam, {}, "full");
+  N.flist = shot(N.s4, "ff-list", 1100, 20);
+  N.ring = el("div", N.s4, {}, "ring");
+  N.p4 = [["High", "yield."], ["Fixed", "income."], ["Your", "call."]].map((w, i) => phrase(N.s4, { words: w, y: 96, size: 112, colors: i === 2 ? [C.lime, C.lime] : [] }));
+
+  // S5 swap
+  N.s5 = el("div", cam, {}, "full");
+  N.swap = shot(N.s5, "sw-card", 530, 24);
+  N.p5 = phrase(N.s5, { words: ["Swap", "anything."], y: 120, size: 112 });
+  N.p5b = phrase(N.s5, { words: ["In", "seconds."], y: 120, size: 112, colors: [C.lime, C.lime] });
+
+  // S6 up to 90% back to holders (pale ground)
+  N.s6 = el("div", cam, {}, "full");
+  N.p6a = phrase(N.s6, { words: ["Up", "to"], y: 130, size: 84, weight: 600, color: C.mid });
+  N.n90 = el("div", N.s6, { position: "absolute", left: "0", width: "1920px", top: "215px", textAlign: "center", fontSize: "400px", fontWeight: "800", letterSpacing: "-0.06em", lineHeight: "1", color: C.ink }, "num");
+  N.p6b = phrase(N.s6, { words: ["back", "to", "holders."], y: 625, size: 96, weight: 700, color: C.ink, colors: ["", "", C.mid] });
+  N.rew = shot(N.s6, "gz-rewards", 338, 18);
+  N.fine = el("div", N.s6, { position: "absolute", left: "0", width: "1920px", top: "1012px", textAlign: "center", fontSize: "26px", fontWeight: "500", color: "#3a4630", letterSpacing: "0" });
+  N.fine.textContent = "Of every trading fee: holder airdrops + $GAZZ buyback & burn. Split per product in Docs.";
+
+  // S7 end card (white ground)
+  N.s7 = el("div", cam, {}, "full");
+  N.logo = el("img", N.s7, { position: "absolute", width: "250px", height: "250px", left: px(960 - 125), top: "210px", borderRadius: "56px" });
+  N.logo.src = "img/logo.png";
+  N.word = phrase(N.s7, { words: ["gazz.fun"], y: 500, size: 150, weight: 700, color: C.ink, track: "-0.05em" });
+  N.tag = phrase(N.s7, { words: ["The", "market", "that", "pays", "its", "holders."], y: 700, size: 64, weight: 500, color: "#3a4630", colors: ["", "", "", C.mid, C.mid, C.mid] });
+
+  // ---- SOUND (owner 2026-11-01: plain UI sounds, at most one per ~1.5 s, one
+  // success tone, no bell on the logo, clean silent tail)
+  cue(0.28, "ui-pop-1", 0.9);             // the hook's first words
+  cue(T1 + 0.18, "ui-iris", 0.9);         // zoom into the real Market header
+  cue(T1 + 1.25, "ui-snap", 0.9);         // tabs line lock
+  cue(T2 + 0.05, "ui-whoosh-low", 1);     // the coin list slides up
+  cue(T2 + 1.55, "ui-thud", 0.9);         // chart card lands
+  cue(T3 + 0.05, "ui-whoosh-1", 0.9);
+  cue(10.05, "ui-tap-1", 1);              // the tap on the fund's buy amount
+  cue(T4 + 0.02, "ui-drawer", 1);         // class menu opens
+  cue(W_FI, "ui-key-1", 1);               // highlight steps to Fixed income
+  cue(W_YC, "ui-snap", 0.9);
+  cue(T5 + 0.05, "ui-slide", 1);
+  cue(16.05, "ui-toggle", 1);             // swap direction flips
+  cue(T6 + 0.03, "ui-whoosh-low", 1);
+  cue(19.15, "ui-success", 1);            // 90 lands (the one success tone)
+  cue(20.55, "ui-pop-2", 0.9);            // real rewards card
+  cue(T7 - 0.3, "ui-pad", 1);             // warm swell into the logo
+  cue(T7 + 0.36, "ui-sub", 1);            // logo lands (felt, not heard; no bell)
+  // music automation: focus pulls at the big scene changes, music out before the tail
+  cue(T2 - 0.25, "@lowpass", 1, { to: 700, d: 0.25, hold: 0.1, back: 0.4 });
+  cue(T6 - 0.25, "@lowpass", 1, { to: 600, d: 0.25, hold: 0.1, back: 0.35 });
+  cue(25.75, "@stop", 1, { d: 0.9 });
+}
+
+// ---------------------------------------------------------------- seek
+function seek(t) {
+  const pale = t >= T6 - 0.05 && t < T7 - 0.05, white = t >= T7 - 0.05;
+  N.gPale.style.opacity = pale ? "1" : "0"; N.gWhite.style.opacity = white ? "1" : "0";
+  show(N.gPale, pale); show(N.gWhite, white);
+  N.gDark.style.opacity = !pale && !white ? "1" : "0";
+  N.grid.style.opacity = !pale && !white ? "1" : "0";
+  N.plane.style.backgroundPosition = `0 ${((t * 160) % 120).toFixed(2)}px`;
+
+  // ===== S0 hook (0 – T1)
+  if (focus(N.s0, t, null, T1 - 0.05, 0.4, 0.3)) {
+    N.f0.forEach((f, i) => {
+      const a = EO(prog(t, 0.05 + i * 0.07, 1.2));
+      const z = f.z + t * 0.06;                      // slow push toward camera
+      const dx = (f.x - 960) * (z - 1) * 0.35, dy = (f.y - 540) * (z - 1) * 0.35;
+      put(f.d, f.x + dx, f.y + dy + (1 - a) * 80, z, `rotate(${(Math.sin(i * 1.7) * 6).toFixed(2)}deg)`, 9 + (1 - a) * 14, a * 0.5);
+    });
+    phraseAt(N.p0a, t, 0.32, null);
+    phraseAt(N.p0b, t, 1.02, null, 0.12);
+  }
+
+  // ===== S1 market header
+  if (focus(N.s1, t, T1, T2 - 0.1, 0.35, 0.3)) {
+    const a = EO(prog(t, T1 + 0.1, 0.9)), push = 1 + (t - T1) * 0.02;
+    put(N.head, 960, 560, lerp(0.8, 1.55, a) * push, "", (1 - a) * 18, a * 1.4);
+    phraseAt(N.p1, t, T1 + 0.3, null);
+    phraseAt(N.p1s, t, T1 + 1.15, null, 0.18);
+  }
+
+  // ===== S2 memecoins: the real list rises, then the live chart + trade panel land
+  if (focus(N.s2, t, T2, T3 - 0.1, 0.35, 0.3)) {
+    const a = EO(prog(t, T2 + 0.05, 0.8));
+    const tilt = lerp(18, 8, a);
+    put(N.rows, 700, 640 + (1 - a) * 420, 1.0, `perspective(2400px) rotateX(${tilt.toFixed(2)}deg) rotateY(${(10).toFixed(2)}deg)`, 0, clamp(a * 2));
+    // depth: the list softens as the chart takes focus
+    const k = EO(prog(t, T2 + 1.45, 0.5));
+    N.rows.style.filter = k > 0.02 ? `blur(${(k * 5).toFixed(2)}px)` : "";
+    N.rows.style.opacity = (clamp(a * 2) * (1 - 0.45 * k)).toFixed(3);
+    const c = sp(t, T2 + 1.45, 0.7, 0.75);
+    put(N.chart, 1190 + (1 - c) * 120, 600 + (1 - c) * 160, lerp(0.8, 1.12, c), "", (1 - c) * 12, clamp(c * 3));
+    const tr = sp(t, T2 + 1.75, 0.7, 0.75);
+    put(N.trade, 1650 + (1 - tr) * 140, 640, lerp(0.8, 1.15, tr), "", (1 - tr) * 12, clamp(tr * 3));
+    phraseAt(N.p2, t, T2 + 0.35, T2 + 1.42);
+    phraseAt(N.p2b, t, T2 + 1.8, null);
+  }
+
+  // ===== S3 funds: real fund chart + buy panel, one tap
+  if (focus(N.s3, t, T3, T4 - 0.1, 0.35, 0.3)) {
+    const a = EO(prog(t, T3 + 0.05, 0.8));
+    put(N.fchart, 690 - (1 - a) * 160, 600, 1.2, `perspective(2400px) rotateY(${lerp(14, 6, a).toFixed(2)}deg)`, (1 - a) * 14, clamp(a * 2));
+    const b = sp(t, T3 + 0.35, 0.8, 0.75);
+    // "One tap": the panel answers the press (scale dip + settle)
+    const press = Math.sin(Math.PI * prog(t, 10.0, 0.22)) * 0.025;
+    put(N.fbuy, 1440 + (1 - b) * 160, 600, lerp(0.85, 1.2, b) - press, `perspective(2400px) rotateY(${lerp(-12, -5, b).toFixed(2)}deg)`, (1 - b) * 12, clamp(b * 3));
+    // tap ring on the panel's "$10" chip (87 / 210 of the 402 x 426 crop)
+    const tp = prog(t, 10.0, 0.5), s = 1.2 * lerp(0.85, 1.2, 1);
+    const cx = 1440 + (87 - 201) * 1.2, cy = 600 + (210 - 213) * 1.2;
+    N.tap.style.left = px(cx); N.tap.style.top = px(cy);
+    N.tap.style.transform = `scale(${lerp(0.5, 1.5, EO(tp)).toFixed(3)})`;
+    N.tap.style.opacity = (tp > 0 ? 1 - tp : 0).toFixed(3);
+    show(N.tap, tp > 0 && tp < 1); void s;
+    phraseAt(N.p3, t, T3 + 0.35, 9.72);
+    phraseAt(N.p3b, t, 10.12, null);
+  }
+
+  // ===== S4 every class: the real class menu, highlight follows the voice
+  if (focus(N.s4, t, T4, T5 - 0.1, 0.35, 0.3)) {
+    const a = EO(prog(t, T4 + 0.05, 0.7));
+    const S = 1.25, cx = 960, cy = 620 + (1 - a) * 60, push = 1 + (t - T4) * 0.012;
+    put(N.flist, cx, cy, S * push, "", (1 - a) * 12, clamp(a * 2));
+    // menu rows in the 3300x1560 crop (3x): Standard y=112, High-Yield 146, Fixed 180 (css px), x 176..396 → crop x 0..226
+    const rowsY = [146, 180], i = t < W_FI ? 0 : 1;
+    const mv = EIO(prog(t, W_FI - 0.05, 0.22));
+    const ry = lerp(rowsY[0], rowsY[1], mv);
+    const sc = S * push, ox = cx - 550 * sc, oy = cy - 260 * sc;
+    const on = prog(t, W_HY - 0.1, 0.25) * (1 - prog(t, W_YC + 0.1, 0.25));
+    N.ring.style.left = px(ox + 8 * sc); N.ring.style.top = px(oy + (ry - 15) * sc);
+    N.ring.style.width = px(206 * sc); N.ring.style.height = px(32 * sc); N.ring.style.opacity = on.toFixed(3);
+    show(N.ring, on > 0); void i;
+    phraseAt(N.p4[0], t, W_HY - 0.05, W_FI - 0.15);
+    phraseAt(N.p4[1], t, W_FI - 0.02, W_YC - 0.15);
+    phraseAt(N.p4[2], t, W_YC - 0.02, null);
+  }
+
+  // ===== S5 swap
+  if (focus(N.s5, t, T5, T6 - 0.1, 0.35, 0.3)) {
+    const a = sp(t, T5 + 0.05, 0.9, 0.78);
+    const flip = EIO(prog(t, 16.0, 0.45));
+    put(N.swap, 960, 640 + (1 - a) * 260, lerp(1.1, 1.55, a), `perspective(2600px) rotateX(${lerp(22, 0, a).toFixed(2)}deg) rotateY(${(Math.sin(Math.PI * flip) * 8).toFixed(2)}deg)`, (1 - a) * 14, clamp(a * 2.5));
+    phraseAt(N.p5, t, T5 + 0.35, 15.85);
+    phraseAt(N.p5b, t, 16.22, null);
+  }
+
+  // ===== S6 up to 90% back to holders
+  if (focus(N.s6, t, T6, T7 - 0.08, 0.35, 0.28)) {
+    phraseAt(N.p6a, t, T6 + 0.3, null);
+    const c = EO(prog(t, T6 + 0.45, 1.25));          // 0 -> 90 lands at ~19.15 (on "ninety")
+    const n = Math.floor(90 * c);
+    N.n90.textContent = n + "%";
+    const pop = 1 + 0.06 * Math.sin(Math.PI * prog(t, 19.12, 0.25));
+    const ina = EO(prog(t, T6 + 0.35, 0.4));
+    N.n90.style.transform = `scale(${(lerp(0.9, 1, ina) * pop).toFixed(4)})`;
+    N.n90.style.filter = ina < 0.98 ? `blur(${((1 - ina) * 18).toFixed(2)}px)` : "";
+    N.n90.style.opacity = clamp(ina * 2).toFixed(3);
+    N.n90.style.color = n >= 90 ? C.ink : C.mid;
+    phraseAt(N.p6b, t, 19.6, null, 0.12);
+    const r = sp(t, 20.5, 0.8, 0.75);
+    put(N.rew, 960, 870 + (1 - r) * 120, lerp(0.9, 1.5, r), "", (1 - r) * 10, clamp(r * 3));
+    N.fine.style.opacity = (0.95 * EO(prog(t, 20.9, 0.5))).toFixed(3);
+  }
+
+  // ===== S7 end card
+  if (focus(N.s7, t, T7, null, 0.4)) {
+    const m = sp(t, T7 + 0.05, 0.9, 0.7);
+    N.logo.style.transform = `translateY(${((1 - m) * 120).toFixed(2)}px) scale(${lerp(0.6, 1, m).toFixed(4)})`;
+    N.logo.style.opacity = clamp(m * 3).toFixed(3);
+    N.logo.style.filter = m < 0.98 ? `blur(${((1 - m) * 10).toFixed(2)}px)` : "";
+    phraseAt(N.word, t, T7 + 0.35, null);
+    phraseAt(N.tag, t, W_TAG - 0.05, null, 0.08);
+  }
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  await Promise.all(["800 100px Geist", "700 100px Geist", "600 40px Geist", "500 40px Geist"].map((f) => document.fonts.load(f)));
+  await document.fonts.ready;
+  build();
+  await Promise.all([...document.images].map((im) => im.decode().catch(() => { throw new Error("img " + im.src); })));
+  const q = new URLSearchParams(location.search).get("t");
+  seek(q ? +q : 0);
+  window.seek = seek; window.READY = true;
+}
+boot().catch((e) => { window.BOOT_ERR = String((e && e.stack) || e); });
+</script>
+</body>
+</html>

@@ -1954,3 +1954,61 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .h-partner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 40px max(16px, calc((100vw - 1200px) / 2)); border-top: 1px solid var(--line); }
 .h-partner h2 { margin: 0; font-size: 22px; }
 .h-partner .h-btn { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* ---- BackX Proposals (owner 2026-11-04): rolling front-page banner + www.backx.trade/proposal ---------------- */
+.bxp-banner { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 max(16px, calc((100vw - 1200px) / 2)); background: var(--brand); color: var(--brand-ink); font-size: 14px; font-weight: 600; }
+.bxp-banner .bxp-strip { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; color: inherit; text-decoration: none; }
+.bxp-tag { flex: none; padding: 3px 8px; border-radius: 6px; background: var(--brand-ink); color: var(--brand); font-family: var(--mono, ui-monospace, monospace); font-size: 12px; letter-spacing: .02em; }
+.bxp-live { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--brand-ink); animation: bxp-pulse 1.6s ease-out infinite; }
+.bxp-marquee { flex: 1; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.bxp-track { display: inline-flex; white-space: nowrap; animation: bxp-roll 38s linear infinite; }
+.bxp-run { display: inline-flex; }
+.bxp-run > span { display: inline-flex; align-items: center; padding-right: 28px; }
+.bxp-dot { display: inline-block; width: 5px; height: 5px; margin-left: 28px; border-radius: 50%; background: currentColor; opacity: .5; }
+.bxp-strip:hover .bxp-track, .bxp-strip:focus-visible .bxp-track { animation-play-state: paused; }
+.bxp-strip:hover { text-decoration: underline; text-underline-offset: 3px; }
+.bxp-banner .bxp-cta { flex: none; display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--brand-ink); color: var(--brand); text-decoration: none; font-size: 13px; font-weight: 700; transition: transform 140ms var(--ease-out); }
+.bxp-cta:active { transform: scale(.97); }
+.bxp-banner a:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 2px; }
+@keyframes bxp-roll { to { transform: translateX(-50%); } }
+@keyframes bxp-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-ink) 50%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
+@media (max-width: 520px) { .bxp-cta { padding: 0 10px; } .bxp-live { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .bxp-track { animation: none; }
+  .bxp-run[aria-hidden] { display: none; }
+  .bxp-run > span:not(:first-child) { display: none; }
+  .bxp-marquee { text-overflow: ellipsis; -webkit-mask-image: none; mask-image: none; }
+  .bxp-live { animation: none; }
+}
+
+.bxp-page { display: flex; justify-content: center; padding: 48px 16px 72px; }
+.bxp-card { width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 20px; }
+.bxp-meta { display: flex; align-items: center; gap: 10px; }
+.bxp-code { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 8px; background: var(--brand); color: var(--brand-ink); }
+.bxp-status { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
+.bxp-status.open { border-color: var(--up); color: var(--up); }
+.bxp-card h1 { margin: 0; font-size: clamp(30px, 6vw, 48px); line-height: 1.05; letter-spacing: -.025em; }
+.bxp-body p { margin: 0 0 12px; color: var(--ink-2); font-size: 17px; line-height: 1.6; }
+.bxp-question { margin: 4px 0 0; font-size: 20px; font-weight: 700; line-height: 1.35; color: var(--ink); }
+.bxp-split { display: flex; flex-direction: column; gap: 10px; }
+.bxp-split-labels { display: flex; justify-content: space-between; font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; }
+.bxp-yes-label { color: var(--up); }
+.bxp-no-label { color: var(--pink); }
+.bxp-bar { display: flex; height: 22px; border-radius: 999px; overflow: hidden; background: var(--raised); }
+.bxp-bar > span { display: block; height: 100%; min-width: 0; transition: width 280ms var(--ease-out); }
+.bxp-bar-yes { background: linear-gradient(90deg, var(--brand), var(--up)); }
+.bxp-bar-no { background: linear-gradient(90deg, var(--pink), var(--violet)); }
+.bxp-bar.both .bxp-bar-no { border-left: 4px solid var(--bg); }
+.bxp-bar.empty > span { background: var(--raised); }
+.bxp-none { margin: 0; text-align: center; color: var(--ink-3); font-size: 14px; }
+.bxp-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.bxp-choice { height: 56px; border-radius: 14px; font-size: 18px; font-weight: 800; border: 2px solid var(--line); color: var(--ink); background: var(--panel); transition: transform 140ms var(--ease-out), border-color 160ms var(--ease-out), background 160ms var(--ease-out); }
+.bxp-choice:active:not(:disabled) { transform: scale(.97); }
+.bxp-choice:disabled { opacity: .55; cursor: default; }
+.bxp-choice.yes:hover:not(:disabled), .bxp-choice.yes.picked { border-color: var(--up); background: var(--up-bg); color: var(--up); }
+.bxp-choice.no:hover:not(:disabled), .bxp-choice.no.picked { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 12%, transparent); color: var(--pink); }
+.bxp-choice.picked:disabled { opacity: 1; }
+.bxp-mine { margin: 0; text-align: center; color: var(--ink-3); font-size: 14px; min-height: 20px; }
+.bxp-sk-title { width: 80%; height: 40px; } .bxp-sk-bar { width: 100%; height: 22px; border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) { .bxp-bar > span, .bxp-choice { transition: none; } }
+.bxp-admin-form { display: flex; flex-direction: column; gap: 12px; } .bxp-admin-form textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); resize: vertical; }

@@ -10,6 +10,7 @@ const Terminal = lazy(() => import('./Terminal'));
 const Whitepaper = lazy(() => import('./pages/WhitepaperSite'));
 const McpSite = lazy(() => import('./pages/McpSite'));
 const PitchSite = lazy(() => import('./pages/PitchSite'));
+const ProposalSite = lazy(() => import('./pages/ProposalSite'));
 // MCP consent and signing (docs/backx/MCP-PLAN.md): any signed-in account, not only admins; the API decides who may connect.
 const McpConnect = lazy(() => import('./pages/McpPages').then((m) => ({ default: m.ConnectPage })));
 const McpSign = lazy(() => import('./pages/McpPages').then((m) => ({ default: m.SignPage })));
@@ -18,7 +19,7 @@ export function App() {
   const { me, status } = useAuth();
   if (!IS_APP) {
     const p = location.pathname.replace(/\/+$/, '');
-    if (p === '/whitepaper' || p === '/mcp' || p === '/pitch') return <Suspense fallback={<div className="app-loading" aria-busy="true" />}>{p === '/mcp' ? <McpSite /> : p === '/pitch' ? <PitchSite /> : <Whitepaper />}</Suspense>;
+    if (p === '/whitepaper' || p === '/mcp' || p === '/pitch' || p === '/proposal') return <Suspense fallback={<div className="app-loading" aria-busy="true" />}>{p === '/mcp' ? <McpSite /> : p === '/pitch' ? <PitchSite /> : p === '/proposal' ? <ProposalSite /> : <Whitepaper />}</Suspense>;
     return <HomePage />;
   }
   if (status === 'checking') return <div className="app-loading" aria-busy="true" />;

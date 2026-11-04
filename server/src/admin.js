@@ -4,6 +4,7 @@ import { config } from './config.js';
 import { listingReport, bestChainCached, RULES, TIERS } from './listing.js';
 import { CHAINS, SAFE, ethCall, decodeString, decodeUint, decodeAddresses, pad, padAddr } from './chains.js';
 import { mountKeeperAdmin } from './keepers.js';
+import { mountProposalAdmin } from './proposals.js';
 import { IMPLS, stakingConfig, MAX_RUNTIME, ARTIFACTS_COMMIT, CREATE2_DEPLOYER, chainStatus, factoryAddress, factoryInitcode, create2Address, safeBatch, selector } from './deployments.js';
 
 // Admin portal API (owner 2026-10-19). Every route: verified session + wallet in ADMIN_WALLETS, else 404 so the
@@ -35,6 +36,7 @@ const audit = (req, action, target, detail) =>
     [req.user.address, action, target, detail ? JSON.stringify(detail) : null]);
 
 mountKeeperAdmin(adminRouter, audit);
+mountProposalAdmin(adminRouter, audit);
 
 // ---- validation -------------------------------------------------------------------------------
 
