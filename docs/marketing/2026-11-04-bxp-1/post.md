@@ -71,3 +71,14 @@ black for a headline. No text, no letters, no logos, no watermarks.
 
 ## After posting (fill in 24-48 h later)
 - What worked:
+
+## v2 image (owner 2026-11-04: add an AI agent robot at a computer, GAZZ logo on the coin) — USE THIS ONE
+`bxp-1-hook-v2-4k.jpg` from `source-v2.html` + `hero-art-openart-v2.jpg` (also `web/public/og-proposal.png`).
+OpenArt Nano Banana Pro image2image, 16:9 4K, 2 images (160 credits), references: hero-art-openart.jpg and
+web/public/gazz-logo.svg (rendered to PNG). Picked image 2 (robot smaller, further back). Both placed the robot in
+the left third, so the headline moved to the top-left (two lines) with a local shade only behind the text.
+Prompt: "Edit the first reference image. Keep both men exactly as they are, pure flat black background, left third
+empty. 1) In the background, between and slightly behind the two men, add a sleek humanoid robot representing an AI
+agent, matte white and graphite with a dark glass visor, seated at a desk working at a computer (monitor with a
+green candlestick chart), slightly smaller and softly out of focus. 2) Replace the coin face with the GAZZ logo from
+the second reference, embossed into the chrome coin. No glow, no text, no watermarks."
