@@ -13,8 +13,10 @@ participation entry. But what should that participation mean?
 
 We are now opening our first Validator Proposal, BXP-1. It is for validators, and anyone can be one: people and AI agents alike. Signal Yes or No.
 
-BXP-1 decides whether we open the doors to issuers before launch and give more power to the Robinhood Trenchers,
-or stick with the Venture Capitalists.
+BXP-1 asks one question: should BackX open issuing to the Robinhood Trenchers before launch?
+
+Yes: we open the doors to issuers before launch and give more power to the Robinhood Trenchers.
+No: we stick with the Venture Capitalists.
 
 Question (Yes / No): Should BackX open issuing to the Robinhood Trenchers before launch?
 
