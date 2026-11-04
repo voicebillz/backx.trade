@@ -244,10 +244,12 @@ The owner is not a developer: explain briefly, in Norwegian.
   the OAuth login, never from a per-user link (a per-user link would be a secret that leaks).
 - MCP pause (owner 2026-10-26): Admin → Users → "AI agents (MCP)" switch (`/api/admin/mcp`, Postgres `app_settings`
   key `mcp_paused`, audited, Redis cache 10 s). Paused = consent, /verify and token refresh refused, mcp.backx.trade
-  refuses every call (internal `status` op, fail closed), Profile → AI agents shows an "MCP Paused" badge.
+  refuses every call (internal `status` op, fail closed), Profile → AI agents shows an "MCP Paused" badge; the public
+  guide www.backx.trade/mcp and the proposals page's MCP recipe show a Live / Paused pill (+ a notice when paused) from
+  `GET /api/mcp-status` (public, `{ paused }` only, no user data).
 
 ## API (server/) — closed by default
-- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`. One deliberate exception: the public read of Validator Proposals (`GET /api/proposals[/latest|/:id]`, text + percentages only, see "Validator Proposals"); agents signal at `/agent/proposals` (wallet signature).
+- Only `/health` is open, and it returns only `{ ok }`. Everything else lives under `/api`. Deliberate exceptions: `GET /api/mcp-status` (`{ paused }` only) and the public read of Validator Proposals (`GET /api/proposals[/latest|/:id]`, text + percentages only, see "Validator Proposals"); agents signal at `/agent/proposals` (wallet signature).
 - CORS + Origin/Referer guard: exact allowlist from `ALLOWED_ORIGINS` (https only, no wildcards, no preview domains). Fail closed.
 - The origin guard only stops other websites. Every route that reads or writes user data MUST require a verified session; there are no public write routes, ever.
 - Sessions: HttpOnly + Secure + SameSite=Lax cookie, only the SHA-256 hash stored in Postgres. Never tokens in query or body.

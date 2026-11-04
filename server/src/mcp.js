@@ -52,6 +52,14 @@ async function eligibility(did) {
 export const mcpPublicRouter = express.Router();
 mcpPublicRouter.get('/grant-key', (_req, res) => res.json({ alg: 'ed25519', spki: signer?.spki ?? null }));
 
+// ---- /api/mcp-status: public, no user data (owner 2026-11-04): the www.backx.trade/mcp guide and the proposals page
+// show "Paused" while Admin → Users has MCP switched off. Same Redis-cached flag as everywhere else (10 s).
+export const mcpStatusRouter = express.Router();
+mcpStatusRouter.get('/', async (req, res) => {
+  try { res.set('Cache-Control', 'no-store').json({ paused: await mcpPaused(req.app.locals.redis) }); }
+  catch { res.status(503).json({ error: 'unavailable' }); }
+});
+
 // ---- /api/mcp: the consent page on app.backx.trade (session + origin guard + own rate limit) ---------------------
 export const mcpRouter = express.Router();
 mcpRouter.use(async (req, res, next) => {

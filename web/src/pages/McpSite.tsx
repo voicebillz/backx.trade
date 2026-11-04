@@ -3,6 +3,7 @@ import { Logo } from '../components/Logo';
 import { McpAddress, McpSteps } from '../components/McpSteps';
 import { CAN, NEVER } from '../lib/mcpGuide';
 import { useTheme } from '../lib/theme';
+import { useMcpPaused, mcpPill } from '../lib/mcpStatus';
 import { APP_URL } from '../lib/host';
 
 /** www.backx.trade/mcp (owner 2026-10-26): how to connect your own AI assistant. Explains only: the connection
@@ -10,6 +11,8 @@ import { APP_URL } from '../lib/host';
 export default function McpSite() {
   useEffect(() => { document.title = 'Connect your AI agent · BackX'; }, []);
   const { theme, setTheme } = useTheme();
+  const paused = useMcpPaused();
+  const pill = mcpPill(paused);
   return (
     <div className="home home-doc">
       <a className="skip" href="#main">Skip to content</a>
@@ -22,10 +25,11 @@ export default function McpSite() {
         </div>
       </header>
       <main id="main" className="mcpp">
-        <p className="h-kicker">MCP · AI agents</p>
+        <p className="h-kicker mcp-kicker">MCP · AI agents{pill && <span className={pill.cls} role="status">{pill.text}</span>}</p>
         <h1>Connect your AI agent to BackX</h1>
         <p className="mcpp-lead">Ask your own assistant about your positions, rewards and staking, and let it prepare trades and "Claim all". It works on your account only, and you sign every transaction yourself.</p>
 
+        {paused && <p className="mcp-paused" role="status"><b>MCP is paused.</b> BackX has switched AI agent connections off for now. Connected assistants are on hold and new connections cannot be made until it is switched back on.</p>}
         <McpAddress />
 
         <section aria-labelledby="how">

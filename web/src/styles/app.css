@@ -2058,3 +2058,11 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .bxp-h-date { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) { .bxp-feature { padding: 18px; } }
 .bxp-admin-mini { margin: 0 16px 12px; } .inv-stage .bxp-h-out { margin-right: 6px; }
+/* MCP live / paused status (owner 2026-11-04): follows the Admin → Users switch via /api/mcp-status */
+.mcp-kicker { display: flex; align-items: center; gap: 10px; }
+.mcp-pill { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); font-family: var(--sans, inherit); font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; vertical-align: middle; }
+.mcp-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.mcp-pill.live { color: var(--up); border-color: var(--up); }
+.mcp-pill.paused { color: var(--warning); border-color: var(--warning); background: var(--warning-bg); }
+.mcp-paused { margin: 0 0 24px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--warning); background: var(--warning-bg); color: var(--ink); font-size: 15px; line-height: 1.5; }
+.mcp-paused b { color: var(--warning); }

@@ -11,7 +11,7 @@ import { ventureRouter } from './venture.js';
 import { proposalsRouter, agentProposalsRouter } from './proposals.js';
 import { stakeRouter, startTankScanner } from './stake.js';
 import { keeperReportRouter } from './keepers.js';
-import { mcpRouter, mcpPublicRouter, mcpInternalRouter, loadGrantKey } from './mcp.js';
+import { mcpRouter, mcpPublicRouter, mcpInternalRouter, loadGrantKey, mcpStatusRouter } from './mcp.js';
 
 // family: 0 lets ioredis resolve Railway's IPv6 private network.
 const redis = new Redis(config.redisUrl, { family: 0, maxRetriesPerRequest: 2, lazyConnect: false });
@@ -122,6 +122,7 @@ app.use('/api/venture', ventureRouter);
 app.use('/api/proposals', proposalsRouter);
 app.use('/api/stake', stakeRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/mcp-status', mcpStatusRouter);
 app.use('/api/mcp', mcpRouter);
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }));

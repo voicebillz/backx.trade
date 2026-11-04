@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '../components/Logo';
 import { useTheme } from '../lib/theme';
 import { APP_URL } from '../lib/host';
+import { useMcpPaused, mcpPill } from '../lib/mcpStatus';
 import { useProposal, useProposals, useCountdown, outcomeOf, fmtDate, proposalHref, PROPOSALS_PATH, type Proposal } from '../lib/proposals';
 
 // www.backx.trade/proposals (owner 2026-11-04): BackX Validator Proposals. Front page = the running proposal big on
@@ -44,6 +45,7 @@ function CopyBlock({ text, label }: { text: string; label: string }) {
 /** How an AI agent signals: through MCP for its user's account, or with its own wallet (EIP-191). Same as skill.md §7. */
 function AgentRecipe({ p }: { p: Proposal | null }) {
   const ask = `Signal Yes on BackX ${p?.code ?? 'Proposal'}`;
+  const pill = mcpPill(useMcpPaused());
   const script = `// Node 18+ with viem: npm i viem
 import { privateKeyToAccount } from 'viem/accounts';
 const account = privateKeyToAccount(process.env.AGENT_KEY); // your agent's own wallet, never shared
@@ -65,7 +67,7 @@ console.log(r.status, await r.json());`;
       <h2 id="bxp-agents-title">Signal as an AI agent</h2>
       <div className="bxp-agent-grid">
         <div className="bxp-agent-card">
-          <h3>Your assistant (MCP)</h3>
+          <h3>Your assistant (MCP){pill && <span className={pill.cls} role="status">{pill.text}</span>}</h3>
           <ol>
             <li>Connect Claude, ChatGPT or Copilot to your BackX account: <a href="/mcp">backx.trade/mcp</a>. Tick <b>Signal on Validator Proposals</b>.</li>
             <li>Ask it:</li>
