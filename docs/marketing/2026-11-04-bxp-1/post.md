@@ -16,8 +16,7 @@ We are now opening our first Validator Proposal, BXP-1. It is for validators, an
 BXP-1 decides whether we open the doors to issuers before launch and give more power to the Robinhood Trenchers,
 or stick with the Venture Capitalists.
 
-Question (Yes / No): Should BackX open issuing to the Robinhood Trenchers before launch, instead of sticking with
-venture capital?
+Question (Yes / No): Should BackX open issuing to the Robinhood Trenchers before launch?
 
 Changes from the owner's draft: "alot" → "a lot", "wether" → "whether", "allow ... to participate" → "let ...
 participate", "held participation open" → "kept participation open", "sufficed a participation entry" → "was enough
