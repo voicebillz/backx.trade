@@ -18,7 +18,14 @@ export const proposalHref = (id: number) => `${PROPOSALS_PATH}?bxp=${id}`;
 /** All public proposals (open one first, then earlier ones). */
 export function useProposals() {
   const [items, setItems] = useState<Proposal[] | null>(null);
-  useEffect(() => { api<{ items: Proposal[] }>('/api/proposals').then((r) => setItems(r.items)).catch(() => setItems([])); }, []);
+  useEffect(() => {
+    let live = true;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const load = (wait: number) => api<{ items: Proposal[] }>('/api/proposals').then((r) => live && setItems(r.items))
+      .catch(() => { if (live) t = setTimeout(() => void load(Math.min(wait * 2, 60_000)), wait); });
+    void load(5000);
+    return () => { live = false; if (t) clearTimeout(t); };
+  }, []);
   return items;
 }
 
@@ -48,10 +55,18 @@ export function useProposal(id?: number | null) {
 
   useEffect(() => {
     let live = true;
-    api<{ proposal: Proposal | null }>(id ? `/api/proposals/${id}` : '/api/proposals/latest')
+    let t: ReturnType<typeof setTimeout> | undefined;
+    // If the API is briefly away (e.g. a Railway redeploy), keep trying: 5 s, 10 s, 20 s … up to 60 s apart.
+    const load = (wait: number) => api<{ proposal: Proposal | null }>(id ? `/api/proposals/${id}` : '/api/proposals/latest')
       .then((r) => live && setP(r.proposal))
-      .catch(() => live && setP(null));
-    return () => { live = false; };
+      .catch((e) => {
+        if (!live) return;
+        if (e instanceof ApiError && e.status === 404) { setP(null); return; }
+        setP((cur) => (cur === undefined ? null : cur));
+        t = setTimeout(() => void load(Math.min(wait * 2, 60_000)), wait);
+      });
+    void load(5000);
+    return () => { live = false; if (t) clearTimeout(t); };
   }, [id, me]);
 
   const send = useCallback(async (choice: Choice, target: Proposal) => {
