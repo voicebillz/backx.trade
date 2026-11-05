@@ -41,6 +41,31 @@ const PROFILE_KEYS: [string, string, number?][] = [
   ['other', 'Anything else forms often ask', 4],
 ];
 
+// Starting values for the profile (owner 2026-11-05): facts from the pitch whitepaper and the founder. They only
+// fill empty fields and are saved when you press Save profile. Keep them true: forms quote them word for word.
+const DEFAULTS: Record<string, string> = {
+  company: 'BackX Trade (company not registered yet)',
+  website: 'https://www.backx.trade',
+  one_liner: 'Open onchain leverage for every listed coin, backed by issuers and built for AI agents.',
+  pitch_short: 'BackX is an onchain leverage protocol: traders go Long or Short with up to 20x leverage, and issuers lend the capital (USDC for Longs, the coin itself for Shorts) and earn from every position. Issuers are lenders who are repaid first, not AMM liquidity providers who lose to arbitrage, and any AI assistant can trade through our MCP server while the user signs.',
+  pitch_long: 'BackX is a leverage market for every listed coin. Traders go Long or Short with up to 20x leverage; issuers supply the capital (USDC for Longs, the coin itself for Shorts) and earn from every position; validators settle positions and are paid from each position\'s own escrow, so execution is open to anyone. Issuers are lenders with a protected principal, not AMM liquidity providers who bleed to arbitrage, which makes the model stronger as bots and AI agents take over trading. BackX launches on Robinhood Chain, BNB Chain, Base and Arbitrum with identical contract addresses on every chain, and any AI assistant can trade, issue and claim through our MCP server or plain contract calls while the user always signs.',
+  founder_name: 'Roem Malik',
+  founder_title: 'Founder',
+  founder_email: 'partner@backx.trade',
+  founder_x: '@cryptopodaz (company: @BACKXTRADE)',
+  founder_linkedin: 'https://www.linkedin.com/in/roem-malik-55399719b/',
+  telegram: '@cryptopodaz',
+  founded: '2026',
+  stage: 'Pre-seed, pre-launch',
+  raising: 'Seed round with one lead investor, who is invited to lead or anchor the Series A. Amount and terms are shared directly.',
+  use_of_funds: 'Proposed: engineering 35 %, audit and security 25 %, issuer liquidity at launch 15 %, validators and infrastructure 10 %, legal and company 10 %, go to market 5 %.',
+  traction: 'Smart contracts written and tested (96 tests passing), not yet audited or deployed. Trading app with a demo mode and an MCP server for AI agents are live. Pre-revenue; launch follows a fast oracle integration and an external audit.',
+  chains: 'Robinhood Chain, BNB Chain, Base, Arbitrum (same contract addresses on every chain)',
+  product_links: 'Website: https://www.backx.trade\nPitch deck: https://www.backx.trade/pitch\nPitch whitepaper: https://www.backx.trade/pitch?view=whitepaper\nAI agents (MCP): https://www.backx.trade/mcp',
+  category: 'DeFi, onchain derivatives / leverage, AI agents',
+  other: 'The company is not registered yet; a new company will operate BackX. Contracts are not audited yet. Company X: @BACKXTRADE.',
+};
+
 const when = (d: string | null) => d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const json = (body: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -115,7 +140,7 @@ export function AdminOutreach() {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const load = () => Promise.all([
-    api<Data>('/api/admin/outreach').then((r) => { setD(r); setS(r.settings); setProf(r.profile); }),
+    api<Data>('/api/admin/outreach').then((r) => { setD(r); setS(r.settings); setProf((cur) => (Object.keys(cur).length ? cur : Object.keys(r.profile).length ? r.profile : { ...DEFAULTS })); }),
     api<{ items: { firm: string }[] }>('/api/admin/investors/status').then((r) => setInv(Object.fromEntries(r.items.map((x) => [x.firm, x])))),
   ]).catch(() => setErr('Could not load outreach.'));
   useEffect(() => { void load(); const t = setInterval(() => void load(), 30_000); return () => clearInterval(t); }, []);
@@ -195,7 +220,11 @@ export function AdminOutreach() {
       {list('History', by('sent', 'submitted', 'replied', 'bounced', 'done', 'skipped', 'cancelled', 'failed'))}
 
       <section className="card">
-        <div className="row-between"><h2>Company profile for forms</h2><button className="btn btn-sm btn-primary" onClick={saveProfile}>Save profile</button></div>
+        <div className="row-between"><h2>Company profile for forms</h2>
+          <span className="link-buttons">
+            <button className="btn btn-sm" onClick={() => setProf({ ...DEFAULTS, ...Object.fromEntries(Object.entries(prof).filter(([, v]) => v.trim())) })}>Fill empty with BackX defaults</button>
+            <button className="btn btn-sm btn-primary" onClick={saveProfile}>Save profile</button>
+          </span></div>
         <p className="muted small">The agent answers forms only from these facts. A required question it cannot answer from here goes to your queue.</p>
         <div className="or-profile">
           {PROFILE_KEYS.map(([k, label, rows]) => (
