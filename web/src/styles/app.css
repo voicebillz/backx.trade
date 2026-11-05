@@ -2081,3 +2081,16 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .inv-mark-btn.on.applied { border-color: var(--violet); color: var(--violet); background: var(--violet-bg); }
 .inv-mark-btn.on.done { border-color: var(--up); color: var(--up); background: var(--up-bg); }
 .inv-tally { margin: 6px 0 10px; font-size: 14px; color: var(--ink-2); }
+/* Admin → Outreach (owner 2026-11-05) */
+.or-pill { display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
+.or-pill.ok { color: var(--up); border-color: var(--up); } .or-pill.warn { color: var(--warning); border-color: var(--warning); } .or-pill.bad { color: var(--down); border-color: var(--down); }
+.or-today { margin: 6px 0 14px; color: var(--ink-2); }
+.or-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: end; }
+.or-settings select { min-height: 44px; width: 100%; font-size: 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); padding: 0 10px; }
+.or-check { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--ink-2); }
+.or-check input { width: 18px; height: 18px; }
+.or-actions { margin-bottom: 12px; }
+.or-events { margin: 12px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); display: flex; flex-direction: column; gap: 8px; }
+.or-shot { display: block; margin-top: 6px; max-width: 100%; width: 520px; border-radius: 8px; border: 1px solid var(--line); }
+.or-profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 12px 0; }
+.or-profile textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); resize: vertical; }

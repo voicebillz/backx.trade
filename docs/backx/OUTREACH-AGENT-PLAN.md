@@ -1,6 +1,10 @@
 # Outreach agent: plan (owner 2026-11-05)
 
-Status: PLAN, nothing built yet. The owner sets up the keys (section 3); then we build it in the phases of section 8.
+Status: BUILT 2026-11-05 (phases 1–3: email, replies / bounces, forms). Code: `outreach/` (worker, its README has the
+Railway steps and the mailbox lock), `server/src/outreach.js` (Admin API), `web/src/pages/AdminOutreach.tsx`.
+Owner rules added at build time: the agent never answers email (it only reads to stop on a reply or a bounce);
+emails never use the model; when it sends or submits, the firm is ticked in Admin → Investors; a firm the owner
+ticked by hand is skipped. Follow-ups are not built.
 
 ## 1. What it does
 

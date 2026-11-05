@@ -1,0 +1,18 @@
+{
+  "name": "backx-outreach",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.22.1"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js && node --check src/forms.js && node --check src/graph.js && node --check src/llm.js && node --check src/db.js && node --check src/config.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0",
+    "pg": "8.13.1",
+    "playwright": "1.64.0"
+  }
+}

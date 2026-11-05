@@ -98,6 +98,59 @@ export async function migrate() {
       updated_by text not null
     );
 
+    -- Outreach agent (owner 2026-11-05, docs/backx/OUTREACH-AGENT-PLAN.md). The worker service backx-outreach
+    -- reads and writes these; the API (Admin → Outreach) writes settings, profile, deck and jobs.
+    create table if not exists outreach_settings (
+      id            integer primary key default 1 check (id = 1),
+      daily_max     integer not null default 0,
+      mode          text not null default 'approve' check (mode in ('approve', 'auto')),
+      forms_review  boolean not null default true,
+      paused        boolean not null default true,
+      ignore_window boolean not null default false,
+      heartbeat_at  timestamptz,
+      updated_at    timestamptz not null default now()
+    );
+    insert into outreach_settings (id) values (1) on conflict (id) do nothing;
+    create table if not exists outreach_profile (key text primary key, value text not null);
+    create table if not exists outreach_files (
+      name text primary key, filename text not null, mime text not null, data bytea not null,
+      updated_at timestamptz not null default now()
+    );
+    create table if not exists outreach_jobs (
+      id                  serial primary key,
+      firm                text not null,
+      channel             text not null check (channel in ('email', 'form', 'manual')),
+      target              text not null,
+      subject             text,
+      body_text           text,
+      signature_html      text,
+      note                text,
+      status              text not null,
+      last_error          text,
+      attempts            integer not null default 0,
+      fills               jsonb,
+      message_id          text,
+      conversation_id     text,
+      tokens_in           integer not null default 0,
+      tokens_out          integer not null default 0,
+      created_by          text not null,
+      created_at          timestamptz not null default now(),
+      approved_at         timestamptz,
+      sent_at             timestamptz,
+      replied_at          timestamptz
+    );
+    create index if not exists outreach_jobs_status on outreach_jobs(status, id);
+    create index if not exists outreach_jobs_firm on outreach_jobs(firm);
+    create table if not exists outreach_events (
+      id     bigserial primary key,
+      job_id integer references outreach_jobs(id) on delete cascade,
+      at     timestamptz not null default now(),
+      kind   text not null,
+      detail text,
+      image  bytea
+    );
+    create index if not exists outreach_events_job on outreach_events(job_id, id);
+
     -- BackX Proposals (owner 2026-11-04): Yes/No questions the community signals on (BXP-<id>). Admin writes them;
     -- one signal per account per proposal, changeable while open. The public page shows only percentages.
     create table if not exists proposals (

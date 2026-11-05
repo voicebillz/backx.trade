@@ -21,7 +21,7 @@ const PAPER = 'https://www.backx.trade/pitch?view=whitepaper';
 const DRIVE = 'https://docs.google.com/presentation/d/1_5iG-DL-NCCtm77tAoC6OOCDbFWADBUx/edit?usp=sharing';
 
 /** The outreach email for one firm. Ends before the sign-off: the email signature does that. */
-function email(i: Investor): { subject: string; body: string } | null {
+export function email(i: Investor): { subject: string; body: string } | null {
   if (i.tier === 'dropped' || i.tier === 'program') return null;
   const team = i.name.split(' / ')[0].replace(/ \(.*\)$/, '');
   const why = WHY[i.name] ?? 'We follow your work in onchain finance and think BackX is a strong fit for your portfolio.';

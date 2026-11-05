@@ -322,6 +322,21 @@ The owner is not a developer: explain briefly, in Norwegian.
   "BackX Proposal BXP-n\nSignal: yes|no\nWallet: <lowercase>\nIssued: <ISO>", ±5 min, each signature once, the wallet needs ≥ 1 tx on a launch chain, a BackX account's own wallet counts as
   that account (skill.md §7). `GET /api/proposals[/latest|/:id]` is the ONE deliberate public read under /api (text +
   percent, Redis cache 10 s, 60/min per IP); signals are 10/min.
+- Outreach agent (owner 2026-11-05, `docs/backx/OUTREACH-AGENT-PLAN.md`, `outreach/README.md`): separate Railway
+  service `backx-outreach` (root `outreach/`, NO public domain, Node 24.22.1 + Playwright Chromium) sharing the main
+  Postgres (tables `outreach_settings|profile|files|jobs|events`, schema owned by server/src/db.js). Sends ONLY first
+  outreach emails (Microsoft Graph app "BackX Outreach", client credentials, mailbox `OUTREACH_MAILBOX`, to be
+  scoped to that one mailbox with Exchange RBAC for Applications) and fills pitch / apply forms; it NEVER replies,
+  forwards or deletes mail (reads a conversation only to mark Replied / Bounced). Admin → Outreach
+  (`/admin/outreach`, `pages/AdminOutreach.tsx`, API `server/src/outreach.js` under /api/admin, audited): Start/Pause
+  (starts paused, max 0), max per day (≤ 50 hard), approve / auto mode, forms review, send window, "Queue open firms"
+  (email from CONTACT where published + the signature from Branding, else the form, else the owner's queue for X),
+  Needs approval / For you / In progress / History with screenshots, company profile (the only facts forms may use)
+  and the deck PDF (≤ 15 MB, the one non-JSON admin route). Sent / submitted ticks Admin → Investors; a firm the owner
+  ticked is skipped. Model only for forms (`ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL` Railway vars, never hard-coded):
+  compact field JSON, cached system prompt, low effort, structured JSON output, ≤ 12 calls / 60k tokens per form,
+  daily cap; review-approved forms replay saved answers with no new call. CAPTCHA / login / missing answer → owner's
+  queue, never worked around. An email whose send result is unclear is never retried automatically.
 - Marketing (owner 2026-11-04): follow `.claude/skills/backx-marketing/SKILL.md` for every post, image and video
   (hooks, X rules, truth check, 4K pipeline, OpenArt, video + sound); the long gazz.fun originals are in
   `docs/marketing/reference-gazz/`. Campaign folders: `docs/marketing/<date>-<campaign>/`.
