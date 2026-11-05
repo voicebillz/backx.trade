@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Logo } from '../components/Logo';
 import { Motto } from '../components/Motto';
 import { CircuitHero } from '../components/home/CircuitHero';
@@ -48,6 +48,14 @@ export function HomePage() {
     document.querySelector<HTMLMetaElement>('meta[name="robots"]')?.setAttribute('content', 'index, follow, max-image-preview:large, max-snippet:-1');
   }, []);
   const { theme, setTheme } = useTheme();
+  // Safari restores this page from its back/forward cache with stale paint on the hero buttons (owner 2026-11-05:
+  // half-drawn borders, clipped "You're in"). Remount the button rows on such a restore so they are laid out fresh.
+  const [gen, setGen] = useState(0);
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setGen((g) => g + 1); };
+    addEventListener('pageshow', onShow);
+    return () => removeEventListener('pageshow', onShow);
+  }, []);
 
   return (
     <div className="home">
@@ -74,7 +82,7 @@ export function HomePage() {
           <div className="h-hero-copy">
             <h1 id="hero-title"><Motto className="h-motto" /></h1>
             <p className="h-sub">Go long or short with leverage, or issue capital that backs traders.</p>
-            <div className="h-cta"><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
+            <div className="h-cta" key={`cta-${gen}`}><Participate big /><a className="h-btn h-btn-ghost big" href={APP_URL}>Launch App</a></div>
           </div>
         </section>
 
@@ -129,7 +137,7 @@ export function HomePage() {
         <section className="h-section h-final" aria-labelledby="final-title">
           <h2 id="final-title">Join the venture</h2>
           <p className="h-sub">Participants are first in line when BackX opens.</p>
-          <div className="h-cta center"><Participate big /></div>
+          <div className="h-cta center" key={`cta2-${gen}`}><Participate big /></div>
           <div className="h-gazz"><BuyGazz /></div>
         </section>
       </main>
