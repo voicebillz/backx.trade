@@ -153,11 +153,25 @@ export function AdminOutreach() {
   const emailsWithoutSig = !sig && INVESTORS.some((i) => CONTACT[i.name]?.email && email(i));
 
   const saveSettings = (next: Settings) => api('/api/admin/outreach/settings', json(next)).then(() => { setS(next); flash('Saved'); void load(); }).catch(() => setErr('Could not save settings.'));
-  const queue = () => {
+  // Small batches: each email job carries its text and signature, and the API takes at most 64 KB per request.
+  const queue = async () => {
     if (!candidates.length) return;
-    api<{ added: number; skipped: number }>('/api/admin/outreach/jobs', json({ jobs: candidates.slice(0, 100) }))
-      .then((r) => { flash(`${r.added} queued${r.skipped ? `, ${r.skipped} skipped` : ''}`); void load(); })
-      .catch((e) => setErr(e instanceof ApiError && e.body.firm ? `Could not queue ${e.body.firm}: check its contact details.` : 'Could not queue.'));
+    setErr(null);
+    let added = 0, skipped = 0;
+    const list = candidates.slice(0, 100);
+    for (let k = 0; k < list.length; k += 6) {
+      try {
+        const r = await api<{ added: number; skipped: number }>('/api/admin/outreach/jobs', json({ jobs: list.slice(k, k + 6) }));
+        added += r.added; skipped += r.skipped;
+      } catch (e) {
+        setErr(e instanceof ApiError
+          ? e.body.firm ? `Could not queue ${String(e.body.firm)}: check its contact details.` : `Could not queue (${e.status} ${e.code}). ${added} were queued before this.`
+          : `Could not queue (no answer from the API). ${added} were queued before this.`);
+        break;
+      }
+    }
+    flash(`${added} queued${skipped ? `, ${skipped} skipped` : ''}`);
+    void load();
   };
   const act = (id: number, action: string) => api(`/api/admin/outreach/jobs/${id}`, json({ action })).then(() => void load()).catch(() => setErr('That did not work. Reload and try again.'));
   const saveProfile = () => api('/api/admin/outreach/profile', json({ entries: prof })).then(() => flash('Profile saved')).catch(() => setErr('Could not save the profile.'));
@@ -209,7 +223,7 @@ export function AdminOutreach() {
       <section className="card">
         <div className="row-between">
           <h2>Queue open firms <span className="muted num">{candidates.length}</span></h2>
-          <button className="btn btn-primary" disabled={!candidates.length} onClick={queue}>Queue {candidates.length}</button>
+          <button className="btn btn-primary" disabled={!candidates.length} onClick={() => void queue()}>Queue {candidates.length}</button>
         </div>
         <p className="muted small">Every firm in Investors that is not checked off and has no job yet: email where the firm publishes an address, its form otherwise, and your own queue for X-only firms.</p>
         {emailsWithoutSig && <p className="field-err">Fill in your email signature under Branding first: without it, firms with an email address are not queued.</p>}
