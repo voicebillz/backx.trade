@@ -2094,3 +2094,12 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .or-shot { display: block; margin-top: 6px; max-width: 100%; width: 520px; border-radius: 8px; border: 1px solid var(--line); }
 .or-profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 12px 0; }
 .or-profile textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); resize: vertical; }
+/* Admin → Data risk (owner 2026-11-05) */
+.dr-risk { display: inline-flex; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.dr-risk.critical { color: var(--down); background: var(--down-bg); } .dr-risk.high { color: var(--warning); } .dr-risk.medium { color: var(--info); } .dr-risk.low { color: var(--ink-3); }
+.dr-tag { display: inline-flex; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--raised); color: var(--ink-2); margin-right: 6px; white-space: nowrap; }
+.dr-tag.open { color: var(--warning); }
+.dr-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.dr-list li { display: flex; gap: 8px; } .dr-list .warn { color: var(--warning); font-weight: 700; }
+.dr-actions { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.dr-actions .dr-risk { margin-right: 4px; }

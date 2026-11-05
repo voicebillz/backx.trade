@@ -337,6 +337,11 @@ The owner is not a developer: explain briefly, in Norwegian.
   compact field JSON, cached system prompt, low effort, structured JSON output, ≤ 12 calls / 60k tokens per form,
   daily cap; review-approved forms replay saved answers with no new call. CAPTCHA / login / missing answer → owner's
   queue, never worked around. An email whose send result is unclear is never retried automatically.
+- Data risk (owner 2026-11-05, Admin → Data risk `/admin/risk`, `pages/AdminRisk.tsx`, data `web/src/lib/systems.ts`): every
+  outside system (Vercel, Railway, GitHub, GoDaddy, Privy, Microsoft 365 / Entra, Safe, LI.FI, RPCs, CoinGecko,
+  Anthropic, OpenArt, validator clouds …) with what it holds, risk, safeguards, open actions and dashboard / status
+  links, plus where personal data lives (GDPR). Public chunk: names and links only, never keys or ids. Update the
+  list in the same commit that adds or removes a system.
 - Marketing (owner 2026-11-04): follow `.claude/skills/backx-marketing/SKILL.md` for every post, image and video
   (hooks, X rules, truth check, 4K pipeline, OpenArt, video + sound); the long gazz.fun originals are in
   `docs/marketing/reference-gazz/`. Campaign folders: `docs/marketing/<date>-<campaign>/`.
