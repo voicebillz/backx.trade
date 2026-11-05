@@ -2066,3 +2066,9 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .mcp-pill.paused { color: var(--warning); border-color: var(--warning); background: var(--warning-bg); }
 .mcp-paused { margin: 0 0 24px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--warning); background: var(--warning-bg); color: var(--ink); font-size: 15px; line-height: 1.5; }
 .mcp-paused b { color: var(--warning); }
+.bxp-counts { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px; }
+.bxp-counts dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.bxp-counts dl > div { padding: 8px 10px; border-radius: 10px; background: var(--raised); min-width: 0; }
+.bxp-counts dt { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.bxp-counts dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; color: var(--ink); }
+.bxp-counts dd.yes { color: var(--up); } .bxp-counts dd.no { color: var(--pink); }

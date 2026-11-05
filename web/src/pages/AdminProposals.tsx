@@ -7,7 +7,7 @@ import { api, ApiError } from '../lib/api';
 
 interface Item {
   id: number; code: string; title: string; question: string; body: string; banner: string;
-  status: 'draft' | 'open' | 'closed'; createdAt: string; openedAt: string | null; closedAt: string | null; endsAt: string | null; days: number; yes: number; no: number; agents: number;
+  status: 'draft' | 'open' | 'closed'; createdAt: string; openedAt: string | null; closedAt: string | null; endsAt: string | null; days: number; yes: number; no: number; agents: number; agentYes: number; day: number;
 }
 type Form = Pick<Item, 'title' | 'question' | 'body' | 'banner' | 'status' | 'days'>;
 const EMPTY: Form = { title: '', question: '', body: '', banner: '', status: 'draft', days: 14 };
@@ -67,6 +67,26 @@ function Editor({ item, onSaved, onCancel }: { item: Item | null; onSaved: (i: I
 
 const pctYes = (i: Item) => (i.yes + i.no ? Math.round((i.yes * 1000) / (i.yes + i.no)) / 10 : null);
 
+/** Admin only: the real counts (the public page shows percent only). */
+function Counts({ i, y }: { i: Item; y: number | null }) {
+  const total = i.yes + i.no;
+  const accounts = total - i.agents;
+  const tiles: [string, string, string?][] = [
+    ['Signals', total.toLocaleString('en-US')],
+    ['Yes', `${i.yes.toLocaleString('en-US')}${y !== null ? ` · ${y} %` : ''}`, 'yes'],
+    ['No', `${i.no.toLocaleString('en-US')}${y !== null ? ` · ${Math.round((100 - y) * 10) / 10} %` : ''}`, 'no'],
+    ['Accounts', accounts.toLocaleString('en-US')],
+    ['Agent wallets', `${i.agents.toLocaleString('en-US')}${i.agents ? ` (${i.agentYes} yes)` : ''}`],
+    ['Last 24 h', `+${i.day.toLocaleString('en-US')}`],
+  ];
+  return (
+    <div className="bxp-counts">
+      <dl>{tiles.map(([k, v, c]) => <div key={k}><dt>{k}</dt><dd className={'num ' + (c ?? '')}>{v}</dd></div>)}</dl>
+      <span className="bxp-mini" aria-hidden="true"><i className="y" style={{ width: `${y ?? 0}%` }} /><i className="n" style={{ width: `${y === null ? 0 : 100 - y}%` }} /></span>
+    </div>
+  );
+}
+
 function Row({ i, open, onToggle, onSaved }: { i: Item; open: boolean; onToggle: () => void; onSaved: () => void }) {
   const y = pctYes(i);
   const o = y === null ? null : y > 50 ? 'Yes' : y < 50 ? 'No' : 'Tie';
@@ -77,13 +97,10 @@ function Row({ i, open, onToggle, onSaved }: { i: Item; open: boolean; onToggle:
         <span className="inv-name"><b>{i.code} · {i.title}</b><small>{sub}</small></span>
         <span className="inv-stage num">
           {i.status === 'closed' ? <b className={'bxp-h-out ' + (o === 'Yes' ? 'yes' : o === 'No' ? 'no' : 'none')}>{o ?? 'No signals'}</b> : STATUS_LABEL[i.status]}
-          {' '}Yes {i.yes} / No {i.no}{i.agents ? ` (${i.agents} agents)` : ''}
         </span>
         <span className="inv-chev" aria-hidden="true">{open ? '−' : '+'}</span>
       </button>
-      {i.status !== 'draft' && (
-        <span className="bxp-mini bxp-admin-mini" aria-hidden="true"><i className="y" style={{ width: `${y ?? 0}%` }} /><i className="n" style={{ width: `${y === null ? 0 : 100 - y}%` }} /></span>
-      )}
+      {i.status !== 'draft' && <Counts i={i} y={y} />}
       {open && <div className="inv-body"><Editor item={i} onSaved={onSaved} /></div>}
     </li>
   );

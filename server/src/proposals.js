@@ -291,7 +291,7 @@ function validate(b) {
 
 const adminOut = (r) => ({
   id: r.id, code: `BXP-${r.id}`, title: r.title, question: r.question, body: r.body, banner: r.banner, status: r.status,
-  createdAt: r.created_at, openedAt: r.opened_at, closedAt: r.closed_at, endsAt: r.ends_at, days: r.days, yes: r.yes ?? 0, no: r.no ?? 0, agents: r.agents ?? 0,
+  createdAt: r.created_at, openedAt: r.opened_at, closedAt: r.closed_at, endsAt: r.ends_at, days: r.days, yes: r.yes ?? 0, no: r.no ?? 0, agents: r.agents ?? 0, agentYes: r.agent_yes ?? 0, day: r.day ?? 0,
 });
 
 export function mountProposalAdmin(router, audit) {
@@ -304,7 +304,10 @@ export function mountProposalAdmin(router, audit) {
                   + (select count(*) from proposal_agent_signals a where a.proposal_id = p.id and a.choice = 'yes')::int as yes,
                 (select count(*) from proposal_signals s where s.proposal_id = p.id and s.choice = 'no')::int
                   + (select count(*) from proposal_agent_signals a where a.proposal_id = p.id and a.choice = 'no')::int as no,
-                (select count(*) from proposal_agent_signals a where a.proposal_id = p.id)::int as agents
+                (select count(*) from proposal_agent_signals a where a.proposal_id = p.id)::int as agents,
+                (select count(*) from proposal_agent_signals a where a.proposal_id = p.id and a.choice = 'yes')::int as agent_yes,
+                (select count(*) from proposal_signals s where s.proposal_id = p.id and s.at > now() - interval '1 day')::int
+                  + (select count(*) from proposal_agent_signals a where a.proposal_id = p.id and a.at > now() - interval '1 day')::int as day
            from proposals p order by p.id desc limit 100`);
       res.json({ items: rows.map(adminOut) });
     } catch (e) { next(e); }

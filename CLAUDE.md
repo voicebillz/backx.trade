@@ -309,7 +309,7 @@ The owner is not a developer: explain briefly, in Norwegian.
   Timer: `days` (default 14) from opening, editable while running (moves the end), closes itself at `ends_at`;
   the outcome (Yes / No / Tie) then shows in the same bar design. Only one runs at a time in practice.
   Admin → Proposals (`/admin/proposals`, `pages/AdminProposals.tsx`): Running / Drafts / New / History (outcome +
-  counts incl. agents); title, question, text, banner text, days; audited.
+  count tiles per proposal: Signals, Yes, No with %, Accounts, Agent wallets, Last 24 h; admins only); title, question, text, banner text, days; audited.
   Public: www.backx.trade/proposals (`pages/ProposalSite.tsx`; /proposal redirects): the running one big on top with
   Yes/No + countdown, Earlier list with outcomes, `?bxp=<id>` = one proposal; percent only, NEVER totals; footer
   link "Proposals" next to Whitepaper. Front page: rolling yellow banner with the countdown while one runs
