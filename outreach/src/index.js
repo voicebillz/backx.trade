@@ -17,6 +17,9 @@ const TICK_MS = config.tickMs;
 const REPLY_CHECK_MS = 10 * 60_000;
 let lastReplyCheck = 0;
 let stopping = false;
+let lastState = '';
+/** Logs the agent's state once each time it changes (paused, waiting, running), so Railway logs show what it does. */
+function state(text) { if (text !== lastState) { lastState = text; console.log(`[state] ${text}`); } }
 
 function inWindow(now = new Date()) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: config.sendZone, weekday: 'short', hour: 'numeric', hour12: false })
@@ -57,6 +60,7 @@ async function doEmail(job) {
   const { messageId, conversationId } = await sendNew({ to: job.target, subject: job.subject, html: emailHtml(job.body_text, job.signature_html) });
   await setJob(job.id, { status: 'sent', sent_at: new Date(), message_id: messageId, conversation_id: conversationId, last_error: null });
   await event(job.id, 'email.sent', `to ${job.target}`);
+  console.log(`[job] #${job.id} ${job.firm}: email SENT to ${job.target}`);
   await markInvestor(job.firm, 'emailed');
 }
 
@@ -83,10 +87,12 @@ async function doForm(job, s, t) {
     const tokens = { tokens_in: job.tokens_in + r.usage.in, tokens_out: job.tokens_out + r.usage.out, fills: { steps: r.steps } };
     if (r.status === 'review') {
       await setJob(job.id, { ...tokens, status: 'review', note: 'Filled in. Check the screenshot, then Approve to submit.' });
+      console.log(`[job] #${job.id} ${job.firm}: form filled, waiting for your approval (${r.usage.in + r.usage.out} tokens)`);
       return event(job.id, 'form.review');
     }
     await setJob(job.id, { ...tokens, status: 'submitted', sent_at: new Date(), last_error: null, note: null });
     await event(job.id, 'form.submitted', job.target);
+    console.log(`[job] #${job.id} ${job.firm}: form SUBMITTED (${r.usage.in + r.usage.out} tokens)`);
     await markInvestor(job.firm, 'applied');
   } catch (e) {
     if (!(e instanceof Stop)) throw e;
@@ -97,22 +103,26 @@ async function doForm(job, s, t) {
       fills: e.steps?.length ? { steps: e.steps } : job.fills,
     });
     await event(job.id, `manual.${e.kind}`, e.message);
+    console.log(`[job] #${job.id} ${job.firm}: to your queue (${e.kind}): ${e.message}`);
   }
 }
 
 async function work() {
   const s = await settings();
-  if (s.paused) return;
-  if (!s.ignore_window && !inWindow()) return;
+  if (s.paused) return state('paused (press Start agent in Admin → Outreach)');
+  if (!s.ignore_window && !inWindow()) return state(`outside the send window (weekdays 09–18 ${config.sendZone})`);
   const t = await today();
   const limit = Math.min(s.daily_max, config.hardDailyMax);
-  if (t.done >= limit) return;
-  if (t.last && Date.now() - new Date(t.last).getTime() < config.minGapMinutes * 60_000) return;
+  if (t.done >= limit) return state(`daily maximum reached (${t.done}/${limit})`);
+  if (t.last && Date.now() - new Date(t.last).getTime() < config.minGapMinutes * 60_000) return state(`waiting ${config.minGapMinutes} min between sends`);
   const job = await claim();
-  if (!job) return;
+  if (!job) return state(`running, nothing approved to send (${t.done}/${limit} today)`);
+  state(`working on #${job.id} ${job.firm}`);
+  console.log(`[job] #${job.id} ${job.firm}: start ${job.channel} → ${job.channel === 'email' ? job.target : job.target.slice(0, 80)}`);
   try {
     const done = await ownerAlreadyDone(job);
     if (done) {
+      console.log(`[job] #${job.id} ${job.firm}: skipped, already checked off in Investors`);
       await setJob(job.id, { status: 'skipped', note: `Checked off by you in Investors (${done.status})` });
       return event(job.id, 'skipped', 'owner already marked this firm');
     }
@@ -126,6 +136,7 @@ async function work() {
     const status = e?.uncertain ? 'manual' : failed ? 'failed' : job.prev;
     await setJob(job.id, { status, last_error: msg, note: status === 'manual' ? 'Send may have failed: check Sent Items, then mark Done or Retry' : null });
     await event(job.id, 'error', msg);
+    console.error(`[job] #${job.id} ${job.firm}: error → ${status}: ${msg}`);
   }
 }
 
@@ -141,6 +152,7 @@ async function checkReplies() {
       if (!state) continue;
       await setJob(j.id, { status: state, replied_at: new Date() });
       await event(j.id, `email.${state}`); // read only: the agent never answers
+      console.log(`[job] #${j.id} ${j.firm}: ${state.toUpperCase()} (no answer sent)`);
     } catch (e) { console.error('reply check', j.id, e.message); }
   }
 }
