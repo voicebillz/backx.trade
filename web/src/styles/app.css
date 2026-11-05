@@ -2072,3 +2072,12 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .bxp-counts dt { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
 .bxp-counts dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; color: var(--ink); }
 .bxp-counts dd.yes { color: var(--up); } .bxp-counts dd.no { color: var(--pink); }
+/* Admin → Investors outreach status (owner 2026-11-05) */
+.inv-status { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.inv-status.emailed { color: var(--info); } .inv-status.applied { color: var(--violet); } .inv-status.done { color: var(--up); }
+.inv-mark { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.inv-mark-btn { min-height: 36px; border: 1px solid var(--line); }
+.inv-mark-btn.on.emailed { border-color: var(--info); color: var(--info); background: var(--info-bg); }
+.inv-mark-btn.on.applied { border-color: var(--violet); color: var(--violet); background: var(--violet-bg); }
+.inv-mark-btn.on.done { border-color: var(--up); color: var(--up); background: var(--up-bg); }
+.inv-tally { margin: 6px 0 10px; font-size: 14px; color: var(--ink-2); }

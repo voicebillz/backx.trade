@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
 import { CONTACT, INVESTORS, TIER_TITLE, WHY, type Investor, type Tier } from '../lib/investors';
 import { copySignature, savedSignature } from '../components/EmailSignature';
 
@@ -7,6 +8,11 @@ import { copySignature, savedSignature } from '../components/EmailSignature';
 // Each firm is one row; tap it to open the details, a ready outreach email for that fund ("Hi <fund> team", no
 // sign-off: the signature closes the email) and a button that copies your signature (saved in Admin → Branding).
 // Data and sources: lib/investors.ts (checked 2026-10-28, re-verify each row before outreach).
+
+// Outreach status per firm (owner 2026-11-05), stored on the server (Admin only, audited) so it follows you across devices.
+type Status = 'emailed' | 'applied' | 'done';
+interface StatusRow { status: Status; at: string }
+const STATUS_TEXT: Record<Status, string> = { emailed: 'Emailed', applied: 'Applied', done: 'Done' };
 
 const ORDER: Tier[] = ['lead', 'strategic', 'co', 'program', 'dropped'];
 const DECK = 'https://www.backx.trade/pitch';
@@ -50,7 +56,7 @@ function Copy({ text, label }: { text: string; label: string }) {
   return <button className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 1500); })}>{done ? 'Copied' : label}</button>;
 }
 
-function Firm({ i }: { i: Investor }) {
+function Firm({ i, st, setStatus }: { i: Investor; st?: StatusRow; setStatus: (firm: string, s: Status | null) => void }) {
   const [open, setOpen] = useState(false);
   const [sigDone, setSigDone] = useState<string | null>(null);
   const c = CONTACT[i.name];
@@ -65,11 +71,18 @@ function Firm({ i }: { i: Investor }) {
     <li className={'inv-row' + (open ? ' open' : '')}>
       <button className="inv-head" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="inv-name"><b>{i.name}</b><small>{i.type}</small></span>
-        <span className="inv-stage">{i.stage}</span>
+        <span className="inv-stage">{st ? <b className={'inv-status ' + st.status}>✓ {STATUS_TEXT[st.status]}</b> : i.stage}</span>
         <span className="inv-chev" aria-hidden="true">{open ? '−' : '+'}</span>
       </button>
       {open && (
         <div className="inv-body">
+          <div className="inv-mark" role="group" aria-label={`Status for ${i.name}`}>
+            {(['emailed', 'applied', 'done'] as const).map((k) => (
+              <button key={k} className={'btn btn-sm inv-mark-btn' + (st?.status === k ? ' on ' + k : '')} aria-pressed={st?.status === k}
+                onClick={() => setStatus(i.name, st?.status === k ? null : k)}>{st?.status === k ? '✓ ' : ''}{STATUS_TEXT[k]}</button>
+            ))}
+            {st && <span className="muted small">{new Date(st.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+          </div>
           <dl className="inv-facts">
             <div><dt>Leads?</dt><dd>{i.leads}</dd></div>
             <div><dt>Recent</dt><dd>{i.recent}</dd></div>
@@ -104,10 +117,10 @@ function Firm({ i }: { i: Investor }) {
   );
 }
 
-function csv() {
+function csv(stat: Record<string, StatusRow>) {
   const head = ['Tier', 'Firm', 'Website', 'Apply', 'Email', 'X', 'How', 'Type', 'Stage / check', 'Leads?', 'Recent activity', 'Why BackX', 'Note', 'Contacted', 'Status'];
   const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const rows = INVESTORS.map((i) => [TIER_TITLE[i.tier], i.name, i.url, CONTACT[i.name]?.apply ?? '', CONTACT[i.name]?.email ?? '', CONTACT[i.name]?.x ?? '', CONTACT[i.name]?.how ?? '', i.type, i.stage, i.leads, i.recent, i.fit, i.note ?? '', '', ''].map(esc).join(','));
+  const rows = INVESTORS.map((i) => [TIER_TITLE[i.tier], i.name, i.url, CONTACT[i.name]?.apply ?? '', CONTACT[i.name]?.email ?? '', CONTACT[i.name]?.x ?? '', CONTACT[i.name]?.how ?? '', i.type, i.stage, i.leads, i.recent, i.fit, i.note ?? '', stat[i.name] ? new Date(stat[i.name].at).toISOString().slice(0, 10) : '', stat[i.name] ? STATUS_TEXT[stat[i.name].status] : ''].map(esc).join(','));
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([[head.map(esc).join(','), ...rows].join('\n')], { type: 'text/csv' }));
   a.download = 'backx-investors.csv';
@@ -116,13 +129,29 @@ function csv() {
 }
 
 export function AdminInvestors() {
+  const [stat, setStat] = useState<Record<string, StatusRow>>({});
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    api<{ items: { firm: string; status: Status; at: string }[] }>('/api/admin/investors/status')
+      .then((r) => setStat(Object.fromEntries(r.items.map((x) => [x.firm, { status: x.status, at: x.at }]))))
+      .catch(() => setErr(true));
+  }, []);
+  const setStatus = (firm: string, status: Status | null) => {
+    const before = stat;
+    setStat((cur) => { const n = { ...cur }; if (status) n[firm] = { status, at: new Date().toISOString() }; else delete n[firm]; return n; });
+    api('/api/admin/investors/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firm, status }) })
+      .catch(() => { setStat(before); setErr(true); });
+  };
+  const count = (k: Status) => Object.values(stat).filter((x) => x.status === k).length;
   return (
     <>
       <section className="card">
         <div className="row-between">
           <h2>Seed round: one lead</h2>
-          <button className="btn btn-primary" onClick={csv}>Download CSV</button>
+          <button className="btn btn-primary" onClick={() => csv(stat)}>Download CSV</button>
         </div>
+        <p className="inv-tally num">✓ Emailed {count('emailed')} · Applied {count('applied')} · Done {count('done')}</p>
+        {err && <p className="field-err" role="alert">Could not save or load the status. Try again.</p>}
         <ol className="inv-plan">
           <li><b>Lead:</b> Variant, Dragonfly, Haun, Archetype or Lightspeed Faction. One leads the seed and follows into the Series A.</li>
           <li><b>Anchor co-investor:</b> Coinbase Ventures (Base, agents, signal). It rarely leads alone.</li>
@@ -135,8 +164,8 @@ export function AdminInvestors() {
         const rows = INVESTORS.filter((i) => i.tier === t);
         return (
           <section className="card" key={t}>
-            <h2>{TIER_TITLE[t]} <span className="muted num">{rows.length}</span></h2>
-            <ul className="inv-list">{rows.map((i) => <Firm key={i.name} i={i} />)}</ul>
+            <h2>{TIER_TITLE[t]} <span className="muted num">{rows.filter((i) => stat[i.name]).length}/{rows.length}</span></h2>
+            <ul className="inv-list">{rows.map((i) => <Firm key={i.name} i={i} st={stat[i.name]} setStatus={setStatus} />)}</ul>
           </section>
         );
       })}

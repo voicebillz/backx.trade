@@ -260,6 +260,34 @@ adminRouter.get('/participants', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---- investor outreach status (owner 2026-11-05) ----------------------------------------------------------
+
+const INV_STATUS = new Set(['emailed', 'applied', 'done']);
+
+adminRouter.get('/investors/status', async (_req, res, next) => {
+  try {
+    const { rows } = await db.query('select firm, status, updated_at, updated_by from investor_status');
+    res.json({ items: rows.map((r) => ({ firm: r.firm, status: r.status, at: r.updated_at, by: r.updated_by })) });
+  } catch (e) { next(e); }
+});
+
+// { firm, status: 'emailed' | 'applied' | 'done' | null } (null clears it)
+adminRouter.post('/investors/status', async (req, res, next) => {
+  const { firm, status } = req.body ?? {};
+  if (!text(firm, 120) || !firm.trim() || !(status === null || INV_STATUS.has(status))) return res.status(400).json({ error: 'invalid' });
+  try {
+    if (status === null) await db.query('delete from investor_status where firm = $1', [firm]);
+    else {
+      await db.query(
+        `insert into investor_status (firm, status, updated_by) values ($1, $2, $3)
+         on conflict (firm) do update set status = excluded.status, updated_at = now(), updated_by = excluded.updated_by`,
+        [firm, status, req.user.address]);
+    }
+    await audit(req, 'investor.status', firm, { status });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 // ---- audit ------------------------------------------------------------------------------------
 
 adminRouter.get('/audit', async (_req, res, next) => {

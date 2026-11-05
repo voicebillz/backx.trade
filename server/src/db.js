@@ -90,6 +90,14 @@ export async function migrate() {
     );
     create index if not exists venture_joined on venture_participants(joined_at desc);
 
+    -- Admin → Investors outreach status (owner 2026-11-05): one row per firm name from web/src/lib/investors.ts.
+    create table if not exists investor_status (
+      firm       text primary key,
+      status     text not null check (status in ('emailed', 'applied', 'done')),
+      updated_at timestamptz not null default now(),
+      updated_by text not null
+    );
+
     -- BackX Proposals (owner 2026-11-04): Yes/No questions the community signals on (BXP-<id>). Admin writes them;
     -- one signal per account per proposal, changeable while open. The public page shows only percentages.
     create table if not exists proposals (
