@@ -2103,3 +2103,6 @@ html:root { --privy-color-icon-muted: var(--brand); }
 .dr-list li { display: flex; gap: 8px; } .dr-list .warn { color: var(--warning); font-weight: 700; }
 .dr-actions { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--ink-2); }
 .dr-actions .dr-risk { margin-right: 4px; }
+.or-run { display: flex; align-items: center; gap: 10px; }
+.or-stop { min-height: 44px; padding: 0 18px; border-radius: 10px; background: var(--down); color: #fff; font-weight: 700; border: 0; }
+.or-stop:hover { filter: brightness(1.1); }

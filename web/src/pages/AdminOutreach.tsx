@@ -207,7 +207,10 @@ export function AdminOutreach() {
         {err && <p className="field-err" role="alert">{err}</p>}
         {msg && <p className="muted small" aria-live="polite">{msg}</p>}
         <div className="or-settings">
-          <button className={'btn ' + (s.paused ? 'btn-primary' : 'btn-ghost')} onClick={() => saveSettings({ ...s, paused: !s.paused })}>{s.paused ? 'Start agent' : 'Pause agent'}</button>
+          <div className="or-run">
+            <span className={'or-pill ' + (s.paused ? 'warn' : 'ok')}>{s.paused ? 'Stopped' : 'Running'}</span>
+            <button className={'btn ' + (s.paused ? 'btn-primary' : 'or-stop')} onClick={() => saveSettings({ ...s, paused: !s.paused })}>{s.paused ? 'Start agent' : 'Stop agent'}</button>
+          </div>
           <label className="field"><span className="label">Max per day (emails + forms, ≤ {s.hardMax})</span>
             <div className="input-wrap"><input type="number" inputMode="numeric" min={0} max={s.hardMax} value={s.dailyMax}
               onChange={(e) => setS({ ...s, dailyMax: Math.max(0, Math.min(s.hardMax, Math.floor(Number(e.target.value) || 0))) })} onBlur={() => saveSettings(s)} /></div></label>

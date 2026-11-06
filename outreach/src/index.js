@@ -18,6 +18,7 @@ const REPLY_CHECK_MS = 10 * 60_000;
 let lastReplyCheck = 0;
 let stopping = false;
 let lastState = '';
+let authBlockedUntil = 0; // Microsoft refused our app login: wait instead of burning jobs
 /** Logs the agent's state once each time it changes (paused, waiting, running), so Railway logs show what it does. */
 function state(text) { if (text !== lastState) { lastState = text; console.log(`[state] ${text}`); } }
 
@@ -110,6 +111,7 @@ async function doForm(job, s, t) {
 async function work() {
   const s = await settings();
   if (s.paused) return state('paused (press Start agent in Admin → Outreach)');
+  if (Date.now() < authBlockedUntil) return state('Microsoft login failed: check MS_TENANT_ID, MS_CLIENT_ID and MS_CLIENT_SECRET (the secret VALUE, not its ID) in Railway; retrying every 10 min');
   if (!s.ignore_window && !inWindow()) return state(`outside the send window (weekdays 09–18 ${config.sendZone})`);
   const t = await today();
   const limit = Math.min(s.daily_max, config.hardDailyMax);
@@ -131,6 +133,14 @@ async function work() {
     else await setJob(job.id, { status: 'manual' });
   } catch (e) {
     const msg = String(e?.message || e).slice(0, 500);
+    if (/^graph token /.test(msg)) {
+      // Our own login to Microsoft failed: nothing was sent. Put the job back untouched and wait.
+      authBlockedUntil = Date.now() + 10 * 60_000;
+      await setJob(job.id, { status: job.prev, attempts: Math.max(0, job.attempts - 1), last_error: msg });
+      await event(job.id, 'error', msg);
+      console.error(`[auth] Microsoft refused the app login (${msg}); job #${job.id} put back, nothing sent`);
+      return;
+    }
     const failed = job.attempts >= 3;
     // An email whose send call errored might still have gone out: never retry it blindly.
     const status = e?.uncertain ? 'manual' : failed ? 'failed' : job.prev;
